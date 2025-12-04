@@ -20,6 +20,7 @@ import {
   ArrowUpAZ,
   BrushCleaning,
   Check,
+  FolderOpen,
   MoreVertical,
   Plus,
   Save,
@@ -64,7 +65,7 @@ const AssistantItem: FC<AssistantItemProps> = ({
 }) => {
   const { t } = useTranslation()
   const { allTags } = useTags()
-  const { removeAllTopics } = useAssistant(assistant.id)
+  const { removeAllTopics, moveAllTopics } = useAssistant(assistant.id)
   const { clickAssistantToShowTopic, topicPosition, setAssistantIconType } = useSettings()
   const { assistants, updateAssistants } = useAssistants()
 
@@ -107,6 +108,7 @@ const AssistantItem: FC<AssistantItemProps> = ({
         onSwitch,
         onDelete,
         removeAllTopics,
+        moveAllTopics,
         setAssistantIconType,
         sortBy,
         handleSortByChange,
@@ -124,6 +126,7 @@ const AssistantItem: FC<AssistantItemProps> = ({
       onSwitch,
       onDelete,
       removeAllTopics,
+      moveAllTopics,
       setAssistantIconType,
       sortBy,
       handleSortByChange,
@@ -265,6 +268,7 @@ function getMenuItems({
   onSwitch,
   onDelete,
   removeAllTopics,
+  moveAllTopics,
   setAssistantIconType,
   sortBy,
   handleSortByChange,
@@ -302,6 +306,27 @@ function getMenuItems({
           onOk: removeAllTopics
         })
       }
+    },
+    {
+      label: t('assistants.move_all.title'),
+      key: 'move-all-topics',
+      icon: <FolderOpen size={14} />,
+      children: assistants
+        .filter((item) => item.id !== assistant.id)
+        .map((targetAssistant) => ({
+          label: targetAssistant.name,
+          key: `move-all-${targetAssistant.id}`,
+          onClick: () =>
+            window.modal.confirm({
+              title: t('assistants.move_all.title'),
+              content: t('assistants.move_all.confirm', {
+                from: assistant.name,
+                to: targetAssistant.name
+              }),
+              centered: true,
+              onOk: () => moveAllTopics(targetAssistant)
+            })
+        }))
     },
     {
       label: t('assistants.save.title'),
