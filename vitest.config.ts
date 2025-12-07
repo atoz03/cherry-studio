@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import { defineConfig } from 'vitest/config'
 
 import electronViteConfig from './electron.vite.config'
@@ -6,6 +8,11 @@ const mainConfig = (electronViteConfig as any).main
 const rendererConfig = (electronViteConfig as any).renderer
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      'buffer-equal-constant-time': path.resolve(__dirname, 'tests/__mocks__/buffer-equal-constant-time.ts')
+    }
+  },
   test: {
     projects: [
       // 主进程单元测试配置
@@ -27,7 +34,10 @@ export default defineConfig({
         extends: true,
         plugins: rendererConfig.plugins.filter((plugin: any) => plugin.name !== 'tailwindcss'),
         resolve: {
-          alias: rendererConfig.resolve.alias
+          alias: {
+            ...rendererConfig.resolve.alias,
+            'buffer-equal-constant-time': path.resolve(__dirname, 'tests/__mocks__/buffer-equal-constant-time.ts')
+          }
         },
         test: {
           name: 'renderer',
