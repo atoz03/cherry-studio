@@ -1,3 +1,4 @@
+import type { DragStart } from '@hello-pangea/dnd'
 import AssistantAvatar from '@renderer/components/Avatar/AssistantAvatar'
 import { DraggableVirtualList } from '@renderer/components/DraggableList'
 import { CopyIcon, DeleteIcon, EditIcon } from '@renderer/components/Icons'
@@ -5,6 +6,7 @@ import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
 import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
 import { isMac } from '@renderer/config/constant'
+import { useTabDrag } from '@renderer/context/TabDragContext'
 import { db } from '@renderer/databases'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { useInPlaceEdit } from '@renderer/hooks/useInPlaceEdit'
@@ -31,6 +33,7 @@ import {
   exportTopicToNotion,
   topicToMarkdown
 } from '@renderer/utils/export'
+import { sortTopicsByPinnedAndCreatedAt } from '@renderer/utils/topicSort'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import type { ItemType, MenuItemType } from 'antd/es/menu/interface'
@@ -73,7 +76,8 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const { notesPath } = useNotesSettings()
   const { assistants } = useAssistants()
   const { assistant, addTopic, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
-  const { showTopicTime, pinTopicsToTop, setTopicPosition, topicPosition } = useSettings()
+  const { showTopicTime, setTopicPosition, topicPosition } = useSettings()
+  const { setCandidate, clearCandidate, openCandidateIfOverTabBar } = useTabDrag()
 
   const renamingTopics = useSelector((state: RootState) => state.runtime.chat.renamingTopics)
   const topicLoadingQuery = useSelector((state: RootState) => state.messages.loadingByTopic)
@@ -88,7 +92,8 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   // 管理模式状态
   const manageState = useTopicManageMode()
-  const { isManageMode, selectedIds, searchText, enterManageMode, exitManageMode, toggleSelectTopic } = manageState
+  const { isManageMode, selectedIds, searchText, enterManageMode, exitManageMode, toggleSelectTopic, setSelectedIds } =
+    manageState
 
   const { startEdit, isEditing, inputProps } = useInPlaceEdit({
     onSave: (name: string) => {
@@ -126,6 +131,10 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     },
     [newlyRenamedTopics]
   )
+
+  const sortedTopics = useMemo(() => {
+    return sortTopicsByPinnedAndCreatedAt(assistant.topics)
+  }, [assistant.topics])
 
   const handleDeleteClick = useCallback((topicId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -212,7 +221,57 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     const topic = targetTopic
     if (!topic) return []
 
+    const canSelect = !topic.pinned
+    const isSelected = selectedIds.has(topic.id)
+    const selectableTopicIds = sortedTopics.filter((t) => !t.pinned).map((t) => t.id)
+
+    const multiSelectItems: ItemType<MenuItemType>[] = (
+      [
+        {
+          label: isManageMode ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
+          key: 'multi-select-toggle',
+          icon: <CheckSquare size={14} />,
+          onClick() {
+            if (isManageMode) {
+              exitManageMode()
+            } else {
+              enterManageMode()
+              if (canSelect) {
+                setSelectedIds(new Set([topic.id]))
+              }
+            }
+          }
+        },
+        isManageMode && {
+          label: isSelected ? t('chat.topics.multi_select.unselect') : t('chat.topics.multi_select.select'),
+          key: 'toggle-select',
+          icon: isSelected ? <Square size={14} /> : <CheckSquare size={14} />,
+          disabled: !canSelect,
+          onClick() {
+            if (!canSelect) return
+            toggleSelectTopic(topic.id)
+          }
+        },
+        isManageMode && {
+          label: t('chat.topics.multi_select.select_all'),
+          key: 'select-all',
+          onClick() {
+            setSelectedIds(new Set(selectableTopicIds))
+          }
+        },
+        isManageMode && {
+          label: t('chat.topics.multi_select.clear'),
+          key: 'clear-selection',
+          onClick() {
+            setSelectedIds(new Set())
+          }
+        }
+      ] as Array<ItemType<MenuItemType> | false>
+    ).filter(Boolean) as ItemType<MenuItemType>[]
+
     const menus: MenuProps['items'] = [
+      ...multiSelectItems,
+      ...(multiSelectItems.length ? ([{ type: 'divider' }] as ItemType<MenuItemType>[]) : []),
       {
         label: t('chat.topics.auto_rename'),
         key: 'auto-rename',
@@ -478,6 +537,13 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     exportMenuOptions.joplin,
     exportMenuOptions.siyuan,
     assistants,
+    isManageMode,
+    selectedIds,
+    setSelectedIds,
+    toggleSelectTopic,
+    enterManageMode,
+    exitManageMode,
+    sortedTopics,
     notesPath,
     assistant,
     updateTopic,
@@ -489,18 +555,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     onMoveTopic,
     onDeleteTopic
   ])
-
-  // Sort topics based on pinned status if pinTopicsToTop is enabled
-  const sortedTopics = useMemo(() => {
-    if (pinTopicsToTop) {
-      return [...assistant.topics].sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        return 0
-      })
-    }
-    return assistant.topics
-  }, [assistant.topics, pinTopicsToTop])
 
   // Filter topics based on search text (only in manage mode)
   // Supports: case-insensitive, space-separated keywords (all must match)
@@ -526,12 +580,31 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
+  const handleTopicDragStart = useCallback(
+    (start: DragStart) => {
+      const topic = filteredTopics[start.source.index]
+      if (topic) {
+        setCandidate({ type: 'topic', id: topic.id })
+      } else {
+        clearCandidate()
+      }
+    },
+    [filteredTopics, setCandidate, clearCandidate]
+  )
+
+  const handleTopicDragEnd = useCallback(() => {
+    openCandidateIfOverTabBar()
+    clearCandidate()
+  }, [openCandidateIfOverTabBar, clearCandidate])
+
   return (
     <>
       <DraggableVirtualList
         className="topics-tab"
         list={filteredTopics}
         onUpdate={updateTopics}
+        onDragStart={handleTopicDragStart}
+        onDragEnd={handleTopicDragEnd}
         style={{ height: '100%', padding: '8px 0 10px 10px', paddingBottom: isManageMode ? 70 : 10 }}
         itemContainerStyle={{ paddingBottom: '8px' }}
         header={
@@ -574,7 +647,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
           }
 
           return (
-            <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']} disabled={isManageMode}>
+            <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']}>
               <TopicListItem
                 onContextMenu={() => setTargetTopic(topic)}
                 className={classNames(
@@ -695,6 +768,9 @@ const TopicListItem = styled.div`
   justify-content: space-between;
   cursor: pointer;
   width: calc(var(--assistants-width) - 20px);
+  position: relative;
+  gap: 4px;
+  border: 1px solid transparent;
 
   .menu {
     opacity: 0;
@@ -721,6 +797,10 @@ const TopicListItem = styled.div`
       }
     }
   }
+  &.selected {
+    border: 1px solid var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  }
   &.singlealone {
     &:hover {
       background-color: var(--color-background-soft);
@@ -743,7 +823,6 @@ const TopicListItem = styled.div`
 
 const TopicNameContainer = styled.div`
   display: flex;
-  flex-direction: row;
   align-items: center;
   gap: 4px;
   height: 20px;
