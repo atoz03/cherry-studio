@@ -137,9 +137,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const sortSelection = useCallback(
     (ids: string[]) => {
       const order = new Map(sortedTopics.map((topic, index) => [topic.id, index]))
-      return [...new Set(ids)]
-        .filter((id) => order.has(id))
-        .sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
+      return [...new Set(ids)].filter((id) => order.has(id)).sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
     },
     [sortedTopics]
   )
@@ -273,38 +271,40 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     if (!topic) return []
 
     const isSelected = selectedTopicIds.includes(topic.id)
-    const multiSelectItems: MenuProps['items'] = [
-      {
-        label: isMultiSelecting ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
-        key: 'multi-select-toggle',
-        icon: <CheckSquare size={14} />,
-        onClick() {
-          if (isMultiSelecting) {
-            exitMultiSelect()
-          } else {
-            enterMultiSelect(topic.id)
+    const multiSelectItems: ItemType<MenuItemType>[] = (
+      [
+        {
+          label: isMultiSelecting ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
+          key: 'multi-select-toggle',
+          icon: <CheckSquare size={14} />,
+          onClick() {
+            if (isMultiSelecting) {
+              exitMultiSelect()
+            } else {
+              enterMultiSelect(topic.id)
+            }
           }
+        },
+        isMultiSelecting && {
+          label: isSelected ? t('chat.topics.multi_select.unselect') : t('chat.topics.multi_select.select'),
+          key: 'toggle-select',
+          icon: isSelected ? <Square size={14} /> : <CheckSquare size={14} />,
+          onClick() {
+            toggleSelection(topic.id)
+          }
+        },
+        isMultiSelecting && {
+          label: t('chat.topics.multi_select.select_all'),
+          key: 'select-all',
+          onClick: handleSelectAll
+        },
+        isMultiSelecting && {
+          label: t('chat.topics.multi_select.clear'),
+          key: 'clear-selection',
+          onClick: clearSelection
         }
-      },
-      isMultiSelecting && {
-        label: isSelected ? t('chat.topics.multi_select.unselect') : t('chat.topics.multi_select.select'),
-        key: 'toggle-select',
-        icon: isSelected ? <Square size={14} /> : <CheckSquare size={14} />,
-        onClick() {
-          toggleSelection(topic.id)
-        }
-      },
-      isMultiSelecting && {
-        label: t('chat.topics.multi_select.select_all'),
-        key: 'select-all',
-        onClick: handleSelectAll
-      },
-      isMultiSelecting && {
-        label: t('chat.topics.multi_select.clear'),
-        key: 'clear-selection',
-        onClick: clearSelection
-      }
-    ].filter(Boolean)
+      ] as Array<ItemType<MenuItemType> | false>
+    ).filter(Boolean) as ItemType<MenuItemType>[]
 
     const menus: MenuProps['items'] = [
       ...multiSelectItems,
@@ -692,58 +692,54 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     removeTopic,
     selectedTopics,
     setActiveTopic,
-    t,
-    modelGenerating
+    t
   ])
 
-  const mapRole = (role: string): 'user' | 'assistant' | 'system' => {
-    if (role === 'assistant') return 'assistant'
-    if (role === 'system') return 'system'
-    return 'user'
-  }
-
   // 按 ChatGPT conversations.json 线性结构构造 mapping，确保导出可被现有导入逻辑识别
-  const buildChatGPTConversation = useCallback(
-    async (topic: Topic) => {
-      const topicMessages = await TopicManager.getTopicMessages(topic.id)
-      const mapping: Record<string, any> = {}
-      const rootId = uuid()
-      mapping[rootId] = { id: rootId, message: null, parent: null, children: [] }
-      let lastId = rootId
+  const buildChatGPTConversation = useCallback(async (topic: Topic) => {
+    const mapRole = (role: string): 'user' | 'assistant' | 'system' => {
+      if (role === 'assistant') return 'assistant'
+      if (role === 'system') return 'system'
+      return 'user'
+    }
 
-      topicMessages.forEach((message) => {
-        const content = getMainTextContent(message) || ''
-        if (!content.trim()) return
-        const messageId = uuid()
-        mapping[lastId].children.push(messageId)
-        const createdSeconds = message.createdAt ? Math.floor(new Date(message.createdAt).getTime() / 1000) : undefined
-        mapping[messageId] = {
+    const topicMessages = await TopicManager.getTopicMessages(topic.id)
+    const mapping: Record<string, any> = {}
+    const rootId = uuid()
+    mapping[rootId] = { id: rootId, message: null, parent: null, children: [] }
+    let lastId = rootId
+
+    topicMessages.forEach((message) => {
+      const content = getMainTextContent(message) || ''
+      if (!content.trim()) return
+      const messageId = uuid()
+      mapping[lastId].children.push(messageId)
+      const createdSeconds = message.createdAt ? Math.floor(new Date(message.createdAt).getTime() / 1000) : undefined
+      mapping[messageId] = {
+        id: messageId,
+        message: {
           id: messageId,
-          message: {
-            id: messageId,
-            author: { role: mapRole(message.role) },
-            content: { content_type: 'text', parts: [content] },
-            create_time: createdSeconds
-          },
-          parent: lastId,
-          children: []
-        }
-        lastId = messageId
-      })
-
-      const createTime = Math.floor(new Date(topic.createdAt || Date.now()).getTime() / 1000)
-      const updateTime = Math.floor(new Date(topic.updatedAt || topic.createdAt || Date.now()).getTime() / 1000)
-
-      return {
-        title: topic.name,
-        create_time: createTime,
-        update_time: updateTime,
-        mapping,
-        current_node: lastId !== rootId ? lastId : undefined
+          author: { role: mapRole(message.role) },
+          content: { content_type: 'text', parts: [content] },
+          create_time: createdSeconds
+        },
+        parent: lastId,
+        children: []
       }
-    },
-    [mapRole]
-  )
+      lastId = messageId
+    })
+
+    const createTime = Math.floor(new Date(topic.createdAt || Date.now()).getTime() / 1000)
+    const updateTime = Math.floor(new Date(topic.updatedAt || topic.createdAt || Date.now()).getTime() / 1000)
+
+    return {
+      title: topic.name,
+      create_time: createTime,
+      update_time: updateTime,
+      mapping,
+      current_node: lastId !== rootId ? lastId : undefined
+    }
+  }, [])
 
   const handleExportSelected = useCallback(async () => {
     if (!selectedTopics.length) {
@@ -751,7 +747,13 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       return
     }
 
-    const conversations = []
+    const conversations: Array<{
+      title: string
+      create_time: number
+      update_time: number
+      mapping: Record<string, any>
+      current_node?: string
+    }> = []
     for (const topic of selectedTopics) {
       const conversation = await buildChatGPTConversation(topic)
       conversations.push(conversation)
@@ -760,7 +762,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     const fileName = `${removeSpecialCharactersForFileName(assistant.name)}-${Date.now()}.json`
     await window.api.file.save(fileName, JSON.stringify(conversations, null, 2))
     window.toast?.success(t('common.saved'))
-  }, [assistant.name, buildChatGPTConversation, removeSpecialCharactersForFileName, selectedTopics, t])
+  }, [assistant.name, buildChatGPTConversation, selectedTopics, t])
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
@@ -775,11 +777,16 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       header={
         isMultiSelecting ? (
           <ActionBar>
-            <div className="count">{t('chat.topics.multi_select.selected_count', { count: selectedTopicIds.length })}</div>
+            <div className="count">
+              {t('chat.topics.multi_select.selected_count', { count: selectedTopicIds.length })}
+            </div>
             <ActionButtons>
               <ActionButton onClick={handleSelectAll}>{t('chat.topics.multi_select.select_all')}</ActionButton>
               <ActionButton onClick={clearSelection}>{t('chat.topics.multi_select.clear')}</ActionButton>
-              <Dropdown menu={{ items: moveMenuItems }} trigger={['click']} disabled={!selectedTopics.length || !moveMenuItems.length}>
+              <Dropdown
+                menu={{ items: moveMenuItems }}
+                trigger={['click']}
+                disabled={!selectedTopics.length || !moveMenuItems.length}>
                 <ActionButton disabled={!selectedTopics.length || !moveMenuItems.length}>
                   {t('chat.topics.multi_select.move')}
                 </ActionButton>
