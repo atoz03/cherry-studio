@@ -19,7 +19,7 @@ import store from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import { setGenerating } from '@renderer/store/runtime'
 import type { Assistant, Topic } from '@renderer/types'
-import { classNames, removeSpecialCharactersForFileName } from '@renderer/utils'
+import { classNames, removeSpecialCharactersForFileName, uuid } from '@renderer/utils'
 import { copyTopicAsMarkdown, copyTopicAsPlainText } from '@renderer/utils/copy'
 import {
   exportMarkdownToJoplin,
@@ -30,6 +30,7 @@ import {
   exportTopicToNotion,
   topicToMarkdown
 } from '@renderer/utils/export'
+import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
 import type { ItemType, MenuItemType } from 'antd/es/menu/interface'
@@ -37,6 +38,7 @@ import dayjs from 'dayjs'
 import { findIndex } from 'lodash'
 import {
   BrushCleaning,
+  CheckSquare,
   FolderOpen,
   HelpCircle,
   MenuIcon,
@@ -46,6 +48,7 @@ import {
   PinOffIcon,
   Save,
   Sparkles,
+  Square,
   UploadIcon,
   XIcon
 } from 'lucide-react'
@@ -80,6 +83,8 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+  const [isMultiSelecting, setIsMultiSelecting] = useState(false)
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
 
   const { startEdit, isEditing, inputProps } = useInPlaceEdit({
     onSave: (name: string) => {
@@ -116,6 +121,70 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       return newlyRenamedTopics.includes(topicId)
     },
     [newlyRenamedTopics]
+  )
+
+  const sortedTopics = useMemo(() => {
+    if (pinTopicsToTop) {
+      return [...assistant.topics].sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1
+        if (!a.pinned && b.pinned) return 1
+        return 0
+      })
+    }
+    return assistant.topics
+  }, [assistant.topics, pinTopicsToTop])
+
+  const sortSelection = useCallback(
+    (ids: string[]) => {
+      const order = new Map(sortedTopics.map((topic, index) => [topic.id, index]))
+      return [...new Set(ids)]
+        .filter((id) => order.has(id))
+        .sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
+    },
+    [sortedTopics]
+  )
+
+  const handleSelectAll = useCallback(() => {
+    setSelectedTopicIds(sortedTopics.map((topic) => topic.id))
+  }, [sortedTopics])
+
+  const clearSelection = useCallback(() => {
+    setSelectedTopicIds([])
+  }, [])
+
+  const toggleSelection = useCallback(
+    (topicId: string) => {
+      setSelectedTopicIds((prev) => {
+        if (prev.includes(topicId)) {
+          return prev.filter((id) => id !== topicId)
+        }
+        return sortSelection([...prev, topicId])
+      })
+    },
+    [sortSelection]
+  )
+
+  const exitMultiSelect = useCallback(() => {
+    setIsMultiSelecting(false)
+    setSelectedTopicIds([])
+  }, [])
+
+  const enterMultiSelect = useCallback(
+    (topicId?: string) => {
+      setIsMultiSelecting(true)
+      setSelectedTopicIds((prev) => sortSelection([...(topicId ? [topicId] : []), ...prev]))
+    },
+    [sortSelection]
+  )
+
+  useEffect(() => {
+    if (!isMultiSelecting) return
+    setSelectedTopicIds((prev) => sortSelection(prev))
+  }, [isMultiSelecting, sortSelection])
+
+  const selectedTopics = useMemo(
+    () => sortedTopics.filter((topic) => selectedTopicIds.includes(topic.id)),
+    [selectedTopicIds, sortedTopics]
   )
 
   const handleDeleteClick = useCallback((topicId: string, e: React.MouseEvent) => {
@@ -203,7 +272,43 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     const topic = targetTopic
     if (!topic) return []
 
+    const isSelected = selectedTopicIds.includes(topic.id)
+    const multiSelectItems: MenuProps['items'] = [
+      {
+        label: isMultiSelecting ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
+        key: 'multi-select-toggle',
+        icon: <CheckSquare size={14} />,
+        onClick() {
+          if (isMultiSelecting) {
+            exitMultiSelect()
+          } else {
+            enterMultiSelect(topic.id)
+          }
+        }
+      },
+      isMultiSelecting && {
+        label: isSelected ? t('chat.topics.multi_select.unselect') : t('chat.topics.multi_select.select'),
+        key: 'toggle-select',
+        icon: isSelected ? <Square size={14} /> : <CheckSquare size={14} />,
+        onClick() {
+          toggleSelection(topic.id)
+        }
+      },
+      isMultiSelecting && {
+        label: t('chat.topics.multi_select.select_all'),
+        key: 'select-all',
+        onClick: handleSelectAll
+      },
+      isMultiSelecting && {
+        label: t('chat.topics.multi_select.clear'),
+        key: 'clear-selection',
+        onClick: clearSelection
+      }
+    ].filter(Boolean)
+
     const menus: MenuProps['items'] = [
+      ...multiSelectItems,
+      ...(multiSelectItems.length ? ([{ type: 'divider' }] as ItemType<MenuItemType>[]) : []),
       {
         label: t('chat.topics.auto_rename'),
         key: 'auto-rename',
@@ -468,8 +573,15 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     exportMenuOptions.joplin,
     exportMenuOptions.siyuan,
     assistants,
+    handleSelectAll,
+    toggleSelection,
+    clearSelection,
     notesPath,
     assistant,
+    enterMultiSelect,
+    exitMultiSelect,
+    isMultiSelecting,
+    selectedTopicIds,
     updateTopic,
     activeTopic.id,
     setActiveTopic,
@@ -480,17 +592,175 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     onDeleteTopic
   ])
 
-  // Sort topics based on pinned status if pinTopicsToTop is enabled
-  const sortedTopics = useMemo(() => {
-    if (pinTopicsToTop) {
-      return [...assistant.topics].sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        return 0
-      })
+  const moveTargets = useMemo(() => {
+    const getLatestTimestamp = (assistantItem: Assistant) => {
+      const latest = assistantItem.topics.reduce((acc, topic) => {
+        const time = new Date(topic.updatedAt || topic.createdAt || 0).getTime()
+        return Math.max(acc, time)
+      }, 0)
+      return latest
     }
-    return assistant.topics
-  }, [assistant.topics, pinTopicsToTop])
+    return assistants
+      .filter((item) => item.id !== assistant.id)
+      .sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a))
+  }, [assistant.id, assistants])
+
+  const handleMoveSelected = useCallback(
+    async (toAssistant: Assistant) => {
+      if (!selectedTopics.length) {
+        window.toast?.warning(t('chat.topics.multi_select.empty'))
+        return
+      }
+
+      const movingIds = new Set(selectedTopics.map((topic) => topic.id))
+      const remainingTopics = assistant.topics.filter((topic) => !movingIds.has(topic.id))
+
+      selectedTopics.forEach((topic) => {
+        moveTopic(topic, toAssistant)
+      })
+
+      if (movingIds.has(activeTopic.id)) {
+        if (remainingTopics.length) {
+          setActiveTopic(remainingTopics[0])
+        } else {
+          const newTopic = getDefaultTopic(assistant.id)
+          await db.topics.add({ id: newTopic.id, messages: [] })
+          addTopic(newTopic)
+          setActiveTopic(newTopic)
+        }
+      }
+
+      exitMultiSelect()
+      window.toast?.success(t('common.saved'))
+    },
+    [
+      activeTopic.id,
+      addTopic,
+      assistant.id,
+      assistant.topics,
+      exitMultiSelect,
+      moveTopic,
+      selectedTopics,
+      setActiveTopic,
+      t
+    ]
+  )
+
+  const moveMenuItems: MenuProps['items'] = useMemo(
+    () =>
+      moveTargets.map((item) => ({
+        label: item.name,
+        key: item.id,
+        onClick: () => handleMoveSelected(item)
+      })),
+    [handleMoveSelected, moveTargets]
+  )
+
+  const handleBatchDelete = useCallback(async () => {
+    if (!selectedTopics.length) {
+      window.toast?.warning(t('chat.topics.multi_select.empty'))
+      return
+    }
+
+    await modelGenerating()
+    const deletingIds = new Set(selectedTopics.map((topic) => topic.id))
+    const remainingTopics = assistant.topics.filter((topic) => !deletingIds.has(topic.id))
+
+    if (deletingIds.has(activeTopic.id)) {
+      if (remainingTopics.length) {
+        setActiveTopic(remainingTopics[0])
+      } else {
+        const newTopic = getDefaultTopic(assistant.id)
+        await db.topics.add({ id: newTopic.id, messages: [] })
+        addTopic(newTopic)
+        setActiveTopic(newTopic)
+      }
+    }
+
+    for (const topic of selectedTopics) {
+      await removeTopic(topic)
+    }
+
+    setDeletingTopicId(null)
+    exitMultiSelect()
+  }, [
+    activeTopic.id,
+    addTopic,
+    assistant.id,
+    assistant.topics,
+    exitMultiSelect,
+    removeTopic,
+    selectedTopics,
+    setActiveTopic,
+    t,
+    modelGenerating
+  ])
+
+  const mapRole = (role: string): 'user' | 'assistant' | 'system' => {
+    if (role === 'assistant') return 'assistant'
+    if (role === 'system') return 'system'
+    return 'user'
+  }
+
+  // 按 ChatGPT conversations.json 线性结构构造 mapping，确保导出可被现有导入逻辑识别
+  const buildChatGPTConversation = useCallback(
+    async (topic: Topic) => {
+      const topicMessages = await TopicManager.getTopicMessages(topic.id)
+      const mapping: Record<string, any> = {}
+      const rootId = uuid()
+      mapping[rootId] = { id: rootId, message: null, parent: null, children: [] }
+      let lastId = rootId
+
+      topicMessages.forEach((message) => {
+        const content = getMainTextContent(message) || ''
+        if (!content.trim()) return
+        const messageId = uuid()
+        mapping[lastId].children.push(messageId)
+        const createdSeconds = message.createdAt ? Math.floor(new Date(message.createdAt).getTime() / 1000) : undefined
+        mapping[messageId] = {
+          id: messageId,
+          message: {
+            id: messageId,
+            author: { role: mapRole(message.role) },
+            content: { content_type: 'text', parts: [content] },
+            create_time: createdSeconds
+          },
+          parent: lastId,
+          children: []
+        }
+        lastId = messageId
+      })
+
+      const createTime = Math.floor(new Date(topic.createdAt || Date.now()).getTime() / 1000)
+      const updateTime = Math.floor(new Date(topic.updatedAt || topic.createdAt || Date.now()).getTime() / 1000)
+
+      return {
+        title: topic.name,
+        create_time: createTime,
+        update_time: updateTime,
+        mapping,
+        current_node: lastId !== rootId ? lastId : undefined
+      }
+    },
+    [mapRole]
+  )
+
+  const handleExportSelected = useCallback(async () => {
+    if (!selectedTopics.length) {
+      window.toast?.warning(t('chat.topics.multi_select.empty'))
+      return
+    }
+
+    const conversations = []
+    for (const topic of selectedTopics) {
+      const conversation = await buildChatGPTConversation(topic)
+      conversations.push(conversation)
+    }
+
+    const fileName = `${removeSpecialCharactersForFileName(assistant.name)}-${Date.now()}.json`
+    await window.api.file.save(fileName, JSON.stringify(conversations, null, 2))
+    window.toast?.success(t('common.saved'))
+  }, [assistant.name, buildChatGPTConversation, removeSpecialCharactersForFileName, selectedTopics, t])
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
@@ -501,13 +771,36 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       onUpdate={updateTopics}
       style={{ height: '100%', padding: '11px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}
+      disabled={isMultiSelecting}
       header={
-        <>
-          <AddButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
-            {t('chat.add.topic.title')}
-          </AddButton>
-          <div className="my-1"></div>
-        </>
+        isMultiSelecting ? (
+          <ActionBar>
+            <div className="count">{t('chat.topics.multi_select.selected_count', { count: selectedTopicIds.length })}</div>
+            <ActionButtons>
+              <ActionButton onClick={handleSelectAll}>{t('chat.topics.multi_select.select_all')}</ActionButton>
+              <ActionButton onClick={clearSelection}>{t('chat.topics.multi_select.clear')}</ActionButton>
+              <Dropdown menu={{ items: moveMenuItems }} trigger={['click']} disabled={!selectedTopics.length || !moveMenuItems.length}>
+                <ActionButton disabled={!selectedTopics.length || !moveMenuItems.length}>
+                  {t('chat.topics.multi_select.move')}
+                </ActionButton>
+              </Dropdown>
+              <ActionButton danger onClick={handleBatchDelete} disabled={!selectedTopics.length}>
+                {t('chat.topics.multi_select.delete')}
+              </ActionButton>
+              <ActionButton onClick={handleExportSelected} disabled={!selectedTopics.length}>
+                {t('chat.topics.multi_select.export')}
+              </ActionButton>
+              <ActionButton onClick={exitMultiSelect}>{t('chat.topics.multi_select.exit')}</ActionButton>
+            </ActionButtons>
+          </ActionBar>
+        ) : (
+          <>
+            <AddButton onClick={() => EventEmitter.emit(EVENT_NAMES.ADD_NEW_TOPIC)}>
+              {t('chat.add.topic.title')}
+            </AddButton>
+            <div className="my-1"></div>
+          </>
+        )
       }>
       {(topic) => {
         const isActive = topic.id === activeTopic?.id
@@ -525,8 +818,22 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
           <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']}>
             <TopicListItem
               onContextMenu={() => setTargetTopic(topic)}
-              className={classNames(isActive ? 'active' : '', singlealone ? 'singlealone' : '')}
-              onClick={editingTopicId === topic.id && isEditing ? undefined : () => onSwitchTopic(topic)}
+              className={classNames(
+                isActive ? 'active' : '',
+                singlealone ? 'singlealone' : '',
+                selectedTopicIds.includes(topic.id) ? 'selected' : ''
+              )}
+              onClick={
+                editingTopicId === topic.id && isEditing
+                  ? undefined
+                  : () => {
+                      if (isMultiSelecting) {
+                        toggleSelection(topic.id)
+                        return
+                      }
+                      onSwitchTopic(topic)
+                    }
+              }
               style={{
                 borderRadius,
                 cursor: editingTopicId === topic.id && isEditing ? 'default' : 'pointer'
@@ -534,6 +841,20 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
               {isPending(topic.id) && !isActive && <PendingIndicator />}
               {isFulfilled(topic.id) && !isActive && <FulfilledIndicator />}
               <TopicNameContainer>
+                {isMultiSelecting && (
+                  <MultiSelectCheckbox
+                    aria-label="multi-select-checkbox"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleSelection(topic.id)
+                    }}>
+                    {selectedTopicIds.includes(topic.id) ? (
+                      <CheckSquare size={14} color="var(--color-primary)" />
+                    ) : (
+                      <Square size={14} color="var(--color-text-3)" />
+                    )}
+                  </MultiSelectCheckbox>
+                )}
                 {editingTopicId === topic.id && isEditing ? (
                   <TopicEditInput {...inputProps} onClick={(e) => e.stopPropagation()} />
                 ) : (
@@ -541,6 +862,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
                     className={getTopicNameClassName()}
                     title={topicName}
                     onDoubleClick={() => {
+                      if (isMultiSelecting) return
                       setEditingTopicId(topic.id)
                       startEdit(topic.name)
                     }}>
@@ -596,6 +918,68 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   )
 }
 
+const ActionBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  gap: 12px;
+  color: var(--color-text-2);
+  background: var(--color-list-item);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  margin: 0 6px 8px 0;
+
+  .count {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-1);
+  }
+`
+
+const ActionButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`
+
+const ActionButton = styled.button<{ danger?: boolean }>`
+  border: 1px solid ${({ danger }) => (danger ? 'var(--color-error)' : 'var(--color-border)')};
+  background: ${({ danger }) => (danger ? 'rgba(255, 0, 0, 0.08)' : 'var(--color-background)')};
+  color: ${({ danger }) => (danger ? 'var(--color-error)' : 'var(--color-text-1)')};
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:not(:disabled):hover {
+    background: ${({ danger }) => (danger ? 'rgba(255, 0, 0, 0.15)' : 'var(--color-list-item-hover)')};
+  }
+`
+
+const MultiSelectCheckbox = styled.button`
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+`
+
 const TopicListItem = styled.div`
   padding: 7px 12px;
   border-radius: var(--list-item-border-radius);
@@ -605,6 +989,9 @@ const TopicListItem = styled.div`
   justify-content: space-between;
   cursor: pointer;
   width: calc(var(--assistants-width) - 20px);
+  position: relative;
+  gap: 4px;
+  border: 1px solid transparent;
 
   .menu {
     opacity: 0;
@@ -631,6 +1018,10 @@ const TopicListItem = styled.div`
       }
     }
   }
+  &.selected {
+    border: 1px solid var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  }
   &.singlealone {
     border-radius: 0 !important;
     &:hover {
@@ -645,11 +1036,14 @@ const TopicListItem = styled.div`
 
 const TopicNameContainer = styled.div`
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 4px;
-  height: 20px;
-  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+
+  .menu,
+  .pin {
+    margin-left: auto;
+  }
 `
 
 const TopicName = styled.div`
