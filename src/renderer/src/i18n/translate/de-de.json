@@ -1031,6 +1031,12 @@
         "label": "Themen-Prompt",
         "tips": "Themen-Prompt: Bietet zusätzliche ergänzende Prompts für das aktuelle Thema"
       },
+      "sort": {
+        "created": "[to be translated]:By created time",
+        "label": "[to be translated]:Sort",
+        "name": "[to be translated]:By name",
+        "updated": "[to be translated]:By updated time"
+      },
       "title": "Thema",
       "unpin": "Anheften aufheben"
     },

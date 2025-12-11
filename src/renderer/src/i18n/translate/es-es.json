@@ -1031,6 +1031,12 @@
         "label": "Palabras clave del tema",
         "tips": "Palabras clave del tema: proporcionar indicaciones adicionales para el tema actual"
       },
+      "sort": {
+        "created": "[to be translated]:By created time",
+        "label": "[to be translated]:Sort",
+        "name": "[to be translated]:By name",
+        "updated": "[to be translated]:By updated time"
+      },
       "title": "Tema",
       "unpin": "Quitar fijación"
     },

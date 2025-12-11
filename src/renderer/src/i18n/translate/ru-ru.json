@@ -1031,6 +1031,12 @@
         "label": "Тематические подсказки",
         "tips": "Тематические подсказки: Дополнительные подсказки, предоставленные для текущей темы"
       },
+      "sort": {
+        "created": "[to be translated]:By created time",
+        "label": "[to be translated]:Sort",
+        "name": "[to be translated]:By name",
+        "updated": "[to be translated]:By updated time"
+      },
       "title": "Топики",
       "unpin": "Открепленные темы"
     },

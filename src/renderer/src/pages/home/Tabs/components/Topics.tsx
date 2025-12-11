@@ -85,7 +85,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [isMultiSelecting, setIsMultiSelecting] = useState(false)
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
-  const [sortMode, setSortMode] = useState<'updated' | 'created' | 'name'>('updated')
+  const [sortMode, setSortMode] = useState<'updated' | 'created' | 'name'>('created')
 
   const { startEdit, isEditing, inputProps } = useInPlaceEdit({
     onSave: (name: string) => {
@@ -678,7 +678,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   const sortMenuItems: MenuProps['items'] = useMemo(
     () =>
-      ([
+      [
         {
           label: t('chat.topics.sort.updated'),
           key: 'updated',
@@ -694,7 +694,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
           key: 'name',
           onClick: () => setSortMode('name')
         }
-      ] as ItemType<MenuItemType>[]),
+      ] as ItemType<MenuItemType>[],
     [t]
   )
 
