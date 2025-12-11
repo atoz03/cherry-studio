@@ -171,6 +171,10 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     setSelectedTopicIds(sortedTopics.map((topic) => topic.id))
   }, [sortedTopics])
 
+  const handleSelectAllUnique = useCallback(() => {
+    setSelectedTopicIds((prev) => sortSelection([...prev, ...sortedTopics.map((topic) => topic.id)]))
+  }, [sortSelection, sortedTopics])
+
   const clearSelection = useCallback(() => {
     setSelectedTopicIds([])
   }, [])
@@ -816,6 +820,47 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     window.toast?.success(t('common.saved'))
   }, [assistant.name, buildChatGPTConversation, selectedTopics, t])
 
+  const handleBatchRename = useCallback(async () => {
+    if (!selectedTopics.length) {
+      window.toast?.warning(t('chat.topics.multi_select.empty'))
+      return
+    }
+
+    const concurrency = 5
+    let cursor = 0
+
+    const runNext = async () => {
+      while (cursor < selectedTopics.length) {
+        const current = selectedTopics[cursor++]
+        if (!current) return
+
+        try {
+          startTopicRenaming(current.id)
+          const messages = await TopicManager.getTopicMessages(current.id)
+          if (!messages.length) {
+            window.toast?.warning(t('chat.topics.multi_select.batch_rename_skip_empty', { name: current.name }))
+            continue
+          }
+
+          const summaryText = await fetchMessagesSummary({ messages, assistant })
+          if (summaryText) {
+            const updatedTopic = { ...current, name: summaryText, isNameManuallyEdited: false }
+            updateTopic(updatedTopic)
+            window.toast?.success(t('chat.topics.multi_select.batch_rename_success', { name: summaryText }))
+          } else {
+            window.toast?.error(t('chat.topics.multi_select.batch_rename_failed', { name: current.name }))
+          }
+        } catch (error) {
+          window.toast?.error(t('chat.topics.multi_select.batch_rename_failed', { name: current.name }))
+        } finally {
+          finishTopicRenaming(current.id)
+        }
+      }
+    }
+
+    await Promise.allSettled(Array.from({ length: Math.min(concurrency, selectedTopics.length) }, runNext))
+  }, [assistant, finishTopicRenaming, selectedTopics, startTopicRenaming, t, updateTopic])
+
   const singlealone = topicPosition === 'right' && position === 'right'
 
   return (
@@ -837,6 +882,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
                 <ActionButton>{t('chat.topics.sort.label') + ' · ' + sortLabel}</ActionButton>
               </Dropdown>
               <ActionButton onClick={handleSelectAll}>{t('chat.topics.multi_select.select_all')}</ActionButton>
+              <ActionButton onClick={handleSelectAllUnique}>
+                {t('chat.topics.multi_select.select_all_unique')}
+              </ActionButton>
               <ActionButton onClick={clearSelection}>{t('chat.topics.multi_select.clear')}</ActionButton>
               <Dropdown
                 menu={{ items: moveMenuItems }}
@@ -851,6 +899,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
               </ActionButton>
               <ActionButton onClick={handleExportSelected} disabled={!selectedTopics.length}>
                 {t('chat.topics.multi_select.export')}
+              </ActionButton>
+              <ActionButton onClick={handleBatchRename} disabled={!selectedTopics.length}>
+                {t('chat.topics.multi_select.batch_rename')}
               </ActionButton>
               <ActionButton onClick={exitMultiSelect}>{t('chat.topics.multi_select.exit')}</ActionButton>
             </ActionButtons>
