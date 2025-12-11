@@ -1031,6 +1031,12 @@
         "label": "Topic Prompts",
         "tips": "Topic Prompts: Additional supplementary prompts provided for the current topic"
       },
+      "sort": {
+        "created": "By created time",
+        "label": "Sort",
+        "name": "By name",
+        "updated": "By updated time"
+      },
       "title": "Topics",
       "unpin": "Unpin Topic"
     },

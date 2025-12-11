@@ -85,6 +85,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
   const [isMultiSelecting, setIsMultiSelecting] = useState(false)
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
+  const [sortMode, setSortMode] = useState<'updated' | 'created' | 'name'>('updated')
 
   const { startEdit, isEditing, inputProps } = useInPlaceEdit({
     onSave: (name: string) => {
@@ -123,16 +124,40 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     [newlyRenamedTopics]
   )
 
+  const getTopicTimestamp = useCallback(
+    (topic: Topic) => {
+      const raw = sortMode === 'created' ? topic.createdAt || topic.updatedAt : topic.updatedAt || topic.createdAt
+      if (sortMode === 'name') return 0
+      if (typeof raw === 'number') {
+        const ms = raw > 1e12 ? raw : raw * 1000
+        return Number.isFinite(ms) ? ms : 0
+      }
+      const parsed = Date.parse(raw || '')
+      return Number.isFinite(parsed) ? parsed : 0
+    },
+    [sortMode]
+  )
+
+  const getNameKey = useCallback((topic: Topic) => topic.name?.toLowerCase?.() || '', [])
+
+  const sortTopics = useCallback(
+    (items: Topic[]) => {
+      if (sortMode === 'name') {
+        return [...items].sort((a, b) => getNameKey(a).localeCompare(getNameKey(b), 'zh-CN'))
+      }
+      return [...items].sort((a, b) => getTopicTimestamp(b) - getTopicTimestamp(a))
+    },
+    [getNameKey, getTopicTimestamp, sortMode]
+  )
+
   const sortedTopics = useMemo(() => {
     if (pinTopicsToTop) {
-      return [...assistant.topics].sort((a, b) => {
-        if (a.pinned && !b.pinned) return -1
-        if (!a.pinned && b.pinned) return 1
-        return 0
-      })
+      const pinned = assistant.topics.filter((topic) => topic.pinned)
+      const others = assistant.topics.filter((topic) => !topic.pinned)
+      return [...sortTopics(pinned), ...sortTopics(others)]
     }
-    return assistant.topics
-  }, [assistant.topics, pinTopicsToTop])
+    return sortTopics(assistant.topics)
+  }, [assistant.topics, pinTopicsToTop, sortTopics])
 
   const sortSelection = useCallback(
     (ids: string[]) => {
@@ -593,17 +618,12 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   ])
 
   const moveTargets = useMemo(() => {
-    const getLatestTimestamp = (assistantItem: Assistant) => {
-      const latest = assistantItem.topics.reduce((acc, topic) => {
-        const time = new Date(topic.updatedAt || topic.createdAt || 0).getTime()
-        return Math.max(acc, time)
-      }, 0)
-      return latest
-    }
+    const getLatestTimestamp = (assistantItem: Assistant) =>
+      assistantItem.topics.reduce((acc, topic) => Math.max(acc, getTopicTimestamp(topic)), 0)
     return assistants
       .filter((item) => item.id !== assistant.id)
       .sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a))
-  }, [assistant.id, assistants])
+  }, [assistant.id, assistants, getTopicTimestamp])
 
   const handleMoveSelected = useCallback(
     async (toAssistant: Assistant) => {
@@ -655,6 +675,34 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       })),
     [handleMoveSelected, moveTargets]
   )
+
+  const sortMenuItems: MenuProps['items'] = useMemo(
+    () =>
+      ([
+        {
+          label: t('chat.topics.sort.updated'),
+          key: 'updated',
+          onClick: () => setSortMode('updated')
+        },
+        {
+          label: t('chat.topics.sort.created'),
+          key: 'created',
+          onClick: () => setSortMode('created')
+        },
+        {
+          label: t('chat.topics.sort.name'),
+          key: 'name',
+          onClick: () => setSortMode('name')
+        }
+      ] as ItemType<MenuItemType>[]),
+    [t]
+  )
+
+  const sortLabel = useMemo(() => {
+    if (sortMode === 'created') return t('chat.topics.sort.created')
+    if (sortMode === 'name') return t('chat.topics.sort.name')
+    return t('chat.topics.sort.updated')
+  }, [sortMode, t])
 
   const handleBatchDelete = useCallback(async () => {
     if (!selectedTopics.length) {
@@ -781,6 +829,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
               {t('chat.topics.multi_select.selected_count', { count: selectedTopicIds.length })}
             </div>
             <ActionButtons>
+              <Dropdown menu={{ items: sortMenuItems }} trigger={['click']}>
+                <ActionButton>{t('chat.topics.sort.label') + ' · ' + sortLabel}</ActionButton>
+              </Dropdown>
               <ActionButton onClick={handleSelectAll}>{t('chat.topics.multi_select.select_all')}</ActionButton>
               <ActionButton onClick={clearSelection}>{t('chat.topics.multi_select.clear')}</ActionButton>
               <Dropdown
