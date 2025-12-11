@@ -202,7 +202,11 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   useEffect(() => {
     if (!isMultiSelecting) return
-    setSelectedTopicIds((prev) => sortSelection(prev))
+    setSelectedTopicIds((prev) => {
+      const next = sortSelection(prev)
+      if (next.length === prev.length && next.every((id, idx) => id === prev[idx])) return prev
+      return next
+    })
   }, [isMultiSelecting, sortSelection])
 
   const selectedTopics = useMemo(
@@ -967,7 +971,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
                   {fullTopicPrompt}
                 </TopicPromptText>
               )}
-              {showTopicTime && <TopicTime className="time">{dayjs(topic.createdAt).format('MM/DD HH:mm')}</TopicTime>}
+              {showTopicTime && (
+                <TopicTime className="time">{dayjs(topic.createdAt).format('YYYY/MM/DD HH:mm')}</TopicTime>
+              )}
             </TopicListItem>
           </Dropdown>
         )
