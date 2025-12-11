@@ -1010,6 +1010,10 @@
       "list": "话题列表",
       "move_to": "移动到",
       "multi_select": {
+        "batch_rename": "批量生成话题名",
+        "batch_rename_failed": "重命名失败：{{name}}",
+        "batch_rename_skip_empty": "【{{name}}】无消息，已跳过",
+        "batch_rename_success": "已重命名：{{name}}",
         "clear": "清空选择",
         "delete": "批量删除",
         "empty": "请先选择话题",
@@ -1019,6 +1023,7 @@
         "move": "批量移动",
         "select": "选中",
         "select_all": "全选",
+        "select_all_unique": "全选去重",
         "selected_count": "已选 {{count}} 条",
         "unselect": "取消选中"
       },

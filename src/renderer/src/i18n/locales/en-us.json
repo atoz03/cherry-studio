@@ -1010,6 +1010,10 @@
       "list": "Topic List",
       "move_to": "Move to",
       "multi_select": {
+        "batch_rename": "Batch rename topics",
+        "batch_rename_failed": "Rename failed: {{name}}",
+        "batch_rename_skip_empty": "Skipped {{name}} (no messages)",
+        "batch_rename_success": "Renamed: {{name}}",
         "clear": "Clear",
         "delete": "Delete Selected",
         "empty": "Please select topics first",
@@ -1019,6 +1023,7 @@
         "move": "Move Selected",
         "select": "Select",
         "select_all": "Select All",
+        "select_all_unique": "Select all (dedup)",
         "selected_count": "{{count}} selected",
         "unselect": "Unselect"
       },
