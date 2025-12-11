@@ -1023,7 +1023,7 @@
         "move": "批次移動",
         "select": "選中",
         "select_all": "全選",
-        "select_all_unique": "全選並去重",
+        "select_all_unique": "全選去重（按標題）",
         "selected_count": "已選 {{count}} 條",
         "unselect": "取消選中"
       },

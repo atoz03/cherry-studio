@@ -172,8 +172,23 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   }, [sortedTopics])
 
   const handleSelectAllUnique = useCallback(() => {
-    setSelectedTopicIds((prev) => sortSelection([...prev, ...sortedTopics.map((topic) => topic.id)]))
-  }, [sortSelection, sortedTopics])
+    const topicMap = new Map(sortedTopics.map((topic) => [topic.id, topic]))
+    const normalizeName = (topic: Topic) => removeSpecialCharactersForFileName(getNameKey(topic)).trim() || topic.id
+    const mergedIds = [...selectedTopicIds, ...sortedTopics.map((topic) => topic.id)]
+    const seen = new Set<string>()
+    const deduped: string[] = []
+
+    for (const id of mergedIds) {
+      const topic = topicMap.get(id)
+      if (!topic) continue
+      const key = normalizeName(topic).toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      deduped.push(id)
+    }
+
+    setSelectedTopicIds(sortSelection(deduped))
+  }, [getNameKey, selectedTopicIds, sortSelection, sortedTopics])
 
   const clearSelection = useCallback(() => {
     setSelectedTopicIds([])

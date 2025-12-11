@@ -1023,7 +1023,7 @@
         "move": "Move Selected",
         "select": "Select",
         "select_all": "Select All",
-        "select_all_unique": "Select all (dedup)",
+        "select_all_unique": "Select all (dedup titles)",
         "selected_count": "{{count}} selected",
         "unselect": "Unselect"
       },
