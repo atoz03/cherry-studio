@@ -1444,6 +1444,15 @@
       "label": "Sind Sie sicher, dass Sie externe Daten importieren möchten?"
     },
     "content": "Wählen Sie die zu importierende Gesprächsdatei einer externen Anwendung aus; derzeit werden nur ChatGPT-JSON-Formatdateien unterstützt.",
+    "gemini": {
+      "assistant_name": "[to be translated]:Gemini Import",
+      "error": {
+        "no_conversations": "[to be translated]:No Gemini conversations found",
+        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
+        "unknown": "[to be translated]:Import failed, please check file format"
+      },
+      "untitled_conversation": "[to be translated]:Untitled Conversation"
+    },
     "title": "Externe Gespräche importieren"
   },
   "knowledge": {
@@ -1984,9 +1993,18 @@
   "minapp": {
     "add_to_launchpad": "Zu Launchpad hinzufügen",
     "add_to_sidebar": "Zur Seitenleiste hinzufügen",
+    "export": {
+      "error": "[to be translated]:Export failed: {{error}}",
+      "no_conversations": "[to be translated]:No conversations found",
+      "no_webview": "[to be translated]:WebView is not ready, please try again",
+      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
+      "unknown": "[to be translated]:Unknown error"
+    },
     "popup": {
       "close": "Mini-App schließen",
       "devtools": "Entwicklertools",
+      "export": "[to be translated]:Export chats",
+      "exporting": "[to be translated]:Exporting...",
       "goBack": "Zurück",
       "goForward": "Vorwärts",
       "minimize": "Mini-App minimieren",

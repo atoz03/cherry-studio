@@ -1444,6 +1444,15 @@
       "label": "Вы уверены, что хотите импортировать внешние данные?"
     },
     "content": "Выберите внешний файл с перепиской для импорта; в настоящее время поддерживаются только файлы в формате JSON ChatGPT",
+    "gemini": {
+      "assistant_name": "[to be translated]:Gemini Import",
+      "error": {
+        "no_conversations": "[to be translated]:No Gemini conversations found",
+        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
+        "unknown": "[to be translated]:Import failed, please check file format"
+      },
+      "untitled_conversation": "[to be translated]:Untitled Conversation"
+    },
     "title": "Импорт внешних бесед"
   },
   "knowledge": {
@@ -1984,9 +1993,18 @@
   "minapp": {
     "add_to_launchpad": "Добавить в стартовый экран",
     "add_to_sidebar": "Добавить в боковую панель",
+    "export": {
+      "error": "[to be translated]:Export failed: {{error}}",
+      "no_conversations": "[to be translated]:No conversations found",
+      "no_webview": "[to be translated]:WebView is not ready, please try again",
+      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
+      "unknown": "[to be translated]:Unknown error"
+    },
     "popup": {
       "close": "Закрыть встроенное приложение",
       "devtools": "Инструменты разработчика",
+      "export": "[to be translated]:Export chats",
+      "exporting": "[to be translated]:Exporting...",
       "goBack": "Назад",
       "goForward": "Вперед",
       "minimize": "Свернуть встроенное приложение",

@@ -1444,6 +1444,15 @@
       "label": "Είστε σίγουροι ότι θέλετε να εισάγετε εξωτερικά δεδομένα;"
     },
     "content": "Επιλέξτε εξωτερικό αρχείο συνομιλίας εφαρμογής για εισαγωγή, προς το παρόν υποστηρίζονται μόνο αρχεία μορφής JSON του ChatGPT",
+    "gemini": {
+      "assistant_name": "[to be translated]:Gemini Import",
+      "error": {
+        "no_conversations": "[to be translated]:No Gemini conversations found",
+        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
+        "unknown": "[to be translated]:Import failed, please check file format"
+      },
+      "untitled_conversation": "[to be translated]:Untitled Conversation"
+    },
     "title": "Εισαγωγή Εξωτερικών Συνομιλιών"
   },
   "knowledge": {
@@ -1984,9 +1993,18 @@
   "minapp": {
     "add_to_launchpad": "Προσθήκη στο Launchpad",
     "add_to_sidebar": "Προσθήκη στην πλευρική μπάρα",
+    "export": {
+      "error": "[to be translated]:Export failed: {{error}}",
+      "no_conversations": "[to be translated]:No conversations found",
+      "no_webview": "[to be translated]:WebView is not ready, please try again",
+      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
+      "unknown": "[to be translated]:Unknown error"
+    },
     "popup": {
       "close": "Κλείσιμο της εφαρμογής",
       "devtools": "Εργαλεία προγραμματιστή",
+      "export": "[to be translated]:Export chats",
+      "exporting": "[to be translated]:Exporting...",
       "goBack": "Πίσω",
       "goForward": "Μπροστά",
       "minimize": "Ελαχιστοποίηση της εφαρμογής",
