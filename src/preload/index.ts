@@ -424,6 +424,8 @@ const api = {
       ipcRenderer.invoke(IpcChannel.Webview_SetOpenLinkExternal, webviewId, isExternal),
     setSpellCheckEnabled: (webviewId: number, isEnable: boolean) =>
       ipcRenderer.invoke(IpcChannel.Webview_SetSpellCheckEnabled, webviewId, isEnable),
+    executeScript: (webviewId: number, script: string) =>
+      ipcRenderer.invoke(IpcChannel.Webview_ExecuteScript, webviewId, script),
     onFindShortcut: (callback: (payload: WebviewKeyEvent) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, payload: WebviewKeyEvent) => {
         callback(payload)

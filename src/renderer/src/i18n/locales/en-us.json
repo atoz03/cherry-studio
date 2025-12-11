@@ -1444,6 +1444,15 @@
       "label": "Are you sure you want to import external data?"
     },
     "content": "Select external application conversation file to import, currently only supports ChatGPT JSON format files",
+    "gemini": {
+      "assistant_name": "Gemini Import",
+      "error": {
+        "no_conversations": "No Gemini conversations found",
+        "no_valid_conversations": "No valid Gemini conversations to import",
+        "unknown": "Import failed, please check file format"
+      },
+      "untitled_conversation": "Untitled Conversation"
+    },
     "title": "Import External Conversations"
   },
   "knowledge": {
@@ -1984,9 +1993,18 @@
   "minapp": {
     "add_to_launchpad": "Add to Launchpad",
     "add_to_sidebar": "Add to Sidebar",
+    "export": {
+      "error": "Export failed: {{error}}",
+      "no_conversations": "No conversations found",
+      "no_webview": "WebView is not ready, please try again",
+      "success": "Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
+      "unknown": "Unknown error"
+    },
     "popup": {
       "close": "Close MinApp",
       "devtools": "Developer Tools",
+      "export": "Export chats",
+      "exporting": "Exporting...",
       "goBack": "Go Back",
       "goForward": "Go Forward",
       "minimize": "Minimize MinApp",

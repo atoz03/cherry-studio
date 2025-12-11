@@ -1444,6 +1444,15 @@
       "label": "确定要导入外部数据吗？"
     },
     "content": "选择要导入的外部应用对话文件，暂时仅支持ChatGPT的JSON格式文件",
+    "gemini": {
+      "assistant_name": "Gemini 导入",
+      "error": {
+        "no_conversations": "未找到任何 Gemini 对话",
+        "no_valid_conversations": "没有可导入的有效 Gemini 对话",
+        "unknown": "导入失败，请检查文件格式"
+      },
+      "untitled_conversation": "未命名对话"
+    },
     "title": "导入外部对话"
   },
   "knowledge": {
@@ -1984,9 +1993,18 @@
   "minapp": {
     "add_to_launchpad": "添加到启动台",
     "add_to_sidebar": "添加到侧边栏",
+    "export": {
+      "error": "导出失败：{{error}}",
+      "no_conversations": "未找到任何对话记录",
+      "no_webview": "WebView 未就绪，请稍后重试",
+      "success": "导出成功！已创建助手 \"{{name}}\"，包含 {{count}} 个对话",
+      "unknown": "未知错误"
+    },
     "popup": {
       "close": "关闭小程序",
       "devtools": "开发者工具",
+      "export": "导出聊天记录",
+      "exporting": "正在导出...",
       "goBack": "后退",
       "goForward": "前进",
       "minimize": "最小化小程序",
