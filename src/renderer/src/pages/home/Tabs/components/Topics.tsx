@@ -874,7 +874,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     }
 
     await Promise.allSettled(Array.from({ length: Math.min(concurrency, selectedTopics.length) }, runNext))
-  }, [assistant, finishTopicRenaming, selectedTopics, startTopicRenaming, t, updateTopic])
+	  }, [assistant, selectedTopics, t, updateTopic])
 
   const singlealone = topicPosition === 'right' && position === 'right'
 

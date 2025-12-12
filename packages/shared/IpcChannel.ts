@@ -52,12 +52,12 @@ export enum IpcChannel {
   Notification_Send = 'notification:send',
   Notification_OnClick = 'notification:on-click',
 
-	  Webview_SetOpenLinkExternal = 'webview:set-open-link-external',
-	  Webview_SetSpellCheckEnabled = 'webview:set-spell-check-enabled',
-	  Webview_SearchHotkey = 'webview:search-hotkey',
-	  Webview_ExecuteScript = 'webview:execute-script',
-	  Webview_PrintToPDF = 'webview:print-to-pdf',
-	  Webview_SaveAsHTML = 'webview:save-as-html',
+  Webview_SetOpenLinkExternal = 'webview:set-open-link-external',
+  Webview_SetSpellCheckEnabled = 'webview:set-spell-check-enabled',
+  Webview_SearchHotkey = 'webview:search-hotkey',
+  Webview_ExecuteScript = 'webview:execute-script',
+  Webview_PrintToPDF = 'webview:print-to-pdf',
+  Webview_SaveAsHTML = 'webview:save-as-html',
 
   // Open
   Open_Path = 'open:path',
