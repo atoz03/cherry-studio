@@ -544,13 +544,19 @@ function mapToGeminiThinkingLevel(reasoningEffort: ReasoningEffortOption): Googl
     case 'default':
       return undefined
     case 'minimal':
-      return 'minimal'
+      // Gemini 不支持 minimal，向下取整到 low
+      return 'low'
     case 'low':
       return 'low'
     case 'medium':
       return 'medium'
     case 'high':
       return 'high'
+    case 'xhigh':
+      // Gemini 不支持 xhigh，向上取整到 high
+      return 'high'
+    case 'auto':
+      return undefined
     default:
       logger.warn('Unknown thinking level for Gemini. Fallback to medium instead.', { reasoningEffort })
       return 'medium'
@@ -652,6 +658,8 @@ export function getXAIReasoningParams(assistant: Assistant, model: Model): Pick<
     default:
       return {}
   }
+
+  return {}
 }
 
 /**
