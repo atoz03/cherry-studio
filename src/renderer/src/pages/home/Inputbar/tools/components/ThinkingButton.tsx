@@ -21,6 +21,7 @@ import { getReasoningEffortOptionsLabel } from '@renderer/i18n/label'
 import type { ToolQuickPanelApi } from '@renderer/pages/home/Inputbar/types'
 import type { Model, ThinkingOption } from '@renderer/types'
 import { Tooltip } from 'antd'
+import { Brain } from 'lucide-react'
 import type { FC, ReactElement } from 'react'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -170,36 +171,37 @@ const ThinkingButton: FC<Props> = ({ quickPanel, model, assistantId }): ReactEle
 }
 
 const ThinkingIcon = (props: { option?: ThinkingOption; isFixedReasoning?: boolean }) => {
-  let IconComponent: React.FC<React.SVGProps<SVGSVGElement>> | null = null
   if (props.isFixedReasoning) {
-    IconComponent = MdiLightbulbAutoOutline
-  } else {
-    switch (props.option) {
-      case 'minimal':
-        IconComponent = MdiLightbulbOn30
-        break
-      case 'low':
-        IconComponent = MdiLightbulbOn50
-        break
-      case 'medium':
-        IconComponent = MdiLightbulbOn80
-        break
-      case 'high':
-        IconComponent = MdiLightbulbOn
-        break
-      case 'xhigh':
-        IconComponent = MdiLightbulbOn
-        break
-      case 'auto':
-        IconComponent = MdiLightbulbAutoOutline
-        break
-      case 'none':
-        IconComponent = MdiLightbulbOffOutline
-        break
-      default:
-        IconComponent = MdiLightbulbOffOutline
-        break
-    }
+    return <MdiLightbulbAutoOutline className="icon" width={18} height={18} style={{ marginTop: -2 }} />
+  }
+
+  if (props.option === 'xhigh') {
+    return <Brain size={18} style={{ marginTop: -2 }} />
+  }
+
+  let IconComponent: React.FC<React.SVGProps<SVGSVGElement>> | null = null
+  switch (props.option) {
+    case 'minimal':
+      IconComponent = MdiLightbulbOn30
+      break
+    case 'low':
+      IconComponent = MdiLightbulbOn50
+      break
+    case 'medium':
+      IconComponent = MdiLightbulbOn80
+      break
+    case 'high':
+      IconComponent = MdiLightbulbOn
+      break
+    case 'auto':
+      IconComponent = MdiLightbulbAutoOutline
+      break
+    case 'none':
+      IconComponent = MdiLightbulbOffOutline
+      break
+    default:
+      IconComponent = MdiLightbulbOffOutline
+      break
   }
 
   return <IconComponent className="icon" width={18} height={18} style={{ marginTop: -2 }} />
