@@ -11,6 +11,7 @@ import { isEmbeddingModel, isRerankModel } from './embedding'
 import {
   isGPT5ProModel,
   isGPT5SeriesModel,
+  isGPT52SeriesModel,
   isGPT51SeriesModel,
   isOpenAIDeepResearchModel,
   isOpenAIReasoningModel,
@@ -30,6 +31,7 @@ export const MODEL_SUPPORTED_REASONING_EFFORT: ReasoningEffortConfig = {
   o: ['low', 'medium', 'high'] as const,
   openai_deep_research: ['medium'] as const,
   gpt5: ['minimal', 'low', 'medium', 'high'] as const,
+  gpt5_2: ['minimal', 'low', 'medium', 'high', 'xhigh'] as const,
   gpt5_codex: ['low', 'medium', 'high'] as const,
   gpt5_1: ['none', 'low', 'medium', 'high'] as const,
   gpt5_1_codex: ['none', 'medium', 'high'] as const,
@@ -56,6 +58,7 @@ export const MODEL_SUPPORTED_OPTIONS: ThinkingOptionConfig = {
   o: MODEL_SUPPORTED_REASONING_EFFORT.o,
   openai_deep_research: MODEL_SUPPORTED_REASONING_EFFORT.openai_deep_research,
   gpt5: [...MODEL_SUPPORTED_REASONING_EFFORT.gpt5] as const,
+  gpt5_2: [...MODEL_SUPPORTED_REASONING_EFFORT.gpt5_2] as const,
   gpt5pro: MODEL_SUPPORTED_REASONING_EFFORT.gpt5pro,
   gpt5_codex: MODEL_SUPPORTED_REASONING_EFFORT.gpt5_codex,
   gpt5_1: MODEL_SUPPORTED_REASONING_EFFORT.gpt5_1,
@@ -95,6 +98,12 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
       thinkingModelType = 'gpt5_1_codex'
     } else {
       thinkingModelType = 'gpt5_1'
+    }
+  } else if (isGPT52SeriesModel(model)) {
+    if (modelId.includes('codex')) {
+      thinkingModelType = 'gpt5_codex'
+    } else {
+      thinkingModelType = 'gpt5_2'
     }
   } else if (isGPT5SeriesModel(model)) {
     if (modelId.includes('codex')) {

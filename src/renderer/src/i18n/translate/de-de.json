@@ -546,6 +546,7 @@
       "reasoning_effort": {
         "default": "Standard",
         "high": "Tiefes Nachdenken",
+        "xhigh": "Sehr tiefes Nachdenken",
         "label": "Gedankenkettenlänge",
         "low": "Spontan",
         "medium": "Überlegt",

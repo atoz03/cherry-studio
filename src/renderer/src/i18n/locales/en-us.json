@@ -546,6 +546,7 @@
       "reasoning_effort": {
         "default": "Default",
         "high": "High",
+        "xhigh": "XHigh",
         "label": "Reasoning effort",
         "low": "Low",
         "medium": "Medium",

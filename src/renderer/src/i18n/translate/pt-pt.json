@@ -546,6 +546,7 @@
       "reasoning_effort": {
         "default": "Padrão",
         "high": "Longo",
+        "xhigh": "Muito longo",
         "label": "Comprimento da Cadeia de Raciocínio",
         "low": "Curto",
         "medium": "Médio",

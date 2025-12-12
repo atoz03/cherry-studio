@@ -55,6 +55,11 @@ export const isGPT51SeriesModel = (model: Model) => {
   return modelId.includes('gpt-5.1')
 }
 
+export const isGPT52SeriesModel = (model: Model) => {
+  const modelId = getLowerBaseModelName(model.id)
+  return modelId.includes('gpt-5.2')
+}
+
 export function isSupportVerbosityModel(model: Model): boolean {
   const modelId = getLowerBaseModelName(model.id)
   return (isGPT5SeriesModel(model) || isGPT51SeriesModel(model)) && !modelId.includes('chat')

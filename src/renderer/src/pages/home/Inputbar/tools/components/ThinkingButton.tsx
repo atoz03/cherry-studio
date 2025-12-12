@@ -187,6 +187,9 @@ const ThinkingIcon = (props: { option?: ThinkingOption; isFixedReasoning?: boole
       case 'high':
         IconComponent = MdiLightbulbOn
         break
+      case 'xhigh':
+        IconComponent = MdiLightbulbOn
+        break
       case 'auto':
         IconComponent = MdiLightbulbAutoOutline
         break

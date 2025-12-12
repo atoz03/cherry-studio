@@ -546,6 +546,7 @@
       "reasoning_effort": {
         "default": "デフォルト",
         "high": "最大限の思考",
+        "xhigh": "極めて最大限の思考",
         "label": "思考連鎖の長さ",
         "low": "少しの思考",
         "medium": "普通の思考",

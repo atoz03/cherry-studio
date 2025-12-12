@@ -314,6 +314,7 @@ const reasoningEffortOptionsKeyMap: Record<ThinkingOption, string> = {
   none: 'assistants.settings.reasoning_effort.off',
   minimal: 'assistants.settings.reasoning_effort.minimal',
   high: 'assistants.settings.reasoning_effort.high',
+  xhigh: 'assistants.settings.reasoning_effort.xhigh',
   low: 'assistants.settings.reasoning_effort.low',
   medium: 'assistants.settings.reasoning_effort.medium',
   auto: 'assistants.settings.reasoning_effort.default'

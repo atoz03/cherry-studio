@@ -85,6 +85,7 @@ const ThinkModelTypes = [
   'o',
   'openai_deep_research',
   'gpt5',
+  'gpt5_2',
   'gpt5_1',
   'gpt5_codex',
   'gpt5_1_codex',
@@ -105,7 +106,7 @@ const ThinkModelTypes = [
   'deepseek_hybrid'
 ] as const
 
-export type ReasoningEffortOption = NonNullable<OpenAI.ReasoningEffort> | 'auto'
+export type ReasoningEffortOption = NonNullable<OpenAI.ReasoningEffort> | 'auto' | 'xhigh'
 export type ThinkingOption = ReasoningEffortOption
 export type ThinkingModelType = (typeof ThinkModelTypes)[number]
 export type ThinkingOptionConfig = Record<ThinkingModelType, ThinkingOption[]>
@@ -122,6 +123,7 @@ export const EFFORT_RATIO: EffortRatio = {
   low: 0.05,
   medium: 0.5,
   high: 0.8,
+  xhigh: 1,
   auto: 2
 }
 
