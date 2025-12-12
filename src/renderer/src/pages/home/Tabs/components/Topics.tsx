@@ -883,7 +883,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       className="topics-tab"
       list={sortedTopics}
       onUpdate={updateTopics}
-      style={{ height: '100%', padding: '11px 0 10px 10px' }}
+      style={{ height: '100%', padding: '9px 0 10px 10px' }}
       itemContainerStyle={{ paddingBottom: '8px' }}
       disabled={isMultiSelecting}
       header={
@@ -1153,12 +1153,11 @@ const TopicListItem = styled.div`
     background-color: color-mix(in srgb, var(--color-primary) 6%, transparent);
   }
   &.singlealone {
-    border-radius: 0 !important;
     &:hover {
       background-color: var(--color-background-soft);
     }
     &.active {
-      border-left: 2px solid var(--color-primary);
+      background-color: var(--color-background-mute);
       box-shadow: none;
     }
   }

@@ -254,8 +254,8 @@ export function providerToAiSdkConfig(actualProvider: Provider, model: Model): A
     // CherryIN API Host
     const cherryinProvider = getProviderById(SystemProviderIds.cherryin)
     if (cherryinProvider) {
-      extraOptions.anthropicBaseURL = cherryinProvider.anthropicApiHost
-      extraOptions.geminiBaseURL = cherryinProvider.apiHost + '/gemini/v1beta'
+      extraOptions.anthropicBaseURL = cherryinProvider.anthropicApiHost + '/v1'
+      extraOptions.geminiBaseURL = cherryinProvider.apiHost + '/v1beta/models'
     }
   }
 
