@@ -546,12 +546,12 @@
       "reasoning_effort": {
         "default": "預設",
         "high": "盡力思考",
-        "xhigh": "極度思考",
         "label": "思維鏈長度",
         "low": "稍微思考",
         "medium": "正常思考",
         "minimal": "最少思考",
-        "off": "關閉"
+        "off": "關閉",
+        "xhigh": "極度思考"
       },
       "regular_phrases": {
         "add": "添加短语",

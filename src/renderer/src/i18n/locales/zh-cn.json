@@ -546,12 +546,12 @@
       "reasoning_effort": {
         "default": "默认",
         "high": "沉思",
-        "xhigh": "极思",
         "label": "思维链长度",
         "low": "浮想",
         "medium": "斟酌",
         "minimal": "微念",
-        "off": "关闭"
+        "off": "关闭",
+        "xhigh": "极思"
       },
       "regular_phrases": {
         "add": "添加短语",

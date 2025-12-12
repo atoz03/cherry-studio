@@ -11,8 +11,8 @@ import { isEmbeddingModel, isRerankModel } from './embedding'
 import {
   isGPT5ProModel,
   isGPT5SeriesModel,
-  isGPT52SeriesModel,
   isGPT51SeriesModel,
+  isGPT52SeriesModel,
   isOpenAIDeepResearchModel,
   isOpenAIReasoningModel,
   isSupportedReasoningEffortOpenAIModel

@@ -546,12 +546,12 @@
       "reasoning_effort": {
         "default": "Padrão",
         "high": "Longo",
-        "xhigh": "Muito longo",
         "label": "Comprimento da Cadeia de Raciocínio",
         "low": "Curto",
         "medium": "Médio",
         "minimal": "mínimo",
-        "off": "Desligado"
+        "off": "Desligado",
+        "xhigh": "Muito longo"
       },
       "regular_phrases": {
         "add": "Adicionar Frase",

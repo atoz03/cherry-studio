@@ -546,12 +546,12 @@
       "reasoning_effort": {
         "default": "Standard",
         "high": "Tiefes Nachdenken",
-        "xhigh": "Sehr tiefes Nachdenken",
         "label": "Gedankenkettenlänge",
         "low": "Spontan",
         "medium": "Überlegt",
         "minimal": "Minimal",
-        "off": "Aus"
+        "off": "Aus",
+        "xhigh": "Sehr tiefes Nachdenken"
       },
       "regular_phrases": {
         "add": "Phrase hinzufügen",
