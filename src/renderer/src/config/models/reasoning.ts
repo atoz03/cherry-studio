@@ -117,9 +117,13 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
       thinkingModelType = 'gpt5_1'
     }
   } else if (isGPT52SeriesModel(model)) {
-    thinkingModelType = 'gpt5_2'
-    if (isGPT52ProModel(model)) {
-      thinkingModelType = 'gpt52pro'
+    if (modelId.includes('codex')) {
+      thinkingModelType = 'gpt5_codex'
+    } else {
+      thinkingModelType = 'gpt5_2'
+      if (isGPT52ProModel(model)) {
+        thinkingModelType = 'gpt52pro'
+      }
     }
   } else if (isGPT5SeriesModel(model)) {
     if (modelId.includes('codex')) {
