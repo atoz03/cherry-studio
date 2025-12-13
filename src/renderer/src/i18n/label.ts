@@ -317,8 +317,7 @@ const reasoningEffortOptionsKeyMap: Record<ThinkingOption, string> = {
   xhigh: 'assistants.settings.reasoning_effort.xhigh',
   low: 'assistants.settings.reasoning_effort.low',
   medium: 'assistants.settings.reasoning_effort.medium',
-  auto: 'assistants.settings.reasoning_effort.default',
-  xhigh: 'assistants.settings.reasoning_effort.xhigh'
+  auto: 'assistants.settings.reasoning_effort.default'
 } as const
 
 export const getReasoningEffortOptionsLabel = (key: string): string => {
