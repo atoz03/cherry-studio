@@ -24,7 +24,6 @@ import {
   setLaunchOnBoot,
   setLaunchToTray,
   setNavbarPosition,
-  setPinTopicsToTop,
   setSendMessageShortcut as _setSendMessageShortcut,
   setSidebarIcons,
   setTargetLanguage,
@@ -98,9 +97,6 @@ export function useSettings() {
     },
     setTopicPosition(topicPosition: 'left' | 'right') {
       dispatch(setTopicPosition(topicPosition))
-    },
-    setPinTopicsToTop(pinTopicsToTop: boolean) {
-      dispatch(setPinTopicsToTop(pinTopicsToTop))
     },
     updateSidebarIcons(icons: { visible: SidebarIcon[]; disabled: SidebarIcon[] }) {
       dispatch(setSidebarIcons(icons))

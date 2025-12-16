@@ -13,7 +13,6 @@ import {
   setAssistantIconType,
   setClickAssistantToShowTopic,
   setCustomCss,
-  setPinTopicsToTop,
   setShowTopicTime,
   setSidebarIcons
 } from '@renderer/store/settings'
@@ -63,7 +62,6 @@ const DisplaySettings: FC = () => {
     setTopicPosition,
     clickAssistantToShowTopic,
     showTopicTime,
-    pinTopicsToTop,
     customCss,
     sidebarIcons,
     setTheme,
@@ -400,10 +398,6 @@ const DisplaySettings: FC = () => {
           <Switch checked={showTopicTime} onChange={(checked) => dispatch(setShowTopicTime(checked))} />
         </SettingRow>
         <SettingDivider />
-        <SettingRow>
-          <SettingRowTitle>{t('settings.topic.pin_to_top')}</SettingRowTitle>
-          <Switch checked={pinTopicsToTop} onChange={(checked) => dispatch(setPinTopicsToTop(checked))} />
-        </SettingRow>
       </SettingGroup>
       <SettingGroup theme={theme}>
         <SettingTitle>{t('settings.display.assistant.title')}</SettingTitle>
