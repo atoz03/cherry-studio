@@ -24,6 +24,7 @@ interface Props {
   position: 'left' | 'right'
   forceToSeeAllTab?: boolean
   style?: React.CSSProperties
+  initialTab?: Tab
 }
 
 let _tab: Tab | null = null
@@ -35,7 +36,8 @@ const HomeTabs: FC<Props> = ({
   setActiveTopic,
   position,
   forceToSeeAllTab,
-  style
+  style,
+  initialTab
 }) => {
   const { addAssistant } = useAssistants()
   const { topicPosition } = useSettings()
@@ -45,7 +47,14 @@ const HomeTabs: FC<Props> = ({
   const { t } = useTranslation()
   const dispatch = useAppDispatch()
 
-  const [tab, setTab] = useState<Tab>(position === 'left' ? _tab || 'assistants' : 'topic')
+  const [tab, setTab] = useState<Tab>(() => {
+    if (position !== 'left') return 'topic'
+    if (topicPosition === 'left' && initialTab === 'topic') {
+      _tab = 'topic'
+      return 'topic'
+    }
+    return _tab || 'assistants'
+  })
   const borderStyle = '0.5px solid var(--color-border)'
   const border =
     position === 'left'
@@ -55,6 +64,12 @@ const HomeTabs: FC<Props> = ({
   if (position === 'left' && topicPosition === 'left') {
     _tab = tab
   }
+
+  useEffect(() => {
+    if (position === 'left' && topicPosition === 'left' && initialTab === 'topic' && tab !== 'topic') {
+      setTab('topic')
+    }
+  }, [initialTab, position, tab, topicPosition])
 
   const showTab = position === 'left' && topicPosition === 'left'
 
