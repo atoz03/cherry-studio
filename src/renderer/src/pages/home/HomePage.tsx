@@ -13,7 +13,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { startTransition, useCallback, useEffect, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
@@ -35,35 +35,59 @@ const HomePage: FC = () => {
   const state = location.state
 
   const { activeTabId, tabs } = useAppSelector((s) => s.tabs)
-  const currentTab = tabs.find((tab) => tab.id === activeTabId)
+  const tabByPath = useMemo(() => tabs.find((tab) => tab.path === location.pathname), [location.pathname, tabs])
+  const currentTab = tabByPath || tabs.find((tab) => tab.id === activeTabId)
+  const tabChatState = tabByPath?.chatState || currentTab?.chatState
+  const tabForPersistenceId = tabByPath?.id || activeTabId
 
   const resolveAssistantFromTab = useCallback((): Assistant | null => {
-    const tabAssistantId = currentTab?.chatState?.assistantId
+    const tabAssistantId = tabChatState?.assistantId
     if (!tabAssistantId) return null
     return assistants.find((assistant) => assistant.id === tabAssistantId) || null
-  }, [assistants, currentTab?.chatState?.assistantId])
+  }, [assistants, tabChatState?.assistantId])
 
   const resolveTopicFromTab = useCallback(
     (assistant: Assistant | null): Topic | null => {
       if (!assistant) return null
-      const tabTopicId = currentTab?.chatState?.topicId
+      const tabTopicId = tabChatState?.topicId
       if (!tabTopicId) return null
       return assistant.topics?.find((topic) => topic.id === tabTopicId) || null
     },
-    [currentTab?.chatState?.topicId]
+    [tabChatState?.topicId]
   )
 
+  const assistantFromTopic = useMemo(() => {
+    if (!params.topicId) return null
+    return assistants.find((assistant) => assistant.topics?.some((topic) => topic.id === params.topicId)) || null
+  }, [assistants, params.topicId])
+
+  const assistantFromRoute = useMemo(() => {
+    if (!params.assistantId) return null
+    return assistants.find((assistant) => assistant.id === params.assistantId) || null
+  }, [assistants, params.assistantId])
+
+  const topicFromRoute = useMemo(() => {
+    if (!assistantFromTopic || !params.topicId) return null
+    return assistantFromTopic.topics?.find((topic) => topic.id === params.topicId) || null
+  }, [assistantFromTopic, params.topicId])
+
+  const lockedAssistant = assistantFromTopic || assistantFromRoute
+  const lockedAssistantId = lockedAssistant?.id
+  const lockedTopicId = topicFromRoute?.id
+  const isTopicLocked = Boolean(lockedTopicId)
+  const isAssistantLocked = Boolean(lockedAssistantId && (params.assistantId || isTopicLocked))
+
   const [activeAssistant, _setActiveAssistant] = useState<Assistant>(() => {
-    const fromState = state?.assistant as Assistant | undefined
+    const fromState = (state?.assistant as Assistant | undefined) || null
     const fromTab = resolveAssistantFromTab()
-    return fromState || fromTab || assistants[0]
+    return lockedAssistant || fromState || fromTab || assistants[0]
   })
 
   const initialTopicFromState = state?.topic as Topic | undefined
   const initialTopicFromTab = resolveTopicFromTab(activeAssistant)
   const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(
     activeAssistant?.id ?? '',
-    initialTopicFromState || initialTopicFromTab || undefined
+    topicFromRoute || initialTopicFromState || initialTopicFromTab || activeAssistant?.topics[0] || undefined
   )
   const { showAssistants, showTopics, topicPosition } = useSettings()
   const dispatch = useDispatch()
@@ -72,34 +96,46 @@ const HomePage: FC = () => {
 
   const persistTabChatState = useCallback(
     (assistantId: string, topicId: string) => {
-      if (!activeTabId) return
-      dispatch(updateTab({ id: activeTabId, updates: { chatState: { assistantId, topicId } } }))
+      if (!tabForPersistenceId) return
+      dispatch(updateTab({ id: tabForPersistenceId, updates: { chatState: { assistantId, topicId } } }))
     },
-    [activeTabId, dispatch]
+    [dispatch, tabForPersistenceId]
   )
 
   const setActiveAssistant = useCallback(
     // TODO: allow to set it as null.
     (newAssistant: Assistant, options?: { topic?: Topic }) => {
+      if (isAssistantLocked && lockedAssistantId && newAssistant.id !== lockedAssistantId) return
       if (newAssistant.id === activeAssistant?.id) return
       startTransition(() => {
         _setActiveAssistant(newAssistant)
         if (newAssistant.id !== 'fake') {
           dispatch(setActiveAgentId(null))
         }
-        // 同步更新 active topic，避免不必要的重新渲染
-        const newTopic = options?.topic || newAssistant.topics[0]
+        const lockedTopic = isTopicLocked && lockedTopicId ? newAssistant.topics.find((t) => t.id === lockedTopicId) : null
+        const newTopic = lockedTopic || options?.topic || newAssistant.topics[0]
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
         if (newTopic) {
           persistTabChatState(newAssistant.id, newTopic.id)
         }
       })
     },
-    [_setActiveTopic, activeAssistant?.id, dispatch, persistTabChatState]
+    [
+      _setActiveTopic,
+      activeAssistant?.id,
+      dispatch,
+      isAssistantLocked,
+      isTopicLocked,
+      lockedAssistantId,
+      lockedTopicId,
+      persistTabChatState
+    ]
   )
 
   const setActiveTopic = useCallback(
     (newTopic: Topic) => {
+      if (isTopicLocked && lockedTopicId && newTopic.id !== lockedTopicId) return
+      if (isAssistantLocked && lockedAssistantId && newTopic.assistantId !== lockedAssistantId) return
       startTransition(() => {
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
         dispatch(newMessagesActions.setTopicFulfilled({ topicId: newTopic.id, fulfilled: false }))
@@ -107,7 +143,7 @@ const HomePage: FC = () => {
         persistTabChatState(newTopic.assistantId, newTopic.id)
       })
     },
-    [_setActiveTopic, dispatch, persistTabChatState]
+    [_setActiveTopic, dispatch, isAssistantLocked, isTopicLocked, lockedAssistantId, lockedTopicId, persistTabChatState]
   )
 
   useEffect(() => {
@@ -143,6 +179,18 @@ const HomePage: FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistants, params.assistantId, params.topicId])
+
+  useEffect(() => {
+    if (isAssistantLocked && lockedAssistant && activeAssistant?.id !== lockedAssistant.id) {
+      setActiveAssistant(lockedAssistant, { topic: topicFromRoute || lockedAssistant.topics?.[0] })
+    }
+  }, [activeAssistant?.id, isAssistantLocked, lockedAssistant, setActiveAssistant, topicFromRoute])
+
+  useEffect(() => {
+    if (isTopicLocked && topicFromRoute && activeTopic.id !== topicFromRoute.id) {
+      setActiveTopic(topicFromRoute)
+    }
+  }, [activeTopic.id, isTopicLocked, setActiveTopic, topicFromRoute])
 
   useEffect(() => {
     const canMinimize = topicPosition == 'left' ? !showAssistants : !showAssistants && !showTopics
