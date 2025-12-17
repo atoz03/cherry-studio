@@ -86,12 +86,11 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const [deletingTopicId, setDeletingTopicId] = useState<string | null>(null)
   const deleteTimerRef = useRef<NodeJS.Timeout>(null)
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
-  const [isMultiSelecting, setIsMultiSelecting] = useState(false)
-  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
 
   // 管理模式状态
   const manageState = useTopicManageMode()
-  const { isManageMode, selectedIds, searchText, enterManageMode, exitManageMode, toggleSelectTopic } = manageState
+  const { isManageMode, selectedIds, searchText, enterManageMode, exitManageMode, toggleSelectTopic, setSelectedIds } =
+    manageState
 
   const { startEdit, isEditing, inputProps } = useInPlaceEdit({
     onSave: (name: string) => {
@@ -133,56 +132,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const sortedTopics = useMemo(() => {
     return sortTopicsByPinnedAndCreatedAt(assistant.topics)
   }, [assistant.topics])
-
-  const sortSelection = useCallback(
-    (ids: string[]) => {
-      const order = new Map(sortedTopics.map((topic, index) => [topic.id, index]))
-      return [...new Set(ids)].filter((id) => order.has(id)).sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0))
-    },
-    [sortedTopics]
-  )
-
-  const handleSelectAll = useCallback(() => {
-    setSelectedTopicIds(sortedTopics.map((topic) => topic.id))
-  }, [sortedTopics])
-
-  const clearSelection = useCallback(() => {
-    setSelectedTopicIds([])
-  }, [])
-
-  const toggleSelection = useCallback(
-    (topicId: string) => {
-      setSelectedTopicIds((prev) => {
-        if (prev.includes(topicId)) {
-          return prev.filter((id) => id !== topicId)
-        }
-        return sortSelection([...prev, topicId])
-      })
-    },
-    [sortSelection]
-  )
-
-  const exitMultiSelect = useCallback(() => {
-    setIsMultiSelecting(false)
-    setSelectedTopicIds([])
-  }, [])
-
-  const enterMultiSelect = useCallback(
-    (topicId?: string) => {
-      setIsMultiSelecting(true)
-      setSelectedTopicIds((prev) => sortSelection([...(topicId ? [topicId] : []), ...prev]))
-    },
-    [sortSelection]
-  )
-
-  useEffect(() => {
-    if (!isMultiSelecting) return
-    setSelectedTopicIds((prev) => {
-      const next = sortSelection(prev)
-      if (next.length === prev.length && next.every((id, idx) => id === prev[idx])) return prev
-      return next
-    })
-  }, [isMultiSelecting, sortSelection])
 
   const handleDeleteClick = useCallback((topicId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -269,38 +218,50 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     const topic = targetTopic
     if (!topic) return []
 
-    const isSelected = selectedTopicIds.includes(topic.id)
+    const canSelect = !topic.pinned
+    const isSelected = selectedIds.has(topic.id)
+    const selectableTopicIds = sortedTopics.filter((t) => !t.pinned).map((t) => t.id)
+
     const multiSelectItems: ItemType<MenuItemType>[] = (
       [
         {
-          label: isMultiSelecting ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
+          label: isManageMode ? t('chat.topics.multi_select.exit') : t('chat.topics.multi_select.label'),
           key: 'multi-select-toggle',
           icon: <CheckSquare size={14} />,
           onClick() {
-            if (isMultiSelecting) {
-              exitMultiSelect()
+            if (isManageMode) {
+              exitManageMode()
             } else {
-              enterMultiSelect(topic.id)
+              enterManageMode()
+              if (canSelect) {
+                setSelectedIds(new Set([topic.id]))
+              }
             }
           }
         },
-        isMultiSelecting && {
+        isManageMode && {
           label: isSelected ? t('chat.topics.multi_select.unselect') : t('chat.topics.multi_select.select'),
           key: 'toggle-select',
           icon: isSelected ? <Square size={14} /> : <CheckSquare size={14} />,
+          disabled: !canSelect,
           onClick() {
-            toggleSelection(topic.id)
+            if (!canSelect) return
+            toggleSelectTopic(topic.id)
           }
         },
-        isMultiSelecting && {
+        isManageMode && {
           label: t('chat.topics.multi_select.select_all'),
           key: 'select-all',
-          onClick: handleSelectAll
+          onClick() {
+            setSelectedIds(new Set(selectableTopicIds))
+          }
         },
-        isMultiSelecting && {
+        isManageMode && {
           label: t('chat.topics.multi_select.clear'),
           key: 'clear-selection',
-          onClick: clearSelection
+          onClick() {
+            setSelectedIds(new Set())
+          }
         }
       ] as Array<ItemType<MenuItemType> | false>
     ).filter(Boolean) as ItemType<MenuItemType>[]
@@ -573,15 +534,15 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     exportMenuOptions.joplin,
     exportMenuOptions.siyuan,
     assistants,
-    handleSelectAll,
-    toggleSelection,
-    clearSelection,
+    isManageMode,
+    selectedIds,
+    setSelectedIds,
+    toggleSelectTopic,
+    enterManageMode,
+    exitManageMode,
+    sortedTopics,
     notesPath,
     assistant,
-    enterMultiSelect,
-    exitMultiSelect,
-    isMultiSelecting,
-    selectedTopicIds,
     updateTopic,
     activeTopic.id,
     setActiveTopic,
@@ -664,7 +625,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
           }
 
           return (
-            <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']} disabled={isManageMode}>
+            <Dropdown menu={{ items: getTopicMenuItems }} trigger={['contextMenu']}>
               <TopicListItem
                 onContextMenu={() => setTargetTopic(topic)}
                 className={classNames(

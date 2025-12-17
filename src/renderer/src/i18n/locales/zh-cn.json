@@ -430,6 +430,7 @@
     },
     "move_all": {
       "confirm": "将「{{from}}」的所有话题移动到「{{to}}」并合并吗？",
+      "dedupe": "去重（按话题名称）",
       "title": "移动所有话题到"
     },
     "presets": {
@@ -1669,7 +1670,9 @@
   },
   "launchpad": {
     "apps": "应用",
-    "minapps": "小程序"
+    "assistant": "助手",
+    "minapps": "小程序",
+    "topic": "话题"
   },
   "lmstudio": {
     "keep_alive_time": {

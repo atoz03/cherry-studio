@@ -430,6 +430,7 @@
     },
     "move_all": {
       "confirm": "Move all topics from \"{{from}}\" to \"{{to}}\" and merge?",
+      "dedupe": "Deduplicate (by topic name)",
       "title": "Move all topics to"
     },
     "presets": {
@@ -1669,7 +1670,9 @@
   },
   "launchpad": {
     "apps": "Apps",
-    "minapps": "Minapps"
+    "assistant": "Assistant",
+    "minapps": "Minapps",
+    "topic": "Topic"
   },
   "lmstudio": {
     "keep_alive_time": {

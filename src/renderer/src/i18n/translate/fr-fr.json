@@ -430,6 +430,7 @@
     },
     "move_all": {
       "confirm": "[to be translated]:Move all topics from \"{{from}}\" to \"{{to}}\" and merge?",
+      "dedupe": "[to be translated]:Deduplicate (by topic name)",
       "title": "[to be translated]:Move all topics to"
     },
     "presets": {
@@ -1669,7 +1670,9 @@
   },
   "launchpad": {
     "apps": "Applications",
-    "minapps": "Mini-applications"
+    "assistant": "[to be translated]:Assistant",
+    "minapps": "Mini-applications",
+    "topic": "[to be translated]:Topic"
   },
   "lmstudio": {
     "keep_alive_time": {
