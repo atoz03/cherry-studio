@@ -84,6 +84,8 @@ export interface SettingsState {
   topicPosition: 'left' | 'right'
   showTopicTime: boolean
   assistantIconType: AssistantIconType
+  launchpadAssistantId: string
+  launchpadTopicId: string
   pasteLongTextAsFile: boolean
   pasteLongTextThreshold: number
   clickAssistantToShowTopic: boolean
@@ -277,6 +279,8 @@ export const initialState: SettingsState = {
   topicPosition: 'left',
   showTopicTime: false,
   assistantIconType: 'emoji',
+  launchpadAssistantId: '',
+  launchpadTopicId: '',
   pasteLongTextAsFile: false,
   pasteLongTextThreshold: 1500,
   clickAssistantToShowTopic: true,
@@ -529,6 +533,12 @@ const settingsSlice = createSlice({
     },
     setAssistantIconType: (state, action: PayloadAction<AssistantIconType>) => {
       state.assistantIconType = action.payload
+    },
+    setLaunchpadAssistantId: (state, action: PayloadAction<string>) => {
+      state.launchpadAssistantId = action.payload
+    },
+    setLaunchpadTopicId: (state, action: PayloadAction<string>) => {
+      state.launchpadTopicId = action.payload
     },
     setPasteLongTextAsFile: (state, action: PayloadAction<boolean>) => {
       state.pasteLongTextAsFile = action.payload
@@ -914,6 +924,8 @@ export const {
   setTopicPosition,
   setShowTopicTime,
   setAssistantIconType,
+  setLaunchpadAssistantId,
+  setLaunchpadTopicId,
   setPasteLongTextAsFile,
   setAutoCheckUpdate,
   setTestPlan,
