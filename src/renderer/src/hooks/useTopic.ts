@@ -10,22 +10,16 @@ import { loadTopicMessagesThunk } from '@renderer/store/thunk/messageThunk'
 import type { Assistant, Topic } from '@renderer/types'
 import { findMainTextBlocks } from '@renderer/utils/messageUtils/find'
 import { find, isEmpty } from 'lodash'
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useAssistant } from './useAssistant'
 import { getStoreSetting } from './useSettings'
-
-let _activeTopic: Topic
-let _setActiveTopic: Dispatch<SetStateAction<Topic>>
 
 // const logger = loggerService.withContext('useTopic')
 
 export function useActiveTopic(assistantId: string, topic?: Topic) {
   const { assistant } = useAssistant(assistantId)
-  const [activeTopic, setActiveTopic] = useState(topic || _activeTopic || assistant?.topics[0])
-
-  _activeTopic = activeTopic
-  _setActiveTopic = setActiveTopic
+  const [activeTopic, setActiveTopic] = useState(topic || assistant?.topics[0])
 
   useEffect(() => {
     if (activeTopic) {
@@ -142,7 +136,6 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
           startTopicRenaming(topicId)
 
           const data = { ...topic, name: topicName } as Topic
-          topic.id === _activeTopic.id && _setActiveTopic(data)
           store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
         } finally {
           finishTopicRenaming(topicId)
@@ -157,7 +150,6 @@ export const autoRenameTopic = async (assistant: Assistant, topicId: string) => 
         const summaryText = await fetchMessagesSummary({ messages: topic.messages, assistant })
         if (summaryText) {
           const data = { ...topic, name: summaryText }
-          topic.id === _activeTopic.id && _setActiveTopic(data)
           store.dispatch(updateTopic({ assistantId: assistant.id, topic: data }))
         }
       } finally {

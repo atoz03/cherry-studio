@@ -5,8 +5,10 @@ import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
 import NavigationService from '@renderer/services/NavigationService'
+import { useAppSelector } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import { setActiveAgentId, setActiveTopicOrSessionAction } from '@renderer/store/runtime'
+import { updateTab } from '@renderer/store/tabs'
 import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
@@ -20,8 +22,6 @@ import Chat from './Chat'
 import Navbar from './Navbar'
 import HomeTabs from './Tabs'
 
-let _activeAssistant: Assistant
-
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
   const navigate = useNavigate()
@@ -34,20 +34,53 @@ const HomePage: FC = () => {
   const params = useParams<{ assistantId?: string; topicId?: string }>()
   const state = location.state
 
-  const [activeAssistant, _setActiveAssistant] = useState<Assistant>(
-    state?.assistant || _activeAssistant || assistants[0]
+  const { activeTabId, tabs } = useAppSelector((s) => s.tabs)
+  const currentTab = tabs.find((tab) => tab.id === activeTabId)
+
+  const resolveAssistantFromTab = useCallback((): Assistant | null => {
+    const tabAssistantId = currentTab?.chatState?.assistantId
+    if (!tabAssistantId) return null
+    return assistants.find((assistant) => assistant.id === tabAssistantId) || null
+  }, [assistants, currentTab?.chatState?.assistantId])
+
+  const resolveTopicFromTab = useCallback(
+    (assistant: Assistant | null): Topic | null => {
+      if (!assistant) return null
+      const tabTopicId = currentTab?.chatState?.topicId
+      if (!tabTopicId) return null
+      return assistant.topics?.find((topic) => topic.id === tabTopicId) || null
+    },
+    [currentTab?.chatState?.topicId]
   )
-  const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(activeAssistant?.id ?? '', state?.topic)
+
+  const [activeAssistant, _setActiveAssistant] = useState<Assistant>(() => {
+    const fromState = state?.assistant as Assistant | undefined
+    const fromTab = resolveAssistantFromTab()
+    return fromState || fromTab || assistants[0]
+  })
+
+  const initialTopicFromState = state?.topic as Topic | undefined
+  const initialTopicFromTab = resolveTopicFromTab(activeAssistant)
+  const { activeTopic, setActiveTopic: _setActiveTopic } = useActiveTopic(
+    activeAssistant?.id ?? '',
+    initialTopicFromState || initialTopicFromTab || undefined
+  )
   const { showAssistants, showTopics, topicPosition } = useSettings()
   const dispatch = useDispatch()
   const { chat } = useRuntime()
   const { activeTopicOrSession } = chat
 
-  _activeAssistant = activeAssistant
+  const persistTabChatState = useCallback(
+    (assistantId: string, topicId: string) => {
+      if (!activeTabId) return
+      dispatch(updateTab({ id: activeTabId, updates: { chatState: { assistantId, topicId } } }))
+    },
+    [activeTabId, dispatch]
+  )
 
   const setActiveAssistant = useCallback(
     // TODO: allow to set it as null.
-    (newAssistant: Assistant) => {
+    (newAssistant: Assistant, options?: { topic?: Topic }) => {
       if (newAssistant.id === activeAssistant?.id) return
       startTransition(() => {
         _setActiveAssistant(newAssistant)
@@ -55,11 +88,14 @@ const HomePage: FC = () => {
           dispatch(setActiveAgentId(null))
         }
         // 同步更新 active topic，避免不必要的重新渲染
-        const newTopic = newAssistant.topics[0]
+        const newTopic = options?.topic || newAssistant.topics[0]
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
+        if (newTopic) {
+          persistTabChatState(newAssistant.id, newTopic.id)
+        }
       })
     },
-    [_setActiveTopic, activeAssistant?.id, dispatch]
+    [_setActiveTopic, activeAssistant?.id, dispatch, persistTabChatState]
   )
 
   const setActiveTopic = useCallback(
@@ -68,9 +104,10 @@ const HomePage: FC = () => {
         _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
         dispatch(newMessagesActions.setTopicFulfilled({ topicId: newTopic.id, fulfilled: false }))
         dispatch(setActiveTopicOrSessionAction('topic'))
+        persistTabChatState(newTopic.assistantId, newTopic.id)
       })
     },
-    [_setActiveTopic, dispatch]
+    [_setActiveTopic, dispatch, persistTabChatState]
   )
 
   useEffect(() => {
@@ -94,7 +131,8 @@ const HomePage: FC = () => {
     const targetAssistant =
       assistants.find((assistant) => assistant.id === assistantId) || (topicId ? findAssistantByTopic(topicId) : null)
     if (targetAssistant && targetAssistant.id !== activeAssistant?.id) {
-      setActiveAssistant(targetAssistant)
+      const tabTopic = resolveTopicFromTab(targetAssistant)
+      setActiveAssistant(targetAssistant, { topic: tabTopic || targetAssistant.topics?.[0] })
     }
 
     if (topicId && targetAssistant) {
