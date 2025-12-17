@@ -30,6 +30,8 @@ const Router: FC = () => {
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/chat/assistant/:assistantId" element={<HomePage />} />
+          <Route path="/chat/topic/:topicId" element={<HomePage />} />
           <Route path="/store" element={<AssistantPresetsPage />} />
           <Route path="/paintings/*" element={<PaintingsRoutePage />} />
           <Route path="/translate" element={<TranslatePage />} />

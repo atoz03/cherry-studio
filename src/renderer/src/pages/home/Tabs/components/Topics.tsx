@@ -20,7 +20,7 @@ import store from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import { setGenerating } from '@renderer/store/runtime'
 import type { Assistant, Topic } from '@renderer/types'
-import { classNames, removeSpecialCharactersForFileName, uuid } from '@renderer/utils'
+import { classNames, removeSpecialCharactersForFileName } from '@renderer/utils'
 import { copyTopicAsMarkdown, copyTopicAsPlainText } from '@renderer/utils/copy'
 import {
   exportMarkdownToJoplin,
@@ -31,7 +31,6 @@ import {
   exportTopicToNotion,
   topicToMarkdown
 } from '@renderer/utils/export'
-import { getMainTextContent } from '@renderer/utils/messageUtils/find'
 import { sortTopicsByPinnedAndCreatedAt } from '@renderer/utils/topicSort'
 import type { MenuProps } from 'antd'
 import { Dropdown, Tooltip } from 'antd'
@@ -131,8 +130,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     [newlyRenamedTopics]
   )
 
-  const getNameKey = useCallback((topic: Topic) => topic.name?.toLowerCase?.() || '', [])
-
   const sortedTopics = useMemo(() => {
     return sortTopicsByPinnedAndCreatedAt(assistant.topics)
   }, [assistant.topics])
@@ -148,25 +145,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const handleSelectAll = useCallback(() => {
     setSelectedTopicIds(sortedTopics.map((topic) => topic.id))
   }, [sortedTopics])
-
-  const handleSelectAllUnique = useCallback(() => {
-    const topicMap = new Map(sortedTopics.map((topic) => [topic.id, topic]))
-    const normalizeName = (topic: Topic) => removeSpecialCharactersForFileName(getNameKey(topic)).trim() || topic.id
-    const mergedIds = [...selectedTopicIds, ...sortedTopics.map((topic) => topic.id)]
-    const seen = new Set<string>()
-    const deduped: string[] = []
-
-    for (const id of mergedIds) {
-      const topic = topicMap.get(id)
-      if (!topic) continue
-      const key = normalizeName(topic).toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
-      deduped.push(id)
-    }
-
-    setSelectedTopicIds(sortSelection(deduped))
-  }, [getNameKey, selectedTopicIds, sortSelection, sortedTopics])
 
   const clearSelection = useCallback(() => {
     setSelectedTopicIds([])
@@ -205,11 +183,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
       return next
     })
   }, [isMultiSelecting, sortSelection])
-
-  const selectedTopics = useMemo(
-    () => sortedTopics.filter((topic) => selectedTopicIds.includes(topic.id)),
-    [selectedTopicIds, sortedTopics]
-  )
 
   const handleDeleteClick = useCallback((topicId: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -618,221 +591,6 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
     onMoveTopic,
     onDeleteTopic
   ])
-
-  const moveTargets = useMemo(() => {
-    const getTopicCreatedTimestampMs = (topic: Topic) => {
-      const created = Date.parse(topic.createdAt || '')
-      if (Number.isFinite(created)) return created
-      const updated = Date.parse(topic.updatedAt || '')
-      return Number.isFinite(updated) ? updated : 0
-    }
-
-    const getLatestTimestamp = (assistantItem: Assistant) =>
-      assistantItem.topics.reduce((acc, topic) => Math.max(acc, getTopicCreatedTimestampMs(topic)), 0)
-    return assistants
-      .filter((item) => item.id !== assistant.id)
-      .sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a))
-  }, [assistant.id, assistants])
-
-  const handleMoveSelected = useCallback(
-    async (toAssistant: Assistant) => {
-      if (!selectedTopics.length) {
-        window.toast?.warning(t('chat.topics.multi_select.empty'))
-        return
-      }
-
-      const movingIds = new Set(selectedTopics.map((topic) => topic.id))
-      const remainingTopics = assistant.topics.filter((topic) => !movingIds.has(topic.id))
-
-      selectedTopics.forEach((topic) => {
-        moveTopic(topic, toAssistant)
-      })
-
-      if (movingIds.has(activeTopic.id)) {
-        if (remainingTopics.length) {
-          setActiveTopic(remainingTopics[0])
-        } else {
-          const newTopic = getDefaultTopic(assistant.id)
-          await db.topics.add({ id: newTopic.id, messages: [] })
-          addTopic(newTopic)
-          setActiveTopic(newTopic)
-        }
-      }
-
-      exitMultiSelect()
-      window.toast?.success(t('common.saved'))
-    },
-    [
-      activeTopic.id,
-      addTopic,
-      assistant.id,
-      assistant.topics,
-      exitMultiSelect,
-      moveTopic,
-      selectedTopics,
-      setActiveTopic,
-      t
-    ]
-  )
-
-  const moveMenuItems: MenuProps['items'] = useMemo(
-    () =>
-      moveTargets.map((item) => ({
-        label: item.name,
-        key: item.id,
-        onClick: () => handleMoveSelected(item)
-      })),
-    [handleMoveSelected, moveTargets]
-  )
-
-  const handleBatchDelete = useCallback(async () => {
-    if (!selectedTopics.length) {
-      window.toast?.warning(t('chat.topics.multi_select.empty'))
-      return
-    }
-
-    await modelGenerating()
-    const deletingIds = new Set(selectedTopics.map((topic) => topic.id))
-    const remainingTopics = assistant.topics.filter((topic) => !deletingIds.has(topic.id))
-
-    if (deletingIds.has(activeTopic.id)) {
-      if (remainingTopics.length) {
-        setActiveTopic(remainingTopics[0])
-      } else {
-        const newTopic = getDefaultTopic(assistant.id)
-        await db.topics.add({ id: newTopic.id, messages: [] })
-        addTopic(newTopic)
-        setActiveTopic(newTopic)
-      }
-    }
-
-    for (const topic of selectedTopics) {
-      await removeTopic(topic)
-    }
-
-    setDeletingTopicId(null)
-    exitMultiSelect()
-  }, [
-    activeTopic.id,
-    addTopic,
-    assistant.id,
-    assistant.topics,
-    exitMultiSelect,
-    removeTopic,
-    selectedTopics,
-    setActiveTopic,
-    t
-  ])
-
-  // 按 ChatGPT conversations.json 线性结构构造 mapping，确保导出可被现有导入逻辑识别
-  const buildChatGPTConversation = useCallback(async (topic: Topic) => {
-    const mapRole = (role: string): 'user' | 'assistant' | 'system' => {
-      if (role === 'assistant') return 'assistant'
-      if (role === 'system') return 'system'
-      return 'user'
-    }
-
-    const topicMessages = await TopicManager.getTopicMessages(topic.id)
-    const mapping: Record<string, any> = {}
-    const rootId = uuid()
-    mapping[rootId] = { id: rootId, message: null, parent: null, children: [] }
-    let lastId = rootId
-
-    topicMessages.forEach((message) => {
-      const content = getMainTextContent(message) || ''
-      if (!content.trim()) return
-      const messageId = uuid()
-      mapping[lastId].children.push(messageId)
-      const createdSeconds = message.createdAt ? Math.floor(new Date(message.createdAt).getTime() / 1000) : undefined
-      mapping[messageId] = {
-        id: messageId,
-        message: {
-          id: messageId,
-          author: { role: mapRole(message.role) },
-          content: { content_type: 'text', parts: [content] },
-          create_time: createdSeconds
-        },
-        parent: lastId,
-        children: []
-      }
-      lastId = messageId
-    })
-
-    const createTime = Math.floor(new Date(topic.createdAt || Date.now()).getTime() / 1000)
-    const updateTime = Math.floor(new Date(topic.updatedAt || topic.createdAt || Date.now()).getTime() / 1000)
-
-    return {
-      title: topic.name,
-      create_time: createTime,
-      update_time: updateTime,
-      mapping,
-      current_node: lastId !== rootId ? lastId : undefined
-    }
-  }, [])
-
-  const handleExportSelected = useCallback(async () => {
-    if (!selectedTopics.length) {
-      window.toast?.warning(t('chat.topics.multi_select.empty'))
-      return
-    }
-
-    const conversations: Array<{
-      title: string
-      create_time: number
-      update_time: number
-      mapping: Record<string, any>
-      current_node?: string
-    }> = []
-    for (const topic of selectedTopics) {
-      const conversation = await buildChatGPTConversation(topic)
-      conversations.push(conversation)
-    }
-
-    const fileName = `${removeSpecialCharactersForFileName(assistant.name)}-${Date.now()}.json`
-    await window.api.file.save(fileName, JSON.stringify(conversations, null, 2))
-    window.toast?.success(t('common.saved'))
-  }, [assistant.name, buildChatGPTConversation, selectedTopics, t])
-
-  const handleBatchRename = useCallback(async () => {
-    if (!selectedTopics.length) {
-      window.toast?.warning(t('chat.topics.multi_select.empty'))
-      return
-    }
-
-    const concurrency = 5
-    let cursor = 0
-
-    const runNext = async () => {
-      while (cursor < selectedTopics.length) {
-        const current = selectedTopics[cursor++]
-        if (!current) return
-
-        try {
-          startTopicRenaming(current.id)
-          const messages = await TopicManager.getTopicMessages(current.id)
-          if (!messages.length) {
-            window.toast?.warning(t('chat.topics.multi_select.batch_rename_skip_empty', { name: current.name }))
-            continue
-          }
-
-          const summaryText = await fetchMessagesSummary({ messages, assistant })
-          if (summaryText) {
-            const updatedTopic = { ...current, name: summaryText, isNameManuallyEdited: false }
-            updateTopic(updatedTopic)
-            window.toast?.success(t('chat.topics.multi_select.batch_rename_success', { name: summaryText }))
-          } else {
-            window.toast?.error(t('chat.topics.multi_select.batch_rename_failed', { name: current.name }))
-          }
-        } catch (error) {
-          window.toast?.error(t('chat.topics.multi_select.batch_rename_failed', { name: current.name }))
-        } finally {
-          finishTopicRenaming(current.id)
-        }
-      }
-    }
-
-    await Promise.allSettled(Array.from({ length: Math.min(concurrency, selectedTopics.length) }, runNext))
-  }, [assistant, selectedTopics, t, updateTopic])
 
   // Filter topics based on search text (only in manage mode)
   // Supports: case-insensitive, space-separated keywords (all must match)

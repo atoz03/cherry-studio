@@ -1,5 +1,4 @@
 import AssistantAvatar from '@renderer/components/Avatar/AssistantAvatar'
-import AssistantAvatar from '@renderer/components/Avatar/AssistantAvatar'
 import { modelGenerating } from '@renderer/hooks/useRuntime'
 import { TopicManager } from '@renderer/hooks/useTopic'
 import type { Assistant, Topic } from '@renderer/types'

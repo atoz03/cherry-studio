@@ -5,6 +5,7 @@ import HorizontalScrollContainer from '@renderer/components/HorizontalScrollCont
 import { isMac } from '@renderer/config/constant'
 import { DEFAULT_MIN_APPS } from '@renderer/config/minapps'
 import { useTheme } from '@renderer/context/ThemeProvider'
+import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
@@ -16,7 +17,7 @@ import { addTab, removeTab, setActiveTab, setTabs } from '@renderer/store/tabs'
 import type { MinAppType } from '@renderer/types'
 import { ThemeMode } from '@renderer/types'
 import { classNames } from '@renderer/utils'
-import { Tooltip } from 'antd'
+import { Dropdown, type MenuProps, Tooltip } from 'antd'
 import type { LRUCache } from 'lru-cache'
 import {
   FileSearch,
@@ -25,6 +26,7 @@ import {
   Home,
   Languages,
   LayoutGrid,
+  MessagesSquare,
   Monitor,
   Moon,
   NotepadText,
@@ -84,6 +86,14 @@ const getTabIcon = (
     return <LayoutGrid size={14} />
   }
 
+  if (tabId.startsWith('assistant:')) {
+    return <Sparkle size={14} />
+  }
+
+  if (tabId.startsWith('topic:')) {
+    return <MessagesSquare size={14} />
+  }
+
   switch (tabId) {
     case 'home':
       return <Home size={14} />
@@ -125,6 +135,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
   const { settedTheme, toggleTheme } = useTheme()
   const { hideMinappPopup, minAppsCache } = useMinappPopup()
   const { minapps } = useMinapps()
+  const { assistants } = useAssistants()
   const { t } = useTranslation()
 
   const getTabId = (path: string): string => {
@@ -133,6 +144,12 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     // Handle minapp paths: /apps/appId -> apps:appId
     if (segments[1] === 'apps' && segments[2]) {
       return `apps:${segments[2]}`
+    }
+    if (segments[1] === 'chat' && segments[2] === 'assistant' && segments[3]) {
+      return `assistant:${segments[3]}`
+    }
+    if (segments[1] === 'chat' && segments[2] === 'topic' && segments[3]) {
+      return `topic:${segments[3]}`
     }
     return segments[1] // 获取第一个路径段作为 id
   }
@@ -158,6 +175,16 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
 
       // Return app name if found, otherwise use fallback with appId
       return app ? app.name : `MinApp-${appId}`
+    }
+    if (tabId.startsWith('assistant:')) {
+      const assistantId = tabId.replace('assistant:', '')
+      const assistant = assistants.find((item) => item.id === assistantId)
+      return assistant ? `${assistant.emoji ? `${assistant.emoji} ` : ''}${assistant.name}` : `Assistant-${assistantId}`
+    }
+    if (tabId.startsWith('topic:')) {
+      const topicId = tabId.replace('topic:', '')
+      const topic = assistants.flatMap((assistant) => assistant.topics || []).find((item) => item.id === topicId)
+      return topic ? topic.name : `Topic-${topicId}`
     }
     return getTitleLabel(tabId)
   }
@@ -201,10 +228,56 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     tabsService.closeTab(tabId)
   }
 
-  const handleAddTab = () => {
+  const getPreferredAssistant = useCallback(() => {
+    if (assistants.length === 0) return null
+    return assistants[0]
+  }, [assistants])
+
+  const handleAddLaunchpadTab = useCallback(() => {
     hideMinappPopup()
     navigate('/launchpad')
-  }
+  }, [hideMinappPopup, navigate])
+
+  const handleAddAssistantTab = useCallback(() => {
+    hideMinappPopup()
+    const target = getPreferredAssistant()
+    if (!target) return
+    navigate(`/chat/assistant/${target.id}`)
+  }, [getPreferredAssistant, hideMinappPopup, navigate])
+
+  const handleAddTopicTab = useCallback(() => {
+    hideMinappPopup()
+    const targetAssistant = getPreferredAssistant()
+    const targetTopic = targetAssistant?.topics?.[0]
+    if (!targetAssistant || !targetTopic) return
+    navigate(`/chat/topic/${targetTopic.id}`)
+  }, [getPreferredAssistant, hideMinappPopup, navigate])
+
+  const addTabMenuItems: MenuProps['items'] = useMemo(
+    () => [
+      {
+        key: 'assistant-tab',
+        label: '新建助手标签页',
+        onClick: handleAddAssistantTab,
+        disabled: assistants.length === 0
+      },
+      {
+        key: 'topic-tab',
+        label: '新建话题标签页',
+        onClick: handleAddTopicTab,
+        disabled: assistants.every((item) => !item.topics?.length)
+      },
+      {
+        type: 'divider'
+      },
+      {
+        key: 'launchpad',
+        label: '新建应用标签页',
+        onClick: handleAddLaunchpadTab
+      }
+    ],
+    [assistants, handleAddAssistantTab, handleAddLaunchpadTab, handleAddTopicTab]
+  )
 
   const handleSettingsClick = () => {
     hideMinappPopup()
@@ -267,9 +340,11 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
               </Tab>
             )}
           />
-          <AddTabButton onClick={handleAddTab} className={classNames({ active: activeTabId === 'launchpad' })}>
-            <PlusOutlined />
-          </AddTabButton>
+          <Dropdown menu={{ items: addTabMenuItems }} trigger={['click']} placement="bottom">
+            <AddTabButton className={classNames({ active: activeTabId === 'launchpad' })}>
+              <PlusOutlined />
+            </AddTabButton>
+          </Dropdown>
         </HorizontalScrollContainer>
         <RightButtonsContainer>
           <Tooltip
