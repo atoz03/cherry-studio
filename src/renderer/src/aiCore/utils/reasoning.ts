@@ -10,6 +10,7 @@ import {
   GEMINI_FLASH_MODEL_REGEX,
   getModelSupportedReasoningEffortOptions,
   isDeepSeekHybridInferenceModel,
+  isDoubaoSeed18Model,
   isDoubaoSeedAfter251015,
   isDoubaoThinkingAutoModel,
   isGemini3ThinkingTokenModel,
@@ -389,7 +390,7 @@ export function getReasoningEffort(assistant: Assistant, model: Model): Reasonin
 
   // Use thinking, doubao, zhipu, etc.
   if (isSupportedThinkingTokenDoubaoModel(model)) {
-    if (isDoubaoSeedAfter251015(model)) {
+    if (isDoubaoSeedAfter251015(model) || isDoubaoSeed18Model(model)) {
       return { reasoningEffort }
     }
     if (reasoningEffort === 'high') {
@@ -479,16 +480,14 @@ export function getAnthropicThinkingBudget(
     return undefined
   }
 
-  const budgetTokens = Math.max(
-    1024,
-    Math.floor(
-      Math.min(
-        (tokenLimit.max - tokenLimit.min) * effortRatio + tokenLimit.min,
-        (maxTokens || DEFAULT_MAX_TOKENS) * effortRatio
-      )
-    )
-  )
-  return budgetTokens
+  const budget = Math.floor((tokenLimit.max - tokenLimit.min) * effortRatio + tokenLimit.min)
+
+  let budgetTokens = budget
+  if (maxTokens !== undefined) {
+    budgetTokens = Math.min(budget, maxTokens)
+  }
+
+  return Math.max(1024, budgetTokens)
 }
 
 /**
