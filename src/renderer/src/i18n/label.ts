@@ -88,7 +88,8 @@ const providerKeyMap = {
   huggingface: 'provider.huggingface',
   sophnet: 'provider.sophnet',
   gateway: 'provider.ai-gateway',
-  cerebras: 'provider.cerebras'
+  cerebras: 'provider.cerebras',
+  mimo: 'provider.mimo'
 } as const
 
 /**
@@ -311,13 +312,14 @@ export const getHttpMessageLabel = (key: string): string => {
 }
 
 const reasoningEffortOptionsKeyMap: Record<ThinkingOption, string> = {
+  default: 'assistants.settings.reasoning_effort.default',
   none: 'assistants.settings.reasoning_effort.off',
   minimal: 'assistants.settings.reasoning_effort.minimal',
-  high: 'assistants.settings.reasoning_effort.high',
-  xhigh: 'assistants.settings.reasoning_effort.xhigh',
   low: 'assistants.settings.reasoning_effort.low',
   medium: 'assistants.settings.reasoning_effort.medium',
-  auto: 'assistants.settings.reasoning_effort.default'
+  high: 'assistants.settings.reasoning_effort.high',
+  xhigh: 'assistants.settings.reasoning_effort.xhigh',
+  auto: 'assistants.settings.reasoning_effort.auto'
 } as const
 
 export const getReasoningEffortOptionsLabel = (key: string): string => {
@@ -344,7 +346,8 @@ const builtInMcpDescriptionKeyMap: Record<BuiltinMCPServerName, string> = {
   [BuiltinMCPServerNames.difyKnowledge]: 'settings.mcp.builtinServersDescriptions.dify_knowledge',
   [BuiltinMCPServerNames.python]: 'settings.mcp.builtinServersDescriptions.python',
   [BuiltinMCPServerNames.didiMCP]: 'settings.mcp.builtinServersDescriptions.didi_mcp',
-  [BuiltinMCPServerNames.browser]: 'settings.mcp.builtinServersDescriptions.browser'
+  [BuiltinMCPServerNames.browser]: 'settings.mcp.builtinServersDescriptions.browser',
+  [BuiltinMCPServerNames.nowledgeMem]: 'settings.mcp.builtinServersDescriptions.nowledge_mem'
 } as const
 
 export const getBuiltInMcpServerDescriptionLabel = (key: string): string => {
