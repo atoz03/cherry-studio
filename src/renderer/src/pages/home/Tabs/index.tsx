@@ -30,8 +30,6 @@ interface Props {
   tabSide?: Tab
 }
 
-const tabMemory = new Map<string, Tab>()
-
 const HomeTabs: FC<Props> = ({
   activeAssistant,
   activeTopic,
@@ -55,8 +53,6 @@ const HomeTabs: FC<Props> = ({
   const [tab, setTab] = useState<Tab>(() => {
     if (position !== 'left') return 'topic'
     if (tabSide) return tabSide
-    const remembered = tabMemory.get(tabKey)
-    if (remembered) return remembered
     if (topicPosition === 'left' && initialTab === 'topic') return 'topic'
     return 'assistants'
   })
@@ -67,15 +63,10 @@ const HomeTabs: FC<Props> = ({
       : { borderLeft: isLeftNavbar ? borderStyle : 'none', borderTopLeftRadius: 0 }
 
   useEffect(() => {
-    if (position === 'left') {
-      tabMemory.set(tabKey, tab)
-    }
-  }, [position, tab, tabKey])
-
-  useEffect(() => {
     if (position !== 'left') return
+    if (tabSide === tab) return
     dispatch(updateTab({ id: tabKey, updates: { chatState: { tabSide: tab } } }))
-  }, [dispatch, position, tab, tabKey])
+  }, [dispatch, position, tab, tabKey, tabSide])
 
   useEffect(() => {
     if (position !== 'left') {
@@ -84,15 +75,8 @@ const HomeTabs: FC<Props> = ({
     }
     if (tabSide && tabSide !== tab) {
       setTab(tabSide)
-      return
     }
-    const remembered = tabMemory.get(tabKey)
-    if (remembered && remembered !== tab) {
-      setTab(remembered)
-    } else if (!remembered && topicPosition === 'left' && initialTab === 'topic' && tab !== 'topic') {
-      setTab('topic')
-    }
-  }, [initialTab, position, tab, tabKey, tabSide, topicPosition])
+  }, [position, tab, tabSide])
 
   const showTab = position === 'left' && topicPosition === 'left'
 

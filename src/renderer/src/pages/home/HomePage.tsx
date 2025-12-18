@@ -200,10 +200,17 @@ const HomePage: FC = () => {
   }, [navigate])
 
   useEffect(() => {
-    state?.assistant && setActiveAssistant(state?.assistant)
-    state?.topic && setActiveTopic(state?.topic)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state])
+    const navState = state as { assistant?: Assistant; topic?: Topic; preferTopicTab?: boolean } | null | undefined
+    if (!navState) return
+
+    navState.assistant && setActiveAssistant(navState.assistant)
+    navState.topic && setActiveTopic(navState.topic)
+
+    // 一次性消费导航 state，避免切换标签页时反复覆盖“标签页记忆”。
+    if (navState.assistant || navState.topic || navState.preferTopicTab) {
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.pathname, navigate, setActiveAssistant, setActiveTopic, state])
 
   useEffect(() => {
     if (!assistants.length) return
@@ -274,6 +281,7 @@ const HomePage: FC = () => {
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
                 style={{ overflow: 'hidden' }}>
                 <HomeTabs
+                  key={tabKey}
                   activeAssistant={activeAssistant}
                   activeTopic={activeTopic}
                   setActiveAssistant={setActiveAssistant}
