@@ -31,27 +31,31 @@
       }
     },
     "gitBash": {
-      "autoDetected": "[to be translated]:Using auto-detected Git Bash",
+      "autoDetected": "自動検出されたGit Bashを使用中",
+      "autoDiscoveredHint": "[to be translated]:Auto-discovered",
       "clear": {
-        "button": "[to be translated]:Clear custom path"
+        "button": "カスタムパスをクリア"
       },
-      "customPath": "[to be translated]:Using custom path: {{path}}",
+      "customPath": "カスタムパスを使用中: {{path}}",
       "error": {
         "description": "Windowsでエージェントを実行するにはGit Bashが必要です。これがないとエージェントは動作しません。以下からGit for Windowsをインストールしてください。",
         "recheck": "Git Bashのインストールを再確認してください",
+        "required": "[to be translated]:Git Bash path is required on Windows",
         "title": "Git Bashが必要です"
       },
       "found": {
-        "title": "[to be translated]:Git Bash configured"
+        "title": "Git Bashが設定されました"
       },
       "notFound": "Git Bash が見つかりません。先にインストールしてください。",
       "pick": {
-        "button": "[to be translated]:Select Git Bash Path",
-        "failed": "[to be translated]:Failed to set Git Bash path",
-        "invalidPath": "[to be translated]:Selected file is not a valid Git Bash executable (bash.exe).",
-        "title": "[to be translated]:Select Git Bash executable"
+        "button": "Git Bashパスを選択",
+        "failed": "Git Bashパスの設定に失敗しました",
+        "invalidPath": "選択されたファイルは有効なGit Bash実行ファイル（bash.exe）ではありません。",
+        "title": "Git Bash実行ファイルを選択"
       },
-      "success": "Git Bashが正常に検出されました！"
+      "placeholder": "[to be translated]:Select bash.exe path",
+      "success": "Git Bashが正常に検出されました！",
+      "tooltip": "[to be translated]:Git Bash is required to run agents on Windows. Install from git-scm.com if not available."
     },
     "input": {
       "placeholder": "メッセージをここに入力し、{{key}}で送信 - @でパスを選択、/でコマンドを選択"
@@ -428,11 +432,6 @@
       "showByList": "リスト表示",
       "showByTags": "タグ表示"
     },
-    "move_all": {
-      "confirm": "[to be translated]:Move all topics from \"{{from}}\" to \"{{to}}\" and merge?",
-      "dedupe": "[to be translated]:Deduplicate (by topic name)",
-      "title": "[to be translated]:Move all topics to"
-    },
     "presets": {
       "add": {
         "button": "アシスタントに追加",
@@ -549,14 +548,23 @@
       "more": "アシスタント設定",
       "prompt": "プロンプト設定",
       "reasoning_effort": {
+        "auto": "自動",
+        "auto_description": "推論にかける労力を柔軟に調整する",
         "default": "デフォルト",
+        "default_description": "設定なしで、モデルの既定の動作に依存する。",
         "high": "最大限の思考",
+        "high_description": "高度な推論",
         "label": "思考連鎖の長さ",
         "low": "少しの思考",
+        "low_description": "低レベル推論",
         "medium": "普通の思考",
+        "medium_description": "中レベル推論",
         "minimal": "最小限の思考",
+        "minimal_description": "最小限の推論",
         "off": "オフ",
-        "xhigh": "極めて最大限の思考"
+        "off_description": "推論を無効にする",
+        "xhigh": "超高",
+        "xhigh_description": "超高度な推論"
       },
       "regular_phrases": {
         "add": "プロンプトを追加",
@@ -1060,24 +1068,6 @@
         "unpinned": "ピン留めされていないトピック"
       },
       "move_to": "移動先",
-      "multi_select": {
-        "batch_rename": "[to be translated]:Batch rename topics",
-        "batch_rename_failed": "[to be translated]:Rename failed: {{name}}",
-        "batch_rename_skip_empty": "[to be translated]:Skipped {{name}} (no messages)",
-        "batch_rename_success": "[to be translated]:Renamed: {{name}}",
-        "clear": "[to be translated]:Clear",
-        "delete": "[to be translated]:Delete Selected",
-        "empty": "[to be translated]:Please select topics first",
-        "exit": "[to be translated]:Exit Multi-select",
-        "export": "[to be translated]:Export as ChatGPT JSON",
-        "label": "[to be translated]:Multi-select",
-        "move": "[to be translated]:Move Selected",
-        "select": "[to be translated]:Select",
-        "select_all": "[to be translated]:Select All",
-        "select_all_unique": "[to be translated]:Select all (dedup)",
-        "selected_count": "[to be translated]:{{count}} selected",
-        "unselect": "[to be translated]:Unselect"
-      },
       "new": "新しいトピック",
       "pin": "トピックを固定",
       "prompt": {
@@ -1090,12 +1080,6 @@
       "search": {
         "placeholder": "トピックを検索...",
         "title": "検索"
-      },
-      "sort": {
-        "created": "[to be translated]:By created time",
-        "label": "[to be translated]:Sort",
-        "name": "[to be translated]:By name",
-        "updated": "[to be translated]:By updated time"
       },
       "title": "トピック",
       "unpin": "固定解除"
@@ -1507,15 +1491,6 @@
       "label": "外部データをインポートしてもよろしいですか？"
     },
     "content": "外部アプリケーションの会話ファイルを選択してインポートします。現在、ChatGPT JSON形式ファイルのみサポートしています。",
-    "gemini": {
-      "assistant_name": "[to be translated]:Gemini Import",
-      "error": {
-        "no_conversations": "[to be translated]:No Gemini conversations found",
-        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
-        "unknown": "[to be translated]:Import failed, please check file format"
-      },
-      "untitled_conversation": "[to be translated]:Untitled Conversation"
-    },
     "title": "外部会話をインポート"
   },
   "knowledge": {
@@ -1670,9 +1645,7 @@
   },
   "launchpad": {
     "apps": "アプリ",
-    "assistant": "[to be translated]:Assistant",
-    "minapps": "アプリ",
-    "topic": "[to be translated]:Topic"
+    "minapps": "アプリ"
   },
   "lmstudio": {
     "keep_alive_time": {
@@ -2058,18 +2031,9 @@
   "minapp": {
     "add_to_launchpad": "スタート画面に追加",
     "add_to_sidebar": "サイドバーに追加",
-    "export": {
-      "error": "[to be translated]:Export failed: {{error}}",
-      "no_conversations": "[to be translated]:No conversations found",
-      "no_webview": "[to be translated]:WebView is not ready, please try again",
-      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
-      "unknown": "[to be translated]:Unknown error"
-    },
     "popup": {
       "close": "ミニアプリを閉じる",
       "devtools": "開発者ツール",
-      "export": "[to be translated]:Export chats",
-      "exporting": "[to be translated]:Exporting...",
       "goBack": "戻る",
       "goForward": "進む",
       "minimize": "ミニアプリを最小化",
@@ -3967,7 +3931,7 @@
       "builtinServers": "組み込みサーバー",
       "builtinServersDescriptions": {
         "brave_search": "Brave検索APIを統合したMCPサーバーの実装で、ウェブ検索とローカル検索の両機能を提供します。BRAVE_API_KEY環境変数の設定が必要です",
-        "browser": "[to be translated]:Control a headless Electron window via Chrome DevTools Protocol. Tools: open URL, execute single-line JS, reset session.",
+        "browser": "Chrome DevTools Protocolを介してheadless Electronウィンドウを制御します。ツール：URLを開く、単一行JSを実行、セッションをリセット。",
         "didi_mcp": "DiDi MCPサーバーは、地図検索、料金見積もり、注文管理、ドライバー追跡を含むライドシェアサービスを提供します。中国本土でのみ利用可能です。DIDI_API_KEY環境変数の設定が必要です",
         "dify_knowledge": "DifyのMCPサーバー実装は、Difyと対話するためのシンプルなAPIを提供します。Dify Keyの設定が必要です。",
         "fetch": "URLのウェブページコンテンツを取得するためのMCPサーバー",

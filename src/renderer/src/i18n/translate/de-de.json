@@ -32,6 +32,7 @@
     },
     "gitBash": {
       "autoDetected": "Automatisch ermitteltes Git Bash wird verwendet",
+      "autoDiscoveredHint": "[to be translated]:Auto-discovered",
       "clear": {
         "button": "Benutzerdefinierten Pfad löschen"
       },
@@ -39,6 +40,7 @@
       "error": {
         "description": "Git Bash ist erforderlich, um Agents unter Windows auszuführen. Der Agent kann ohne es nicht funktionieren. Bitte installieren Sie Git für Windows von",
         "recheck": "Überprüfe die Git Bash-Installation erneut",
+        "required": "[to be translated]:Git Bash path is required on Windows",
         "title": "Git Bash erforderlich"
       },
       "found": {
@@ -51,7 +53,9 @@
         "invalidPath": "Die ausgewählte Datei ist keine gültige Git Bash ausführbare Datei (bash.exe).",
         "title": "Git Bash ausführbare Datei auswählen"
       },
-      "success": "Git Bash erfolgreich erkannt!"
+      "placeholder": "[to be translated]:Select bash.exe path",
+      "success": "Git Bash erfolgreich erkannt!",
+      "tooltip": "[to be translated]:Git Bash is required to run agents on Windows. Install from git-scm.com if not available."
     },
     "input": {
       "placeholder": "Gib hier deine Nachricht ein, senden mit {{key}} – @ Pfad auswählen, / Befehl auswählen"
@@ -428,11 +432,6 @@
       "showByList": "Listenansicht",
       "showByTags": "Tag-Ansicht"
     },
-    "move_all": {
-      "confirm": "[to be translated]:Move all topics from \"{{from}}\" to \"{{to}}\" and merge?",
-      "dedupe": "[to be translated]:Deduplicate (by topic name)",
-      "title": "[to be translated]:Move all topics to"
-    },
     "presets": {
       "add": {
         "button": "Zu Assistent hinzufügen",
@@ -549,14 +548,23 @@
       "more": "Assistenteneinstellungen",
       "prompt": "Prompt-Einstellungen",
       "reasoning_effort": {
+        "auto": "Auto",
+        "auto_description": "Denkaufwand flexibel bestimmen",
         "default": "Standard",
+        "default_description": "Vom Standardverhalten des Modells abhängen, ohne Konfiguration.",
         "high": "Tiefes Nachdenken",
+        "high_description": "Ganzheitliches Denken",
         "label": "Gedankenkettenlänge",
         "low": "Spontan",
+        "low_description": "Geringfügige Argumentation",
         "medium": "Überlegt",
+        "medium_description": "Denken auf mittlerem Niveau",
         "minimal": "Minimal",
+        "minimal_description": "Minimales Denken",
         "off": "Aus",
-        "xhigh": "Sehr tiefes Nachdenken"
+        "off_description": "Denken deaktivieren",
+        "xhigh": "Extra hoch",
+        "xhigh_description": "Extra hohes Denkvermögen"
       },
       "regular_phrases": {
         "add": "Phrase hinzufügen",
@@ -1060,24 +1068,6 @@
         "unpinned": "Losgelöste Themen"
       },
       "move_to": "Verschieben nach",
-      "multi_select": {
-        "batch_rename": "[to be translated]:Batch rename topics",
-        "batch_rename_failed": "[to be translated]:Rename failed: {{name}}",
-        "batch_rename_skip_empty": "[to be translated]:Skipped {{name}} (no messages)",
-        "batch_rename_success": "[to be translated]:Renamed: {{name}}",
-        "clear": "[to be translated]:Clear",
-        "delete": "[to be translated]:Delete Selected",
-        "empty": "[to be translated]:Please select topics first",
-        "exit": "[to be translated]:Exit Multi-select",
-        "export": "[to be translated]:Export as ChatGPT JSON",
-        "label": "[to be translated]:Multi-select",
-        "move": "[to be translated]:Move Selected",
-        "select": "[to be translated]:Select",
-        "select_all": "[to be translated]:Select All",
-        "select_all_unique": "[to be translated]:Select all (dedup)",
-        "selected_count": "[to be translated]:{{count}} selected",
-        "unselect": "[to be translated]:Unselect"
-      },
       "new": "Neues Gespräch starten",
       "pin": "Thema anheften",
       "prompt": {
@@ -1090,12 +1080,6 @@
       "search": {
         "placeholder": "Themen durchsuchen...",
         "title": "Suche"
-      },
-      "sort": {
-        "created": "[to be translated]:By created time",
-        "label": "[to be translated]:Sort",
-        "name": "[to be translated]:By name",
-        "updated": "[to be translated]:By updated time"
       },
       "title": "Thema",
       "unpin": "Anheften aufheben"
@@ -1507,15 +1491,6 @@
       "label": "Sind Sie sicher, dass Sie externe Daten importieren möchten?"
     },
     "content": "Wählen Sie die zu importierende Gesprächsdatei einer externen Anwendung aus; derzeit werden nur ChatGPT-JSON-Formatdateien unterstützt.",
-    "gemini": {
-      "assistant_name": "[to be translated]:Gemini Import",
-      "error": {
-        "no_conversations": "[to be translated]:No Gemini conversations found",
-        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
-        "unknown": "[to be translated]:Import failed, please check file format"
-      },
-      "untitled_conversation": "[to be translated]:Untitled Conversation"
-    },
     "title": "Externe Gespräche importieren"
   },
   "knowledge": {
@@ -1670,9 +1645,7 @@
   },
   "launchpad": {
     "apps": "Apps",
-    "assistant": "[to be translated]:Assistant",
-    "minapps": "Mini-Apps",
-    "topic": "[to be translated]:Topic"
+    "minapps": "Mini-Apps"
   },
   "lmstudio": {
     "keep_alive_time": {
@@ -2058,18 +2031,9 @@
   "minapp": {
     "add_to_launchpad": "Zu Launchpad hinzufügen",
     "add_to_sidebar": "Zur Seitenleiste hinzufügen",
-    "export": {
-      "error": "[to be translated]:Export failed: {{error}}",
-      "no_conversations": "[to be translated]:No conversations found",
-      "no_webview": "[to be translated]:WebView is not ready, please try again",
-      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
-      "unknown": "[to be translated]:Unknown error"
-    },
     "popup": {
       "close": "Mini-App schließen",
       "devtools": "Entwicklertools",
-      "export": "[to be translated]:Export chats",
-      "exporting": "[to be translated]:Exporting...",
       "goBack": "Zurück",
       "goForward": "Vorwärts",
       "minimize": "Mini-App minimieren",

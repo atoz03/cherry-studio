@@ -32,6 +32,7 @@
     },
     "gitBash": {
       "autoDetected": "Используется автоматически обнаруженный Git Bash",
+      "autoDiscoveredHint": "[to be translated]:Auto-discovered",
       "clear": {
         "button": "Очистить пользовательский путь"
       },
@@ -39,6 +40,7 @@
       "error": {
         "description": "Для запуска агентов в Windows требуется Git Bash. Без него агент не может работать. Пожалуйста, установите Git для Windows с",
         "recheck": "Повторная проверка установки Git Bash",
+        "required": "[to be translated]:Git Bash path is required on Windows",
         "title": "Требуется Git Bash"
       },
       "found": {
@@ -51,7 +53,9 @@
         "invalidPath": "Выбранный файл не является допустимым исполняемым файлом Git Bash (bash.exe).",
         "title": "Выберите исполняемый файл Git Bash"
       },
-      "success": "Git Bash успешно обнаружен!"
+      "placeholder": "[to be translated]:Select bash.exe path",
+      "success": "Git Bash успешно обнаружен!",
+      "tooltip": "[to be translated]:Git Bash is required to run agents on Windows. Install from git-scm.com if not available."
     },
     "input": {
       "placeholder": "Введите ваше сообщение здесь, отправьте с помощью {{key}} — @ выбрать путь, / выбрать команду"
@@ -428,11 +432,6 @@
       "showByList": "Список",
       "showByTags": "По тегам"
     },
-    "move_all": {
-      "confirm": "[to be translated]:Move all topics from \"{{from}}\" to \"{{to}}\" and merge?",
-      "dedupe": "[to be translated]:Deduplicate (by topic name)",
-      "title": "[to be translated]:Move all topics to"
-    },
     "presets": {
       "add": {
         "button": "Добавить в помощник",
@@ -549,14 +548,23 @@
       "more": "Настройки ассистента",
       "prompt": "Настройки промптов",
       "reasoning_effort": {
+        "auto": "Авто",
+        "auto_description": "Гибко определяйте усилие на рассуждение",
         "default": "По умолчанию",
+        "default_description": "Полагаться на поведение модели по умолчанию, без какой-либо конфигурации.",
         "high": "Стараюсь думать",
+        "high_description": "Высокоуровневое рассуждение",
         "label": "Настройки размышлений",
         "low": "Меньше думать",
+        "low_description": "Низкоуровневое рассуждение",
         "medium": "Среднее",
+        "medium_description": "Средний уровень рассуждения",
         "minimal": "минимальный",
+        "minimal_description": "Минимальное рассуждение",
         "off": "Выключить",
-        "xhigh": "Очень стараюсь думать"
+        "off_description": "Отключить рассуждение",
+        "xhigh": "Сверхвысокое",
+        "xhigh_description": "Высочайший уровень рассуждений"
       },
       "regular_phrases": {
         "add": "Добавить подсказку",
@@ -1060,24 +1068,6 @@
         "unpinned": "Откреплённые темы"
       },
       "move_to": "Переместить в",
-      "multi_select": {
-        "batch_rename": "[to be translated]:Batch rename topics",
-        "batch_rename_failed": "[to be translated]:Rename failed: {{name}}",
-        "batch_rename_skip_empty": "[to be translated]:Skipped {{name}} (no messages)",
-        "batch_rename_success": "[to be translated]:Renamed: {{name}}",
-        "clear": "[to be translated]:Clear",
-        "delete": "[to be translated]:Delete Selected",
-        "empty": "[to be translated]:Please select topics first",
-        "exit": "[to be translated]:Exit Multi-select",
-        "export": "[to be translated]:Export as ChatGPT JSON",
-        "label": "[to be translated]:Multi-select",
-        "move": "[to be translated]:Move Selected",
-        "select": "[to be translated]:Select",
-        "select_all": "[to be translated]:Select All",
-        "select_all_unique": "[to be translated]:Select all (dedup)",
-        "selected_count": "[to be translated]:{{count}} selected",
-        "unselect": "[to be translated]:Unselect"
-      },
       "new": "Новый топик",
       "pin": "Закрепленные темы",
       "prompt": {
@@ -1090,12 +1080,6 @@
       "search": {
         "placeholder": "Искать темы...",
         "title": "Поиск"
-      },
-      "sort": {
-        "created": "[to be translated]:By created time",
-        "label": "[to be translated]:Sort",
-        "name": "[to be translated]:By name",
-        "updated": "[to be translated]:By updated time"
       },
       "title": "Топики",
       "unpin": "Открепленные темы"
@@ -1507,15 +1491,6 @@
       "label": "Вы уверены, что хотите импортировать внешние данные?"
     },
     "content": "Выберите внешний файл с перепиской для импорта; в настоящее время поддерживаются только файлы в формате JSON ChatGPT",
-    "gemini": {
-      "assistant_name": "[to be translated]:Gemini Import",
-      "error": {
-        "no_conversations": "[to be translated]:No Gemini conversations found",
-        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
-        "unknown": "[to be translated]:Import failed, please check file format"
-      },
-      "untitled_conversation": "[to be translated]:Untitled Conversation"
-    },
     "title": "Импорт внешних бесед"
   },
   "knowledge": {
@@ -1670,9 +1645,7 @@
   },
   "launchpad": {
     "apps": "Приложения",
-    "assistant": "[to be translated]:Assistant",
-    "minapps": "Приложения",
-    "topic": "[to be translated]:Topic"
+    "minapps": "Приложения"
   },
   "lmstudio": {
     "keep_alive_time": {
@@ -2058,18 +2031,9 @@
   "minapp": {
     "add_to_launchpad": "Добавить в стартовый экран",
     "add_to_sidebar": "Добавить в боковую панель",
-    "export": {
-      "error": "[to be translated]:Export failed: {{error}}",
-      "no_conversations": "[to be translated]:No conversations found",
-      "no_webview": "[to be translated]:WebView is not ready, please try again",
-      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
-      "unknown": "[to be translated]:Unknown error"
-    },
     "popup": {
       "close": "Закрыть встроенное приложение",
       "devtools": "Инструменты разработчика",
-      "export": "[to be translated]:Export chats",
-      "exporting": "[to be translated]:Exporting...",
       "goBack": "Назад",
       "goForward": "Вперед",
       "minimize": "Свернуть встроенное приложение",
@@ -3967,7 +3931,7 @@
       "builtinServers": "Встроенные серверы",
       "builtinServersDescriptions": {
         "brave_search": "реализация сервера MCP с интеграцией API поиска Brave, обеспечивающая функции веб-поиска и локального поиска. Требуется настройка переменной среды BRAVE_API_KEY",
-        "browser": "[to be translated]:Control a headless Electron window via Chrome DevTools Protocol. Tools: open URL, execute single-line JS, reset session.",
+        "browser": "Управление headless-окном Electron через Chrome DevTools Protocol. Инструменты: открытие URL, выполнение однострочного JS, сброс сессии.",
         "didi_mcp": "Сервер DiDi MCP, предоставляющий услуги такси, включая поиск на карте, оценку стоимости, управление заказами и отслеживание водителей. Доступен только в материковом Китае. Требует настройки переменной окружения DIDI_API_KEY",
         "dify_knowledge": "Реализация сервера MCP Dify, предоставляющая простой API для взаимодействия с Dify. Требуется настройка ключа Dify",
         "fetch": "MCP-сервер для получения содержимого веб-страниц по URL",
