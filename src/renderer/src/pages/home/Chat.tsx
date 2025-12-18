@@ -14,6 +14,7 @@ import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { useShowAssistants, useShowTopics } from '@renderer/hooks/useStore'
 import { useTimer } from '@renderer/hooks/useTimer'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
+import { useAppSelector } from '@renderer/store'
 import type { Assistant, Topic } from '@renderer/types'
 import { classNames } from '@renderer/utils'
 import { Alert, Flex } from 'antd'
@@ -56,6 +57,7 @@ const Chat: FC<Props> = (props) => {
   const { apiServer } = useSettings()
   const sessionAgentId = activeTopicOrSession === 'session' ? activeAgentId : null
   const { createDefaultSession } = useCreateDefaultSession(sessionAgentId)
+  const tabKey = useAppSelector((s) => s.tabs.activeTabId) || 'home'
 
   const mainRef = React.useRef<HTMLDivElement>(null)
   const contentSearchRef = React.useRef<ContentSearchRef>(null)
@@ -263,6 +265,7 @@ const Chat: FC<Props> = (props) => {
                 setActiveAssistant={props.setActiveAssistant}
                 setActiveTopic={props.setActiveTopic}
                 position="right"
+                tabKey={tabKey}
               />
             </motion.div>
           )}
