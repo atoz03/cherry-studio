@@ -1,42 +1,37 @@
 import '@testing-library/jest-dom/vitest'
 
-import { styleSheetSerializer } from 'jest-styled-components/serializer'
 import { createRequire } from 'node:module'
+import { styleSheetSerializer } from 'jest-styled-components/serializer'
 import { expect, vi } from 'vitest'
-import * as bufferModule from 'buffer'
 
 const require = createRequire(import.meta.url)
+const bufferModule = require('buffer') as typeof import('buffer') & { SlowBuffer?: typeof Buffer }
 
 expect.addSnapshotSerializer(styleSheetSerializer)
 
-// Provide SlowBuffer compatibility for dependencies expecting it
-// (Node 20+ deprecates/removed SlowBuffer)
-if (!(bufferModule as any).SlowBuffer) {
-  ;(bufferModule as any).SlowBuffer = Buffer
-}
-if (!(Buffer as any).SlowBuffer) {
-  ;(Buffer as any).SlowBuffer = Buffer
-}
+// 为依赖提供 SlowBuffer 兼容（新版本 Node 中 SlowBuffer 已移除/不可用）
+if (!bufferModule.SlowBuffer) bufferModule.SlowBuffer = bufferModule.Buffer
+if (!(Buffer as any).SlowBuffer) (Buffer as any).SlowBuffer = bufferModule.SlowBuffer
 if (!(Buffer as any).prototype.equal) {
   ;(Buffer as any).prototype.equal = Buffer.prototype.equals
 }
-;(globalThis as any).SlowBuffer = (bufferModule as any).SlowBuffer
+;(globalThis as any).SlowBuffer = bufferModule.SlowBuffer
 
-// Hard mock buffer-equal-constant-time before any require() usage (fixes Node 20+ removal of SlowBuffer)
+// 在任何 require() 触发前硬注入 buffer-equal-constant-time（避免其访问 SlowBuffer.prototype）
 try {
   const bectPath = require.resolve('buffer-equal-constant-time')
   const mockFn = (a: any, b: any) => {
     if (a && b && typeof a.equals === 'function') return a.equals(b)
     return a === b
   }
-  require.cache[bectPath] = {
+  ;(require.cache as any)[bectPath] = {
     id: bectPath,
     filename: bectPath,
     loaded: true,
     exports: mockFn
   }
-} catch (err) {
-  // ignore if not resolvable in context
+} catch {
+  // 在某些上下文中可能无法解析，忽略即可
 }
 
 // Mock LoggerService globally for renderer tests
@@ -83,36 +78,35 @@ vi.stubGlobal('api', {
   }
 })
 
-// Provide browser-like globals used by i18n and other modules in tests
-const localStorageMock = (() => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: (key: string) => store[key] ?? null,
+if (typeof globalThis.localStorage === 'undefined' || typeof (globalThis.localStorage as any).getItem !== 'function') {
+  let store = new Map<string, string>()
+
+  const localStorageMock = {
+    getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = value
+      store.set(key, String(value))
     },
     removeItem: (key: string) => {
-      delete store[key]
+      store.delete(key)
     },
     clear: () => {
-      store = {}
+      store.clear()
+    },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() {
+      return store.size
     }
   }
-})()
 
-vi.stubGlobal('localStorage', localStorageMock)
+  vi.stubGlobal('localStorage', localStorageMock)
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+  }
+}
+
+// i18n 等模块可能依赖浏览器语境的 navigator
 vi.stubGlobal('navigator', {
   language: 'en-US',
   languages: ['en-US'],
   userAgent: 'vitest'
-})
-
-// Some third-party deps expect Node.js SlowBuffer which is removed in newer Node.
-// Mock buffer-equal-constant-time to avoid SlowBuffer prototype access in tests.
-vi.mock('buffer-equal-constant-time', () => {
-  const fn = (a: any, b: any) => {
-    if (a && b && typeof a.equals === 'function') return a.equals(b)
-    return a === b
-  }
-  return fn
 })

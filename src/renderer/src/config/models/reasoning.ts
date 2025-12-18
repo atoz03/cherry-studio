@@ -20,7 +20,7 @@ import {
   isOpenAIReasoningModel,
   isSupportedReasoningEffortOpenAIModel
 } from './openai'
-import { GEMINI_FLASH_MODEL_REGEX, isGemini3ThinkingTokenModel } from './utils'
+import { GEMINI_FLASH_MODEL_REGEX, isGemini3FlashModel, isGemini3ProModel } from './utils'
 import { isTextToImageModel } from './vision'
 
 // Reasoning models
@@ -43,15 +43,17 @@ export const MODEL_SUPPORTED_REASONING_EFFORT = {
   gpt52pro: ['medium', 'high', 'xhigh'] as const,
   grok: ['low', 'high'] as const,
   grok4_fast: ['auto'] as const,
-  gemini: ['low', 'medium', 'high', 'auto'] as const,
-  gemini3: ['low', 'medium', 'high'] as const,
-  gemini_pro: ['low', 'medium', 'high', 'auto'] as const,
+  gemini2_flash: ['low', 'medium', 'high', 'auto'] as const,
+  gemini2_pro: ['low', 'medium', 'high', 'auto'] as const,
+  gemini3_flash: ['minimal', 'low', 'medium', 'high'] as const,
+  gemini3_pro: ['low', 'high'] as const,
   qwen: ['low', 'medium', 'high'] as const,
   qwen_thinking: ['low', 'medium', 'high'] as const,
   doubao: ['auto', 'high'] as const,
   doubao_no_auto: ['high'] as const,
   doubao_after_251015: ['minimal', 'low', 'medium', 'high'] as const,
   hunyuan: ['auto'] as const,
+  mimo: ['auto'] as const,
   zhipu: ['auto'] as const,
   perplexity: ['low', 'medium', 'high'] as const,
   deepseek_hybrid: ['auto'] as const
@@ -72,14 +74,16 @@ export const MODEL_SUPPORTED_OPTIONS: ThinkingOptionConfig = {
   gpt52pro: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gpt52pro] as const,
   grok: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.grok] as const,
   grok4_fast: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.grok4_fast] as const,
-  gemini: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini] as const,
-  gemini_pro: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini_pro] as const,
-  gemini3: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini3] as const,
+  gemini2_flash: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini2_flash] as const,
+  gemini2_pro: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini2_pro] as const,
+  gemini3_flash: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini3_flash] as const,
+  gemini3_pro: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.gemini3_pro] as const,
   qwen: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.qwen] as const,
   qwen_thinking: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.qwen_thinking] as const,
   doubao: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.doubao] as const,
   doubao_no_auto: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.doubao_no_auto] as const,
   doubao_after_251015: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.doubao_after_251015] as const,
+  mimo: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.mimo] as const,
   hunyuan: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.hunyuan] as const,
   zhipu: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.zhipu] as const,
   perplexity: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.perplexity] as const,
@@ -100,8 +104,7 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
   const modelId = getLowerBaseModelName(model.id)
   if (isOpenAIDeepResearchModel(model)) {
     return 'openai_deep_research'
-  }
-  if (isGPT51SeriesModel(model)) {
+  } else if (isGPT51SeriesModel(model)) {
     if (modelId.includes('codex')) {
       thinkingModelType = 'gpt5_1_codex'
       if (isGPT51CodexMaxModel(model)) {
@@ -133,16 +136,18 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
   } else if (isGrok4FastReasoningModel(model)) {
     thinkingModelType = 'grok4_fast'
   } else if (isSupportedThinkingTokenGeminiModel(model)) {
-    if (GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
-      thinkingModelType = 'gemini'
+    if (isGemini3FlashModel(model)) {
+      thinkingModelType = 'gemini3_flash'
+    } else if (isGemini3ProModel(model)) {
+      thinkingModelType = 'gemini3_pro'
+    } else if (GEMINI_FLASH_MODEL_REGEX.test(model.id)) {
+      thinkingModelType = 'gemini2_flash'
     } else {
-      thinkingModelType = 'gemini_pro'
+      thinkingModelType = 'gemini2_pro'
     }
-    if (isGemini3ThinkingTokenModel(model)) {
-      thinkingModelType = 'gemini3'
-    }
-  } else if (isSupportedReasoningEffortGrokModel(model)) thinkingModelType = 'grok'
-  else if (isSupportedThinkingTokenQwenModel(model)) {
+  } else if (isSupportedReasoningEffortGrokModel(model)) {
+    thinkingModelType = 'grok'
+  } else if (isSupportedThinkingTokenQwenModel(model)) {
     if (isQwenAlwaysThinkModel(model)) {
       thinkingModelType = 'qwen_thinking'
     }
@@ -155,10 +160,17 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
     } else {
       thinkingModelType = 'doubao_no_auto'
     }
-  } else if (isSupportedThinkingTokenHunyuanModel(model)) thinkingModelType = 'hunyuan'
-  else if (isSupportedReasoningEffortPerplexityModel(model)) thinkingModelType = 'perplexity'
-  else if (isSupportedThinkingTokenZhipuModel(model)) thinkingModelType = 'zhipu'
-  else if (isDeepSeekHybridInferenceModel(model)) thinkingModelType = 'deepseek_hybrid'
+  } else if (isSupportedThinkingTokenHunyuanModel(model)) {
+    thinkingModelType = 'hunyuan'
+  } else if (isSupportedReasoningEffortPerplexityModel(model)) {
+    thinkingModelType = 'perplexity'
+  } else if (isSupportedThinkingTokenZhipuModel(model)) {
+    thinkingModelType = 'zhipu'
+  } else if (isDeepSeekHybridInferenceModel(model)) {
+    thinkingModelType = 'deepseek_hybrid'
+  } else if (isSupportedThinkingTokenMiMoModel(model)) {
+    thinkingModelType = 'mimo'
+  }
   return thinkingModelType
 }
 
@@ -267,7 +279,8 @@ function _isSupportedThinkingTokenModel(model: Model): boolean {
     isSupportedThinkingTokenClaudeModel(model) ||
     isSupportedThinkingTokenDoubaoModel(model) ||
     isSupportedThinkingTokenHunyuanModel(model) ||
-    isSupportedThinkingTokenZhipuModel(model)
+    isSupportedThinkingTokenZhipuModel(model) ||
+    isSupportedThinkingTokenMiMoModel(model)
   )
 }
 
@@ -565,6 +578,11 @@ export const isSupportedThinkingTokenZhipuModel = (model: Model): boolean => {
   return ['glm-4.5', 'glm-4.6'].some((id) => modelId.includes(id))
 }
 
+export const isSupportedThinkingTokenMiMoModel = (model: Model): boolean => {
+  const modelId = getLowerBaseModelName(model.id, '/')
+  return ['mimo-v2-flash'].some((id) => modelId.includes(id))
+}
+
 export const isDeepSeekHybridInferenceModel = (model: Model) => {
   const { idResult, nameResult } = withModelIdAndNameAsId(model, (model) => {
     const modelId = getLowerBaseModelName(model.id)
@@ -602,6 +620,8 @@ export const isZhipuReasoningModel = (model?: Model): boolean => {
   const modelId = getLowerBaseModelName(model.id, '/')
   return isSupportedThinkingTokenZhipuModel(model) || modelId.includes('glm-z1')
 }
+
+export const isMiMoReasoningModel = isSupportedThinkingTokenMiMoModel
 
 export const isStepReasoningModel = (model?: Model): boolean => {
   if (!model) {
@@ -653,6 +673,7 @@ export function isReasoningModel(model?: Model): boolean {
     isDeepSeekHybridInferenceModel(model) ||
     isLingReasoningModel(model) ||
     isMiniMaxReasoningModel(model) ||
+    isMiMoReasoningModel(model) ||
     modelId.includes('magistral') ||
     modelId.includes('pangu-pro-moe') ||
     modelId.includes('seed-oss') ||
