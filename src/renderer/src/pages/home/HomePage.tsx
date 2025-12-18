@@ -90,7 +90,7 @@ const HomePage: FC = () => {
     activeAssistant?.id ?? '',
     topicFromRoute || initialTopicFromState || initialTopicFromTab || activeAssistant?.topics[0] || undefined
   )
-  const { showAssistants, showTopics, topicPosition, clickAssistantToShowTopic } = useSettings()
+  const { showAssistants, showTopics, topicPosition } = useSettings()
   const dispatch = useDispatch()
   const { chat } = useRuntime()
   const { activeTopicOrSession } = chat
