@@ -111,9 +111,10 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const isFulfilled = useCallback((topicId: string) => topicFulfilledQuery[topicId], [topicFulfilledQuery])
   const dispatch = useDispatch()
 
+  // 仅在切换话题时重置 fulfilled，避免把 fulfilledByTopic 对象放入依赖导致循环更新（React #185）。
   useEffect(() => {
     dispatch(newMessagesActions.setTopicFulfilled({ topicId: activeTopic.id, fulfilled: false }))
-  }, [activeTopic.id, dispatch, topicFulfilledQuery])
+  }, [activeTopic.id, dispatch])
 
   const isRenaming = useCallback(
     (topicId: string) => {

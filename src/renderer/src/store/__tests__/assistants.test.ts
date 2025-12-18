@@ -2,6 +2,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { vi } from 'vitest'
 
 import type { AssistantsState } from '../assistants'
+import assistantsReducer, { moveAllTopics } from '../assistants'
 
 vi.mock('@renderer/utils', () => ({
   uuid: () => 'test-uuid'
@@ -31,15 +32,6 @@ const makeAssistant = (id: string, topics: Topic[]): Assistant => ({
 })
 
 describe('assistants reducer - moveAllTopics', () => {
-  let assistantsReducer: any
-  let moveAllTopics: any
-
-  beforeAll(async () => {
-    const mod = await import('../assistants')
-    assistantsReducer = mod.default
-    moveAllTopics = mod.moveAllTopics
-  })
-
   const assistantA = makeAssistant('a', [makeTopic('t1', 'a'), makeTopic('t2', 'a')])
   const assistantB = makeAssistant('b', [makeTopic('t3', 'b')])
 

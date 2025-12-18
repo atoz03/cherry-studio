@@ -50,6 +50,23 @@ export function getErrorDetails(err: any, seen = new WeakSet()): any {
 }
 
 export function formatErrorMessage(error: unknown): string {
+  // React 生产环境最小化错误码提示（例如 #185 最大更新深度超限）。
+  // 这里优先给出更可读的中文说明，并尽可能附带堆栈，方便定位循环更新源头。
+  if (error instanceof Error) {
+    const match = error.message.match(/Minified React error #(\d+);/i)
+    if (match) {
+      const code = Number(match[1])
+      if (code === 185) {
+        const stack = error.stack ? `\n\n堆栈：\n${error.stack}` : ''
+        return (
+          'React 报错 #185（最大更新深度超限）：通常是某个组件在渲染/副作用中反复触发 setState/dispatch 导致循环更新。' +
+          '\n建议：点击「开发者工具」查看 Console 堆栈，或使用开发环境（yarn dev）复现以获得更完整提示。' +
+          stack
+        )
+      }
+    }
+  }
+
   if (error instanceof ZodError) {
     return formatZodError(error)
   }
