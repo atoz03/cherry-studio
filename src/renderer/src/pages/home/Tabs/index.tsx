@@ -5,6 +5,7 @@ import { useShowTopics } from '@renderer/hooks/useStore'
 import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import { useAppDispatch } from '@renderer/store'
 import { setActiveAgentId, setActiveTopicOrSessionAction } from '@renderer/store/runtime'
+import { updateTab } from '@renderer/store/tabs'
 import type { Assistant, Topic } from '@renderer/types'
 import type { Tab } from '@renderer/types/chat'
 import { classNames, uuid } from '@renderer/utils'
@@ -25,7 +26,8 @@ interface Props {
   forceToSeeAllTab?: boolean
   style?: React.CSSProperties
   initialTab?: Tab
-  tabKey: string
+  tabKey?: string
+  tabSide?: Tab
 }
 
 const tabMemory = new Map<string, Tab>()
@@ -39,7 +41,8 @@ const HomeTabs: FC<Props> = ({
   forceToSeeAllTab,
   style,
   initialTab,
-  tabKey
+  tabKey = 'home',
+  tabSide
 }) => {
   const { addAssistant } = useAssistants()
   const { topicPosition } = useSettings()
@@ -51,6 +54,7 @@ const HomeTabs: FC<Props> = ({
 
   const [tab, setTab] = useState<Tab>(() => {
     if (position !== 'left') return 'topic'
+    if (tabSide) return tabSide
     const remembered = tabMemory.get(tabKey)
     if (remembered) return remembered
     if (topicPosition === 'left' && initialTab === 'topic') return 'topic'
@@ -69,8 +73,17 @@ const HomeTabs: FC<Props> = ({
   }, [position, tab, tabKey])
 
   useEffect(() => {
+    if (position !== 'left') return
+    dispatch(updateTab({ id: tabKey, updates: { chatState: { tabSide: tab } } }))
+  }, [dispatch, position, tab, tabKey])
+
+  useEffect(() => {
     if (position !== 'left') {
       setTab('topic')
+      return
+    }
+    if (tabSide && tabSide !== tab) {
+      setTab(tabSide)
       return
     }
     const remembered = tabMemory.get(tabKey)
@@ -79,7 +92,7 @@ const HomeTabs: FC<Props> = ({
     } else if (!remembered && topicPosition === 'left' && initialTab === 'topic' && tab !== 'topic') {
       setTab('topic')
     }
-  }, [initialTab, position, tab, tabKey, topicPosition])
+  }, [initialTab, position, tab, tabKey, tabSide, topicPosition])
 
   const showTab = position === 'left' && topicPosition === 'left'
 

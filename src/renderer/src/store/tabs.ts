@@ -11,6 +11,8 @@ export interface Tab {
   chatState?: {
     assistantId?: string
     topicId?: string
+    /** 侧边栏当前显示的页签（助手/话题），用于标签页内记忆 UI 状态 */
+    tabSide?: 'assistants' | 'topic'
   }
 }
 
@@ -56,7 +58,11 @@ const tabsSlice = createSlice({
     updateTab: (state, action: PayloadAction<{ id: string; updates: Partial<Tab> }>) => {
       const tab = state.tabs.find((tab) => tab.id === action.payload.id)
       if (tab) {
-        Object.assign(tab, action.payload.updates)
+        const { chatState, ...rest } = action.payload.updates
+        Object.assign(tab, rest)
+        if (chatState) {
+          tab.chatState = { ...tab.chatState, ...chatState }
+        }
       }
     },
     setActiveTab: (state, action: PayloadAction<string>) => {

@@ -153,6 +153,48 @@ const HomePage: FC = () => {
     [_setActiveTopic, dispatch, isAssistantLocked, isTopicLocked, lockedAssistantId, lockedTopicId, persistTabChatState]
   )
 
+  // 标签页切换时，恢复该标签页记忆的助手/话题，避免不同标签页互相覆盖。
+  useEffect(() => {
+    if (!assistants.length) return
+
+    let desiredAssistant: Assistant | null = null
+    let desiredTopic: Topic | null = null
+
+    if (isTopicLocked && lockedAssistant && topicFromRoute) {
+      desiredAssistant = lockedAssistant
+      desiredTopic = topicFromRoute
+    } else if (isAssistantLocked && lockedAssistant) {
+      desiredAssistant = lockedAssistant
+      desiredTopic = resolveTopicFromTab(lockedAssistant) || lockedAssistant.topics?.[0] || null
+    } else {
+      desiredAssistant = resolveAssistantFromTab() || assistants[0] || null
+      desiredTopic = resolveTopicFromTab(desiredAssistant) || desiredAssistant?.topics?.[0] || null
+    }
+
+    if (!desiredAssistant || !desiredTopic) return
+
+    if (desiredAssistant.id !== activeAssistant?.id) {
+      setActiveAssistant(desiredAssistant, { topic: desiredTopic })
+      return
+    }
+    if (desiredTopic.id !== activeTopic?.id) {
+      setActiveTopic(desiredTopic)
+    }
+  }, [
+    activeAssistant?.id,
+    activeTopic?.id,
+    assistants,
+    isAssistantLocked,
+    isTopicLocked,
+    lockedAssistant,
+    resolveAssistantFromTab,
+    resolveTopicFromTab,
+    setActiveAssistant,
+    setActiveTopic,
+    tabKey,
+    topicFromRoute
+  ])
+
   useEffect(() => {
     NavigationService.setNavigate(navigate)
   }, [navigate])
@@ -189,9 +231,10 @@ const HomePage: FC = () => {
 
   useEffect(() => {
     if (isAssistantLocked && lockedAssistant && activeAssistant?.id !== lockedAssistant.id) {
-      setActiveAssistant(lockedAssistant, { topic: topicFromRoute || lockedAssistant.topics?.[0] })
+      const rememberedTopic = resolveTopicFromTab(lockedAssistant)
+      setActiveAssistant(lockedAssistant, { topic: topicFromRoute || rememberedTopic || lockedAssistant.topics?.[0] })
     }
-  }, [activeAssistant?.id, isAssistantLocked, lockedAssistant, setActiveAssistant, topicFromRoute])
+  }, [activeAssistant?.id, isAssistantLocked, lockedAssistant, resolveTopicFromTab, setActiveAssistant, topicFromRoute])
 
   useEffect(() => {
     if (isTopicLocked && topicFromRoute && activeTopic.id !== topicFromRoute.id) {
@@ -238,6 +281,7 @@ const HomePage: FC = () => {
                   position="left"
                   initialTab={preferTopicTab ? 'topic' : undefined}
                   tabKey={tabKey}
+                  tabSide={tabChatState?.tabSide}
                 />
               </motion.div>
             </ErrorBoundary>
