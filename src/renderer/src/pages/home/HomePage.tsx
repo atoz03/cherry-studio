@@ -13,7 +13,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
@@ -126,19 +126,17 @@ const HomePage: FC = () => {
     (newAssistant: Assistant, options?: { topic?: Topic }) => {
       if (isAssistantLocked && lockedAssistantId && newAssistant.id !== lockedAssistantId) return
       if (newAssistant.id === activeAssistant?.id) return
-      startTransition(() => {
-        _setActiveAssistant(newAssistant)
-        if (newAssistant.id !== 'fake') {
-          dispatch(setActiveAgentId(null))
-        }
-        const lockedTopic =
-          isTopicLocked && lockedTopicId ? newAssistant.topics.find((t) => t.id === lockedTopicId) : null
-        const newTopic = lockedTopic || options?.topic || newAssistant.topics[0]
-        _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
-        if (newTopic) {
-          persistTabChatState(newAssistant.id, newTopic.id)
-        }
-      })
+      _setActiveAssistant(newAssistant)
+      if (newAssistant.id !== 'fake') {
+        dispatch(setActiveAgentId(null))
+      }
+      const lockedTopic =
+        isTopicLocked && lockedTopicId ? newAssistant.topics.find((t) => t.id === lockedTopicId) : null
+      const newTopic = lockedTopic || options?.topic || newAssistant.topics[0]
+      _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
+      if (newTopic) {
+        persistTabChatState(newAssistant.id, newTopic.id)
+      }
     },
     [
       _setActiveTopic,
@@ -156,14 +154,22 @@ const HomePage: FC = () => {
     (newTopic: Topic) => {
       if (isTopicLocked && lockedTopicId && newTopic.id !== lockedTopicId) return
       if (isAssistantLocked && lockedAssistantId && newTopic.assistantId !== lockedAssistantId) return
-      startTransition(() => {
-        _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
-        dispatch(newMessagesActions.setTopicFulfilled({ topicId: newTopic.id, fulfilled: false }))
-        dispatch(setActiveTopicOrSessionAction('topic'))
-        persistTabChatState(newTopic.assistantId, newTopic.id)
-      })
+      if (newTopic.id === activeTopic?.id) return
+      _setActiveTopic((prev) => (newTopic?.id === prev.id ? prev : newTopic))
+      dispatch(newMessagesActions.setTopicFulfilled({ topicId: newTopic.id, fulfilled: false }))
+      dispatch(setActiveTopicOrSessionAction('topic'))
+      persistTabChatState(newTopic.assistantId, newTopic.id)
     },
-    [_setActiveTopic, dispatch, isAssistantLocked, isTopicLocked, lockedAssistantId, lockedTopicId, persistTabChatState]
+    [
+      _setActiveTopic,
+      activeTopic?.id,
+      dispatch,
+      isAssistantLocked,
+      isTopicLocked,
+      lockedAssistantId,
+      lockedTopicId,
+      persistTabChatState
+    ]
   )
 
   // 标签页切换时，恢复该标签页记忆的助手/话题，避免不同标签页互相覆盖。

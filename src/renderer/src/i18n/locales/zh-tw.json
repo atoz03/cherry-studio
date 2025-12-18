@@ -432,6 +432,11 @@
       "showByList": "列表顯示",
       "showByTags": "標籤顯示"
     },
+    "move_all": {
+      "confirm": "將「{{from}}」的所有話題移動到「{{to}}」並合併嗎？",
+      "dedupe": "去重（依話題名稱）",
+      "title": "移動所有話題到"
+    },
     "presets": {
       "add": {
         "button": "新增到助手",
@@ -1068,6 +1073,24 @@
         "unpinned": "未固定的話題"
       },
       "move_to": "移動到",
+      "multi_select": {
+        "batch_rename": "[to be translated]:Batch rename topics",
+        "batch_rename_failed": "[to be translated]:Rename failed: {{name}}",
+        "batch_rename_skip_empty": "[to be translated]:Skipped {{name}} (no messages)",
+        "batch_rename_success": "[to be translated]:Renamed: {{name}}",
+        "clear": "[to be translated]:Clear",
+        "delete": "[to be translated]:Delete Selected",
+        "empty": "[to be translated]:Please select topics first",
+        "exit": "[to be translated]:Exit Multi-select",
+        "export": "[to be translated]:Export as ChatGPT JSON",
+        "label": "[to be translated]:Multi-select",
+        "move": "[to be translated]:Move Selected",
+        "select": "[to be translated]:Select",
+        "select_all": "[to be translated]:Select All",
+        "select_all_unique": "[to be translated]:Select all (dedup titles)",
+        "selected_count": "[to be translated]:{{count}} selected",
+        "unselect": "[to be translated]:Unselect"
+      },
       "new": "開始新對話",
       "pin": "固定話題",
       "prompt": {
@@ -1080,6 +1103,12 @@
       "search": {
         "placeholder": "搜尋話題...",
         "title": "搜尋"
+      },
+      "sort": {
+        "created": "[to be translated]:By created time",
+        "label": "[to be translated]:Sort",
+        "name": "[to be translated]:By name",
+        "updated": "[to be translated]:By updated time"
       },
       "title": "話題",
       "unpin": "取消固定"
@@ -1491,6 +1520,15 @@
       "label": "確定要匯入外部資料嗎？"
     },
     "content": "選擇要匯入的外部應用對話檔案，暫時僅支援 ChatGPT 的 JSON 格式檔案",
+    "gemini": {
+      "assistant_name": "[to be translated]:Gemini Import",
+      "error": {
+        "no_conversations": "[to be translated]:No Gemini conversations found",
+        "no_valid_conversations": "[to be translated]:No valid Gemini conversations to import",
+        "unknown": "[to be translated]:Import failed, please check file format"
+      },
+      "untitled_conversation": "[to be translated]:Untitled Conversation"
+    },
     "title": "匯入外部對話"
   },
   "knowledge": {
@@ -1645,7 +1683,9 @@
   },
   "launchpad": {
     "apps": "應用",
-    "minapps": "小程式"
+    "assistant": "[to be translated]:Assistant",
+    "minapps": "小程式",
+    "topic": "[to be translated]:Topic"
   },
   "lmstudio": {
     "keep_alive_time": {
@@ -2031,9 +2071,18 @@
   "minapp": {
     "add_to_launchpad": "新增到啟動台",
     "add_to_sidebar": "新增到側邊欄",
+    "export": {
+      "error": "[to be translated]:Export failed: {{error}}",
+      "no_conversations": "[to be translated]:No conversations found",
+      "no_webview": "[to be translated]:WebView is not ready, please try again",
+      "success": "[to be translated]:Exported successfully! Assistant \"{{name}}\" created with {{count}} conversations",
+      "unknown": "[to be translated]:Unknown error"
+    },
     "popup": {
       "close": "關閉小工具",
       "devtools": "開發者工具",
+      "export": "[to be translated]:Export chats",
+      "exporting": "[to be translated]:Exporting...",
       "goBack": "上一頁",
       "goForward": "下一頁",
       "minimize": "最小化小工具",
