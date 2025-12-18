@@ -28,6 +28,7 @@ interface Props {
   initialTab?: Tab
   tabKey?: string
   tabSide?: Tab
+  tabExists?: boolean
 }
 
 const HomeTabs: FC<Props> = ({
@@ -40,7 +41,8 @@ const HomeTabs: FC<Props> = ({
   style,
   initialTab,
   tabKey = 'home',
-  tabSide
+  tabSide,
+  tabExists = true
 }) => {
   const { addAssistant } = useAssistants()
   const { topicPosition } = useSettings()
@@ -64,9 +66,10 @@ const HomeTabs: FC<Props> = ({
 
   useEffect(() => {
     if (position !== 'left') return
+    if (!tabExists) return
     if (tabSide === tab) return
     dispatch(updateTab({ id: tabKey, updates: { chatState: { tabSide: tab } } }))
-  }, [dispatch, position, tab, tabKey, tabSide])
+  }, [dispatch, position, tab, tabKey, tabSide, tabExists])
 
   useEffect(() => {
     if (position !== 'left') {

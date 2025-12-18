@@ -34,12 +34,25 @@ const HomePage: FC = () => {
   const params = useParams<{ assistantId?: string; topicId?: string }>()
   const state = location.state
 
-  const { activeTabId, tabs } = useAppSelector((s) => s.tabs)
-  const tabByPath = useMemo(() => tabs.find((tab) => tab.path === location.pathname), [location.pathname, tabs])
-  const currentTab = tabByPath || tabs.find((tab) => tab.id === activeTabId)
-  const tabChatState = tabByPath?.chatState || currentTab?.chatState
-  const tabForPersistenceId = tabByPath?.id || activeTabId
-  const tabKey = currentTab?.id || 'home'
+  const { tabs } = useAppSelector((s) => s.tabs)
+  // 以当前路由推导 tabId，避免在“新建标签页”尚未写入 store 前发生跨标签页覆盖。
+  const tabKey = useMemo(() => {
+    const path = location.pathname
+    if (path === '/') return 'home'
+    const segments = path.split('/')
+    if (segments[1] === 'chat' && segments[2] === 'assistant' && segments[3]) {
+      return `assistant:${segments[3]}`
+    }
+    if (segments[1] === 'chat' && segments[2] === 'topic' && segments[3]) {
+      return `topic:${segments[3]}`
+    }
+    return segments[1] || 'home'
+  }, [location.pathname])
+
+  const tabById = useMemo(() => tabs.find((tab) => tab.id === tabKey), [tabKey, tabs])
+  const tabChatState = tabById?.chatState
+  const tabForPersistenceId = tabById?.id
+  const tabExists = Boolean(tabById)
 
   const resolveAssistantFromTab = useCallback((): Assistant | null => {
     const tabAssistantId = tabChatState?.assistantId
@@ -290,6 +303,7 @@ const HomePage: FC = () => {
                   initialTab={preferTopicTab ? 'topic' : undefined}
                   tabKey={tabKey}
                   tabSide={tabChatState?.tabSide}
+                  tabExists={tabExists}
                 />
               </motion.div>
             </ErrorBoundary>
