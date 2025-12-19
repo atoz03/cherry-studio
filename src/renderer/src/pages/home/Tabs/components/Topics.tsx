@@ -1,3 +1,4 @@
+import type { DragStart } from '@hello-pangea/dnd'
 import AssistantAvatar from '@renderer/components/Avatar/AssistantAvatar'
 import { DraggableVirtualList } from '@renderer/components/DraggableList'
 import { CopyIcon, DeleteIcon, EditIcon } from '@renderer/components/Icons'
@@ -5,6 +6,7 @@ import ObsidianExportPopup from '@renderer/components/Popups/ObsidianExportPopup
 import PromptPopup from '@renderer/components/Popups/PromptPopup'
 import SaveToKnowledgePopup from '@renderer/components/Popups/SaveToKnowledgePopup'
 import { isMac } from '@renderer/config/constant'
+import { useTabDrag } from '@renderer/context/TabDragContext'
 import { db } from '@renderer/databases'
 import { useAssistant, useAssistants } from '@renderer/hooks/useAssistant'
 import { useInPlaceEdit } from '@renderer/hooks/useInPlaceEdit'
@@ -75,6 +77,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const { assistants } = useAssistants()
   const { assistant, addTopic, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
   const { showTopicTime, setTopicPosition, topicPosition } = useSettings()
+  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
 
   const renamingTopics = useSelector((state: RootState) => state.runtime.chat.renamingTopics)
   const topicLoadingQuery = useSelector((state: RootState) => state.messages.loadingByTopic)
@@ -577,12 +580,34 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
 
   const singlealone = topicPosition === 'right' && position === 'right'
 
+  const handleTopicDragStart = useCallback(
+    (start: DragStart) => {
+      const topic = filteredTopics[start.source.index]
+      if (topic) {
+        setCandidate({ type: 'topic', id: topic.id })
+      } else {
+        clearCandidate()
+      }
+    },
+    [filteredTopics, setCandidate, clearCandidate]
+  )
+
+  const handleTopicDragEnd = useCallback(() => {
+    if (candidate && isOverTabBar) {
+      openCandidateTab(candidate)
+    }
+    clearCandidate()
+    setIsOverTabBar(false)
+  }, [candidate, isOverTabBar, openCandidateTab, clearCandidate, setIsOverTabBar])
+
   return (
     <>
       <DraggableVirtualList
         className="topics-tab"
         list={filteredTopics}
         onUpdate={updateTopics}
+        onDragStart={handleTopicDragStart}
+        onDragEnd={handleTopicDragEnd}
         style={{ height: '100%', padding: '8px 0 10px 10px', paddingBottom: isManageMode ? 70 : 10 }}
         itemContainerStyle={{ paddingBottom: '8px' }}
         header={

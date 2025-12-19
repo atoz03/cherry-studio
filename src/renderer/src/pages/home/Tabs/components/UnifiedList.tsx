@@ -1,4 +1,6 @@
+import type { DragStart } from '@hello-pangea/dnd'
 import { DraggableList } from '@renderer/components/DraggableList'
+import { useTabDrag } from '@renderer/context/TabDragContext'
 import type { Assistant, AssistantsSortType } from '@renderer/types'
 import type { FC } from 'react'
 import { useCallback } from 'react'
@@ -47,6 +49,7 @@ export const UnifiedList: FC<UnifiedListProps> = (props) => {
     sortByPinyinAsc,
     sortByPinyinDesc
   } = props
+  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
 
   const renderUnifiedItem = useCallback(
     (item: UnifiedItem) => {
@@ -96,13 +99,35 @@ export const UnifiedList: FC<UnifiedListProps> = (props) => {
     ]
   )
 
+  const handleDragStart = useCallback(
+    (start: DragStart) => {
+      onDragStart()
+      const item = items[start.source.index]
+      if (item?.type === 'assistant') {
+        setCandidate({ type: 'assistant', id: item.data.id })
+      } else {
+        clearCandidate()
+      }
+    },
+    [items, onDragStart, setCandidate, clearCandidate]
+  )
+
+  const handleDragEnd = useCallback(() => {
+    onDragEnd()
+    if (candidate && isOverTabBar) {
+      openCandidateTab(candidate)
+    }
+    clearCandidate()
+    setIsOverTabBar(false)
+  }, [candidate, isOverTabBar, openCandidateTab, onDragEnd, clearCandidate, setIsOverTabBar])
+
   return (
     <DraggableList
       list={items}
       itemKey={(item) => `${item.type}-${item.data.id}`}
       onUpdate={onReorder}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}>
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}>
       {renderUnifiedItem}
     </DraggableList>
   )
