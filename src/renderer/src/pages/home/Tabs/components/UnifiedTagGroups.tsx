@@ -1,4 +1,6 @@
+import type { DragStart } from '@hello-pangea/dnd'
 import { DraggableList } from '@renderer/components/DraggableList'
+import { useTabDrag } from '@renderer/context/TabDragContext'
 import type { Assistant, AssistantsSortType } from '@renderer/types'
 import type { FC } from 'react'
 import { useCallback } from 'react'
@@ -60,6 +62,7 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
   } = props
 
   const { t } = useTranslation()
+  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
 
   const renderUnifiedItem = useCallback(
     (item: UnifiedItem) => {
@@ -122,8 +125,23 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
             list={group.items}
             itemKey={(item) => `${item.type}-${item.data.id}`}
             onUpdate={(newList) => onGroupReorder(group.tag, newList)}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}>
+            onDragStart={(start: DragStart) => {
+              onDragStart()
+              const item = group.items[start.source.index]
+              if (item?.type === 'assistant') {
+                setCandidate({ type: 'assistant', id: item.data.id })
+              } else {
+                clearCandidate()
+              }
+            }}
+            onDragEnd={() => {
+              onDragEnd()
+              if (candidate && isOverTabBar) {
+                openCandidateTab(candidate)
+              }
+              clearCandidate()
+              setIsOverTabBar(false)
+            }}>
             {renderUnifiedItem}
           </DraggableList>
         </TagGroup>
