@@ -3053,6 +3053,16 @@ const migrateConfig = {
       logger.error('migrate 187 error', error as Error)
       return state
     }
+  },
+  '188': (state: RootState) => {
+    try {
+      addShortcuts(state, ['close_tab'], 'new_topic')
+      logger.info('migrate 188 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 188 error', error as Error)
+      return state
+    }
   }
 }
 

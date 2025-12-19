@@ -49,7 +49,7 @@ export const UnifiedList: FC<UnifiedListProps> = (props) => {
     sortByPinyinAsc,
     sortByPinyinDesc
   } = props
-  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
+  const { setCandidate, clearCandidate, openCandidateIfOverTabBar } = useTabDrag()
 
   const renderUnifiedItem = useCallback(
     (item: UnifiedItem) => {
@@ -114,12 +114,9 @@ export const UnifiedList: FC<UnifiedListProps> = (props) => {
 
   const handleDragEnd = useCallback(() => {
     onDragEnd()
-    if (candidate && isOverTabBar) {
-      openCandidateTab(candidate)
-    }
+    openCandidateIfOverTabBar()
     clearCandidate()
-    setIsOverTabBar(false)
-  }, [candidate, isOverTabBar, openCandidateTab, onDragEnd, clearCandidate, setIsOverTabBar])
+  }, [onDragEnd, openCandidateIfOverTabBar, clearCandidate])
 
   return (
     <DraggableList

@@ -10,6 +10,7 @@ import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useFullscreen } from '@renderer/hooks/useFullscreen'
 import { useMinappPopup } from '@renderer/hooks/useMinappPopup'
 import { useMinapps } from '@renderer/hooks/useMinapps'
+import { useShortcut } from '@renderer/hooks/useShortcuts'
 import { getThemeModeLabel, getTitleLabel } from '@renderer/i18n/label'
 import tabsService from '@renderer/services/TabsService'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
@@ -138,8 +139,10 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
   const { minapps } = useMinapps()
   const { assistants } = useAssistants()
   const { t } = useTranslation()
-  const { candidate, isOverTabBar, setIsOverTabBar } = useTabDrag()
-  const tabsBarRef = useRef<HTMLDivElement | null>(null)
+  const { candidate, isOverTabBar, setIsOverTabBar, clearCandidate, openCandidateIfOverTabBar } = useTabDrag()
+  const tabBarRef = useRef<HTMLDivElement | null>(null)
+  const dragRafRef = useRef<number | null>(null)
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     if (!candidate) {
@@ -147,25 +150,101 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
       return
     }
 
-    const handlePointerMove = (event: PointerEvent) => {
-      const bar = tabsBarRef.current
-      if (!bar) {
-        setIsOverTabBar(false)
-        return
-      }
-
-      const rect = bar.getBoundingClientRect()
-      const isOver =
-        event.clientX >= rect.left &&
-        event.clientX <= rect.right &&
-        event.clientY >= rect.top &&
-        event.clientY <= rect.bottom
+    const updateIsOver = () => {
+      const tabBar = tabBarRef.current
+      const point = lastPointerRef.current
+      if (!tabBar || !point) return
+      const rect = tabBar.getBoundingClientRect()
+      const isOver = point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
       setIsOverTabBar(isOver)
     }
 
-    window.addEventListener('pointermove', handlePointerMove)
-    return () => window.removeEventListener('pointermove', handlePointerMove)
+    const scheduleUpdate = () => {
+      if (dragRafRef.current !== null) return
+      // 用 rAF 降频，避免拖拽过程中过度触发 layout 计算
+      dragRafRef.current = window.requestAnimationFrame(() => {
+        dragRafRef.current = null
+        updateIsOver()
+      })
+    }
+
+    const handlePointerMove = (event: MouseEvent | PointerEvent) => {
+      lastPointerRef.current = { x: event.clientX, y: event.clientY }
+      scheduleUpdate()
+    }
+
+    const handlePointerUp = (event: MouseEvent | PointerEvent) => {
+      lastPointerRef.current = { x: event.clientX, y: event.clientY }
+      updateIsOver()
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true, capture: true })
+    window.addEventListener('mousemove', handlePointerMove, { passive: true, capture: true })
+    window.addEventListener('pointerup', handlePointerUp, { passive: true, capture: true })
+    window.addEventListener('mouseup', handlePointerUp, { passive: true, capture: true })
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove, { capture: true })
+      window.removeEventListener('mousemove', handlePointerMove, { capture: true })
+      window.removeEventListener('pointerup', handlePointerUp, { capture: true })
+      window.removeEventListener('mouseup', handlePointerUp, { capture: true })
+      if (dragRafRef.current !== null) {
+        window.cancelAnimationFrame(dragRafRef.current)
+        dragRafRef.current = null
+      }
+      lastPointerRef.current = null
+      setIsOverTabBar(false)
+    }
   }, [candidate, setIsOverTabBar])
+
+  const handleTabBarDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!candidate) return
+      event.preventDefault()
+      event.stopPropagation()
+      setIsOverTabBar(true)
+    },
+    [candidate, setIsOverTabBar]
+  )
+
+  const handleTabBarDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!candidate) return
+      event.preventDefault()
+      event.stopPropagation()
+      event.dataTransfer.dropEffect = 'move'
+      if (!isOverTabBar) {
+        setIsOverTabBar(true)
+      }
+    },
+    [candidate, isOverTabBar, setIsOverTabBar]
+  )
+
+  const handleTabBarDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!candidate) return
+      event.preventDefault()
+      event.stopPropagation()
+      const relatedTarget = event.relatedTarget as Node | null
+      if (relatedTarget && event.currentTarget.contains(relatedTarget)) {
+        return
+      }
+      setIsOverTabBar(false)
+    },
+    [candidate, setIsOverTabBar]
+  )
+
+  const handleTabBarDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!candidate) return
+      event.preventDefault()
+      event.stopPropagation()
+      setIsOverTabBar(true)
+      openCandidateIfOverTabBar()
+      clearCandidate()
+    },
+    [candidate, clearCandidate, openCandidateIfOverTabBar, setIsOverTabBar]
+  )
 
   const getTabId = (path: string): string => {
     if (path === '/') return 'home'
@@ -253,6 +332,11 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     removeSpecialTabs()
   }, [removeSpecialTabs])
 
+  useShortcut('close_tab', () => {
+    if (activeTabId === 'home') return
+    tabsService.closeTab(activeTabId)
+  })
+
   const closeTab = (tabId: string) => {
     tabsService.closeTab(tabId)
   }
@@ -283,7 +367,14 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
 
   return (
     <Container>
-      <TabsBar ref={tabsBarRef} $isFullscreen={isFullscreen} $isDragOver={Boolean(candidate && isOverTabBar)}>
+      <TabsBar ref={tabBarRef} $isFullscreen={isFullscreen} $isDragOver={Boolean(candidate && isOverTabBar)}>
+        <TabDropZone
+          $active={Boolean(candidate)}
+          onDragEnter={handleTabBarDragEnter}
+          onDragOver={handleTabBarDragOver}
+          onDragLeave={handleTabBarDragLeave}
+          onDrop={handleTabBarDrop}
+        />
         <HorizontalScrollContainer dependencies={[tabs]} gap="6px" className="tab-scroll-container">
           <Sortable
             items={visibleTabs}
@@ -402,6 +493,14 @@ const TabsBar = styled.div<{ $isFullscreen: boolean; $isDragOver: boolean }>`
       -webkit-app-region: no-drag;
     }
   }
+`
+
+const TabDropZone = styled.div<{ $active: boolean }>`
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: ${({ $active }) => ($active ? 'auto' : 'none')};
+  -webkit-app-region: no-drag;
 `
 
 const Tab = styled.div<{ active?: boolean }>`

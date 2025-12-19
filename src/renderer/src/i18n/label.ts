@@ -197,6 +197,7 @@ const shortcutKeyMap = {
   actions: 'settings.shortcuts.actions',
   clear_shortcut: 'settings.shortcuts.clear_shortcut',
   clear_topic: 'settings.shortcuts.clear_topic',
+  close_tab: 'settings.shortcuts.close_tab',
   rename_topic: 'settings.shortcuts.rename_topic',
   copy_last_message: 'settings.shortcuts.copy_last_message',
   edit_last_user_message: 'settings.shortcuts.edit_last_user_message',

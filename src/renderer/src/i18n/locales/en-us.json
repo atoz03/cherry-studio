@@ -4700,6 +4700,7 @@
       "actions": "operation",
       "clear_shortcut": "Clear Shortcut",
       "clear_topic": "Clear Messages",
+      "close_tab": "Close tab",
       "copy_last_message": "Copy Last Message",
       "edit_last_user_message": "Edit Last User Message",
       "enabled": "Enable",

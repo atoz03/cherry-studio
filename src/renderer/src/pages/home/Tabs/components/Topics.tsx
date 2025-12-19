@@ -77,7 +77,7 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   const { assistants } = useAssistants()
   const { assistant, addTopic, removeTopic, moveTopic, updateTopic, updateTopics } = useAssistant(_assistant.id)
   const { showTopicTime, setTopicPosition, topicPosition } = useSettings()
-  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
+  const { setCandidate, clearCandidate, openCandidateIfOverTabBar } = useTabDrag()
 
   const renamingTopics = useSelector((state: RootState) => state.runtime.chat.renamingTopics)
   const topicLoadingQuery = useSelector((state: RootState) => state.messages.loadingByTopic)
@@ -593,12 +593,9 @@ export const Topics: React.FC<Props> = ({ assistant: _assistant, activeTopic, se
   )
 
   const handleTopicDragEnd = useCallback(() => {
-    if (candidate && isOverTabBar) {
-      openCandidateTab(candidate)
-    }
+    openCandidateIfOverTabBar()
     clearCandidate()
-    setIsOverTabBar(false)
-  }, [candidate, isOverTabBar, openCandidateTab, clearCandidate, setIsOverTabBar])
+  }, [openCandidateIfOverTabBar, clearCandidate])
 
   return (
     <>
