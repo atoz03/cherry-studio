@@ -3074,6 +3074,7 @@ const migrateConfig = {
   // 1.7.7
   '188': (state: RootState) => {
     try {
+      addShortcuts(state, ['close_tab'], 'new_topic')
       state.llm.providers.forEach((provider) => {
         if (provider.id === SystemProviderIds.openrouter) {
           provider.anthropicApiHost = 'https://openrouter.ai/api'

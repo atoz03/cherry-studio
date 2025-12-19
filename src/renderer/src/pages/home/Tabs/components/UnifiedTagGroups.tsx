@@ -62,7 +62,7 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
   } = props
 
   const { t } = useTranslation()
-  const { candidate, setCandidate, clearCandidate, isOverTabBar, setIsOverTabBar, openCandidateTab } = useTabDrag()
+  const { setCandidate, clearCandidate, openCandidateIfOverTabBar } = useTabDrag()
 
   const renderUnifiedItem = useCallback(
     (item: UnifiedItem) => {
@@ -136,11 +136,8 @@ export const UnifiedTagGroups: FC<UnifiedTagGroupsProps> = (props) => {
             }}
             onDragEnd={() => {
               onDragEnd()
-              if (candidate && isOverTabBar) {
-                openCandidateTab(candidate)
-              }
+              openCandidateIfOverTabBar()
               clearCandidate()
-              setIsOverTabBar(false)
             }}>
             {renderUnifiedItem}
           </DraggableList>
