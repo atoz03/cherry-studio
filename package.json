@@ -12,7 +12,8 @@
   "workspaces": {
     "packages": [
       "local",
-      "packages/*"
+      "packages/*",
+      "apps/*"
     ],
     "installConfig": {
       "hoistingLimits": [
@@ -27,6 +28,11 @@
   "scripts": {
     "start": "electron-vite preview",
     "dev": "dotenv electron-vite dev",
+    "web:dev": "vite --config apps/web/vite.config.ts",
+    "web:build": "vite build --config apps/web/vite.config.ts",
+    "web:preview": "vite preview --config apps/web/vite.config.ts",
+    "server:dev": "yarn workspace @cherrystudio/web-server dev",
+    "server:build": "yarn workspace @cherrystudio/web-server build",
     "debug": "electron-vite -- --inspect --sourcemap --remote-debugging-port=9222",
     "build": "npm run typecheck && electron-vite build",
     "build:check": "yarn lint && yarn test",

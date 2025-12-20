@@ -6,6 +6,7 @@ import store from '@renderer/store'
 import { setLocalBackupSyncState, setS3SyncState, setWebDAVSyncState } from '@renderer/store/backup'
 import type { S3Config, WebDavConfig } from '@renderer/types'
 import { uuid } from '@renderer/utils'
+import { isWebRuntime } from '@renderer/utils/platform'
 import dayjs from 'dayjs'
 
 import { NotificationService } from './NotificationService'
@@ -65,6 +66,14 @@ async function deleteWebdavFileWithRetry(fileName: string, webdavConfig: WebDavC
 export async function backup(skipBackupFile: boolean) {
   const filename = `cherry-studio.${dayjs().format('YYYYMMDDHHmm')}.zip`
   const fileContnet = await getBackupData()
+
+  if (isWebRuntime()) {
+    const webFileName = filename.replace(/\.zip$/, '.json')
+    await window.api.file.save(webFileName, fileContnet)
+    window.toast.success(i18n.t('message.backup.success'))
+    return
+  }
+
   const selectFolder = await window.api.file.selectFolder()
   if (selectFolder) {
     await window.api.backup.backup(filename, fileContnet, selectFolder, skipBackupFile)
@@ -74,14 +83,22 @@ export async function backup(skipBackupFile: boolean) {
 
 export async function restore() {
   const notificationService = NotificationService.getInstance()
-  const file = await window.api.file.open({ filters: [{ name: '备份文件', extensions: ['bak', 'zip'] }] })
+  const filters = isWebRuntime()
+    ? [{ name: '备份文件', extensions: ['json'] }]
+    : [{ name: '备份文件', extensions: ['bak', 'zip'] }]
+  const file = await window.api.file.open({ filters })
 
   if (file) {
     try {
       let data: Record<string, any> = {}
 
-      // zip backup file
-      if (file?.fileName.endsWith('.zip')) {
+      if (isWebRuntime()) {
+        if (!file.content) {
+          throw new Error('Empty backup content')
+        }
+        const text = new TextDecoder().decode(file.content)
+        data = JSON.parse(text)
+      } else if (file?.fileName.endsWith('.zip')) {
         const restoreData = await window.api.backup.restore(file.filePath)
         data = JSON.parse(restoreData)
       } else {

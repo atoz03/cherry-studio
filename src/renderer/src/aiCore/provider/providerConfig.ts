@@ -21,6 +21,7 @@ import {
   isWithTrailingSharp,
   routeToEndpoint
 } from '@renderer/utils/api'
+import { getWebApiBaseUrl, isWebRuntime } from '@renderer/utils/platform'
 import {
   isAnthropicProvider,
   isAzureOpenAIProvider,
@@ -32,6 +33,7 @@ import {
   isSupportStreamOptionsProvider,
   isVertexProvider
 } from '@renderer/utils/provider'
+import { createWebProxyFetch } from '@renderer/utils/webProxy'
 import { defaultAppHeaders } from '@shared/utils'
 import { cloneDeep, isEmpty } from 'lodash'
 
@@ -201,6 +203,10 @@ export function providerToAiSdkConfig(actualProvider: Provider, model: Model): A
   extraOptions.headers = {
     ...defaultAppHeaders(),
     ...actualProvider.extra_headers
+  }
+
+  if (isWebRuntime()) {
+    extraOptions.fetch = createWebProxyFetch(getWebApiBaseUrl())
   }
 
   if (aiSdkProviderId === 'openai') {

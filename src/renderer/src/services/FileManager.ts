@@ -4,6 +4,7 @@ import i18n from '@renderer/i18n'
 import store from '@renderer/store'
 import type { FileMetadata } from '@renderer/types'
 import { getFileDirectory } from '@renderer/utils'
+import { isWebRuntime } from '@renderer/utils/platform'
 import dayjs from 'dayjs'
 
 const logger = loggerService.withContext('FileManager')
@@ -138,6 +139,9 @@ class FileManager {
 
   static getFileUrl(file: FileMetadata) {
     const filesPath = store.getState().runtime.filesPath
+    if (isWebRuntime()) {
+      return `${filesPath}/${file.name}`
+    }
     return 'file://' + filesPath + '/' + file.name
   }
 

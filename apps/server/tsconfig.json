@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "ES2022",
+    "target": "ES2022",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+    "paths": {
+      "@shared/*": ["../../packages/shared/*"],
+      "@types": ["../../src/renderer/src/types/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}
