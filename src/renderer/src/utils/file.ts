@@ -1,7 +1,7 @@
 import type { FileMetadata } from '@renderer/types'
 import { FileTypes } from '@renderer/types'
 import { audioExts, documentExts, imageExts, KB, MB, textExts, videoExts } from '@shared/config/constant'
-import mime from 'mime-types'
+import mime from 'mime'
 
 /**
  * 从文件路径中提取目录路径。
@@ -114,17 +114,18 @@ export async function filterSupportedFiles(files: FileMetadata[], supportExts: s
 
 export const mime2type = (mimeStr: string): FileTypes => {
   const mimeType = mimeStr.toLowerCase()
-  const ext = mime.extension(mimeType)
-  if (ext) {
-    if (textExts.includes(ext)) {
+  const ext = mime.getExtension(mimeType)
+  const normalizedExt = ext ? `.${ext}` : ''
+  if (normalizedExt) {
+    if (textExts.includes(normalizedExt)) {
       return FileTypes.TEXT
-    } else if (imageExts.includes(ext)) {
+    } else if (imageExts.includes(normalizedExt)) {
       return FileTypes.IMAGE
-    } else if (documentExts.includes(ext)) {
+    } else if (documentExts.includes(normalizedExt)) {
       return FileTypes.DOCUMENT
-    } else if (audioExts.includes(ext)) {
+    } else if (audioExts.includes(normalizedExt)) {
       return FileTypes.AUDIO
-    } else if (videoExts.includes(ext)) {
+    } else if (videoExts.includes(normalizedExt)) {
       return FileTypes.VIDEO
     }
   }

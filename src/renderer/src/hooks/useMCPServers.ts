@@ -6,16 +6,25 @@ import { addMCPServer, deleteMCPServer, setMCPServers, updateMCPServer } from '@
 import type { MCPServer } from '@renderer/types'
 import { IpcChannel } from '@shared/IpcChannel'
 
-// Listen for server changes from main process
-window.electron.ipcRenderer.on(IpcChannel.Mcp_ServersChanged, (_event, servers) => {
-  store.dispatch(setMCPServers(servers))
-})
+// 监听主进程的 MCP 服务变更（Web 端需判空）
+const registerMcpIpcListeners = () => {
+  const ipcRenderer = window.electron?.ipcRenderer
+  if (!ipcRenderer?.on) {
+    return
+  }
 
-window.electron.ipcRenderer.on(IpcChannel.Mcp_AddServer, (_event, server: MCPServer) => {
-  store.dispatch(addMCPServer(server))
-  NavigationService.navigate?.('/settings/mcp')
-  NavigationService.navigate?.(`/settings/mcp/settings/${encodeURIComponent(server.id)}`)
-})
+  ipcRenderer.on(IpcChannel.Mcp_ServersChanged, (_event, servers) => {
+    store.dispatch(setMCPServers(servers))
+  })
+
+  ipcRenderer.on(IpcChannel.Mcp_AddServer, (_event, server: MCPServer) => {
+    store.dispatch(addMCPServer(server))
+    NavigationService.navigate?.('/settings/mcp')
+    NavigationService.navigate?.(`/settings/mcp/settings/${encodeURIComponent(server.id)}`)
+  })
+}
+
+registerMcpIpcListeners()
 
 const selectMcpServers = (state: RootState) => state.mcp.servers
 const selectActiveMcpServers = createSelector([selectMcpServers], (servers) =>

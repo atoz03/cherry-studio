@@ -20,11 +20,23 @@ export function createWebProxyFetch(proxyBaseUrl: string): typeof fetch {
     const method = init?.method || (input instanceof Request ? input.method : 'GET')
     const body = init?.body || (input instanceof Request ? input.body : undefined)
 
-    return fetch(proxyUrl, {
+    const response = await fetch(proxyUrl, {
       ...init,
       method,
       headers,
       body
     })
+
+    if (!response.ok) {
+      let detail = ''
+      try {
+        detail = await response.clone().text()
+      } catch {
+        detail = ''
+      }
+      throw new Error(`代理请求失败: ${response.status} ${response.statusText}${detail ? ` - ${detail}` : ''}`)
+    }
+
+    return response
   }
 }

@@ -23,8 +23,21 @@ router.all('/proxy', async (req: Request, res: Response) => {
     return
   }
 
+  let resolvedUrl: URL | null = null
+  try {
+    resolvedUrl = new URL(targetUrl)
+  } catch {
+    res.status(400).json({ error: 'Invalid x-cherry-proxy-url header', targetUrl })
+    return
+  }
+
   const controller = new AbortController()
-  req.on('close', () => controller.abort())
+  req.on('aborted', () => controller.abort())
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      controller.abort()
+    }
+  })
 
   const headers: Record<string, string> = {}
   Object.entries(req.headers).forEach(([key, value]) => {
@@ -46,7 +59,7 @@ router.all('/proxy', async (req: Request, res: Response) => {
   const body = hasBody ? (hasParsedBody ? JSON.stringify(req.body) : req) : undefined
 
   try {
-    const response = await fetch(targetUrl, {
+    const response = await fetch(resolvedUrl, {
       method,
       headers,
       body,
@@ -68,7 +81,10 @@ router.all('/proxy', async (req: Request, res: Response) => {
     const bodyStream = Readable.fromWeb(response.body)
     bodyStream.pipe(res)
   } catch (error: any) {
-    res.status(502).json({ error: error.message || 'Proxy request failed' })
+    res.status(502).json({
+      error: error?.message || 'Proxy request failed',
+      targetUrl: resolvedUrl?.toString() || targetUrl
+    })
   }
 })
 

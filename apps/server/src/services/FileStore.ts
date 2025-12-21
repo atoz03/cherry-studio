@@ -2,10 +2,18 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { pipeline } from 'node:stream/promises'
 
-import { audioExts, documentExts, imageExts, videoExts } from '@shared/config/constant'
 import { v4 as uuidv4 } from 'uuid'
 
+import * as sharedConstants from '../../../../packages/shared/config/constant'
 import { getDataPath } from '../utils/paths'
+
+const constants = (sharedConstants as { default?: typeof sharedConstants }).default ?? sharedConstants
+const { audioExts, documentExts, imageExts, videoExts } = constants as {
+  audioExts: string[]
+  documentExts: string[]
+  imageExts: string[]
+  videoExts: string[]
+}
 
 export type FileType = 'image' | 'video' | 'audio' | 'text' | 'document' | 'other'
 

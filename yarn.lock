@@ -2152,6 +2152,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cherrystudio/web-app@workspace:apps/web":
+  version: 0.0.0-use.local
+  resolution: "@cherrystudio/web-app@workspace:apps/web"
+  languageName: unknown
+  linkType: soft
+
+"@cherrystudio/web-server@workspace:apps/server":
+  version: 0.0.0-use.local
+  resolution: "@cherrystudio/web-server@workspace:apps/server"
+  dependencies:
+    "@libsql/client": "npm:0.14.0"
+    "@modelcontextprotocol/sdk": "npm:^1.23.0"
+    cors: "npm:^2.8.5"
+    express: "npm:^5.1.0"
+    uuid: "npm:^11.1.0"
+  languageName: unknown
+  linkType: soft
+
 "@chevrotain/cst-dts-gen@npm:11.0.3":
   version: 11.0.3
   resolution: "@chevrotain/cst-dts-gen@npm:11.0.3"
