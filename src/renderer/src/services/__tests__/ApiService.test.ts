@@ -223,7 +223,6 @@ vi.mock('@renderer/store/llm.ts', () => {
       supported_text_delta: true,
       group: ''
     },
-    quickAssistantId: '',
     settings: {
       ollama: { keepAliveTime: 0 },
       lmstudio: { keepAliveTime: 0 },

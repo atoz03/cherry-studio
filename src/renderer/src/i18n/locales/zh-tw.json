@@ -2956,192 +2956,6 @@
       "undo": "復原"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "複製",
-        "explain": "解釋",
-        "quote": "引用",
-        "refine": "潤飾",
-        "search": "搜尋",
-        "summary": "總結",
-        "translate": "翻譯"
-      },
-      "translate": {
-        "smart_translate_tips": "智慧翻譯：內容將優先翻譯為目標語言；內容已是目標語言時，將翻譯為備用語言"
-      },
-      "window": {
-        "c_copy": "C 複製",
-        "esc_close": "Esc 關閉",
-        "esc_stop": "Esc 停止",
-        "opacity": "視窗透明度",
-        "original_copy": "複製原文",
-        "original_hide": "隱藏原文",
-        "original_show": "顯示原文",
-        "pin": "置頂",
-        "pinned": "已置頂",
-        "r_regenerate": "R 重新產生"
-      }
-    },
-    "name": "劃詞助手",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "自訂功能已達上限 ({{max}} 個)",
-          "enabled": "新增自訂功能"
-        },
-        "custom": "自訂功能",
-        "delete_confirm": "確定要刪除這個自訂功能嗎？",
-        "drag_hint": "拖曳排序，移動到上方以啟用功能 ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "重設",
-          "confirm": "確定要重設為預設功能嗎？自訂功能不會被刪除。",
-          "tooltip": "重設為預設功能，自訂功能不會被刪除"
-        },
-        "title": "功能"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "進階功能，建議有經驗的使用者在了解情況下再進行設定",
-          "title": "篩選名單"
-        },
-        "filter_mode": {
-          "blacklist": "黑名單",
-          "default": "關閉",
-          "description": "可以限制劃詞助手只在特定應用中生效（白名單）或不生效（黑名單）",
-          "title": "應用篩選",
-          "whitelist": "白名單"
-        },
-        "title": "進階"
-      },
-      "enable": {
-        "description": "目前僅支援 Windows & macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "前往設定",
-            "open_accessibility_settings": "開啟輔助使用設定"
-          },
-          "description": {
-            "0": "劃詞助手需「<strong>輔助使用權限</strong>」才能正常工作。",
-            "1": "請點選「<strong>前往設定</strong>」，並在稍後出現的權限請求對話框中點選「<strong>開啟系統設定</strong>」按鈕，接著在應用程式清單中找到「<strong>Cherry Studio</strong>」，並開啟權限開關。",
-            "2": "完成設定後，請再次開啟劃詞助手。"
-          },
-          "title": "輔助使用權限"
-        },
-        "title": "啟用"
-      },
-      "experimental": "實驗性功能",
-      "filter_modal": {
-        "title": "應用篩選名單",
-        "user_tips": {
-          "mac": "請輸入應用程式的 Bundle ID（每行一個、不區分大小寫，可模糊比對）。例如：com.google.Chrome、com.apple.mail 等",
-          "windows": "請輸入應用程式的執行檔名稱（每行一個、不區分大小寫，可模糊比對）。例如：chrome.exe、weixin.exe、Cherry Studio.exe 等"
-        }
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "請輸入搜尋引擎名稱",
-            "label": "自訂名稱",
-            "max_length": "名稱不能超過 16 個字元"
-          },
-          "test": "測試",
-          "url": {
-            "hint": "使用 {{queryString}} 代表搜尋詞",
-            "invalid_format": "請輸入以 http:// 或 https:// 開頭的有效 URL",
-            "label": "自訂搜尋 URL",
-            "missing_placeholder": "URL 必須包含 {{queryString}} 佔位符",
-            "required": "請輸入搜尋 URL"
-          }
-        },
-        "engine": {
-          "custom": "自訂",
-          "label": "搜尋引擎"
-        },
-        "title": "設定搜尋引擎"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "緊湊模式下，只顯示圖示，不顯示文字",
-          "title": "緊湊模式"
-        },
-        "title": "工具列",
-        "trigger_mode": {
-          "ctrlkey": "Ctrl 鍵",
-          "ctrlkey_note": "劃詞後，再 按住 Ctrl 鍵，才顯示工具列",
-          "description": "劃詞後，觸發取詞並顯示工具列的方式",
-          "description_note": {
-            "mac": "若使用了快捷鍵或鍵盤對映工具對 ⌘ 鍵進行了重新對應，可能導致部分應用程式無法劃詞。",
-            "windows": "在某些應用中可能無法透過 Ctrl 鍵劃詞。若使用了 AHK 等工具對 Ctrl 鍵進行了重新對應，可能導致部分應用程式無法劃詞。"
-          },
-          "selected": "劃詞",
-          "selected_note": "劃詞後，立即顯示工具列",
-          "shortcut": "快捷鍵",
-          "shortcut_link": "前往快捷鍵設定",
-          "shortcut_note": "劃詞後，使用快捷鍵顯示工具列。請在快捷鍵設定頁面中設定取詞快捷鍵並啟用。",
-          "title": "取詞方式"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "預設",
-          "label": "選擇助手"
-        },
-        "icon": {
-          "error": "無效的圖示名稱，請檢查輸入",
-          "label": "圖示",
-          "placeholder": "輸入 Lucide 圖示名稱",
-          "random": "隨機圖示",
-          "tooltip": "Lucide 圖示名稱為小寫，如 arrow-right",
-          "view_all": "檢視所有圖示"
-        },
-        "model": {
-          "assistant": "使用助手",
-          "default": "預設模型",
-          "label": "模型",
-          "tooltip": "使用助手：會同時使用助手的系統提示詞和模型參數"
-        },
-        "name": {
-          "hint": "請輸入功能名稱",
-          "label": "名稱"
-        },
-        "prompt": {
-          "copy_placeholder": "複製佔位符",
-          "label": "使用者提示詞 (Prompt)",
-          "placeholder": "使用佔位符 {{text}} 代表選取的文字，不填寫時，選取的文字將加到本提示詞的結尾",
-          "placeholder_text": "佔位符",
-          "tooltip": "使用者提示詞，作為使用者輸入的補充，不會覆蓋助手的系統提示詞"
-        },
-        "title": {
-          "add": "新增自訂功能",
-          "edit": "編輯自訂功能"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "當視窗未置頂且失去焦點時，將自動關閉該視窗",
-          "title": "自動關閉"
-        },
-        "auto_pin": {
-          "description": "預設將視窗置於頂端",
-          "title": "自動置頂"
-        },
-        "follow_toolbar": {
-          "description": "視窗位置將跟隨工具列顯示，停用後則始終置中顯示",
-          "title": "跟隨工具列"
-        },
-        "opacity": {
-          "description": "設定視窗的預設透明度，100% 為完全不透明",
-          "title": "透明度"
-        },
-        "remember_size": {
-          "description": "應用運作期間，視窗會按上次調整的大小顯示",
-          "title": "記住大小"
-        },
-        "title": "功能視窗"
-      }
-    }
-  },
   "settings": {
     "about": {
       "checkUpdate": {
@@ -4358,9 +4172,6 @@
       "provider_key_overridden": "成功更新 {{provider}} 的 API 金鑰",
       "provider_key_override_confirm": "{{provider}} 已存在相同 API 金鑰，是否覆蓋？",
       "provider_name": "提供者名稱",
-      "quick_assistant_default_tag": "預設",
-      "quick_assistant_model": "快捷助手模型",
-      "quick_assistant_selection": "選擇助手",
       "quick_model": {
         "description": "用於話題命名、搜尋關鍵字提煉等簡單任務的模型",
         "label": "快速模型",
@@ -4663,13 +4474,6 @@
       },
       "tip": "支援模糊比對（*.test.com，192.168.0.0/16）"
     },
-    "quickAssistant": {
-      "click_tray_to_show": "點選工具列圖示啟動",
-      "enable_quick_assistant": "啟用快捷助手",
-      "read_clipboard_at_startup": "啟動時讀取剪貼簿",
-      "title": "快捷助手",
-      "use_shortcut_to_show": "右鍵點選工具列圖示或使用快捷鍵啟動"
-    },
     "quickPanel": {
       "back": "後退",
       "close": "關閉",
@@ -4706,7 +4510,6 @@
       "enabled": "啟用",
       "exit_fullscreen": "離開全螢幕",
       "label": "按鍵",
-      "mini_window": "快捷助手",
       "new_topic": "新增話題",
       "press_shortcut": "按下快捷鍵",
       "rename_topic": "重新命名話題",
@@ -4715,8 +4518,6 @@
       "reset_to_default": "重設為預設",
       "search_message": "搜尋訊息",
       "search_message_in_chat": "在目前對話中搜尋訊息",
-      "selection_assistant_select_text": "劃詞助手：取詞",
-      "selection_assistant_toggle": "開關劃詞助手",
       "show_app": "顯示 / 隱藏應用程式",
       "show_settings": "開啟設定",
       "title": "快捷鍵",
@@ -5089,7 +4890,6 @@
   },
   "tray": {
     "quit": "結束",
-    "show_mini_window": "快捷助手",
     "show_window": "顯示視窗"
   },
   "update": {

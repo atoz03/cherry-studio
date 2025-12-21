@@ -171,7 +171,7 @@ const logger = loggerService.initWindowSource('Worker').withContext('LetsWork')
 
 ```bash
 CSLOGGER_MAIN_LEVEL=verbose
-CSLOGGER_MAIN_SHOW_MODULES=MCPService,SelectionService
+CSLOGGER_MAIN_SHOW_MODULES=MCPService
 ```
 
 注意：

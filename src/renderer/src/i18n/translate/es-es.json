@@ -2956,192 +2956,6 @@
       "undo": "Revocar"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "Copiar",
-        "explain": "Explicar",
-        "quote": "Citar",
-        "refine": "Perfeccionar",
-        "search": "Buscar",
-        "summary": "Resumen",
-        "translate": "Traducir"
-      },
-      "translate": {
-        "smart_translate_tips": "Traducción inteligente: el contenido se traducirá primero al idioma de destino; si el contenido ya está en el idioma de destino, se traducirá al idioma alternativo"
-      },
-      "window": {
-        "c_copy": "C Copiar",
-        "esc_close": "Esc Cerrar",
-        "esc_stop": "Esc Detener",
-        "opacity": "Transparencia de la ventana",
-        "original_copy": "Copiar texto original",
-        "original_hide": "Ocultar texto original",
-        "original_show": "Mostrar texto original",
-        "pin": "Anclar",
-        "pinned": "Anclado",
-        "r_regenerate": "R Regenerar"
-      }
-    },
-    "name": "Asistente de selección de palabras",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "La funcionalidad personalizada ha alcanzado el límite ({{max}} elementos)",
-          "enabled": "Agregar funcionalidad personalizada"
-        },
-        "custom": "Función personalizada",
-        "delete_confirm": "¿Está seguro de que desea eliminar esta función personalizada?",
-        "drag_hint": "Arrastre para ordenar, muévalo hacia arriba para habilitar la función ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "Restablecer",
-          "confirm": "¿Está seguro de que desea restablecer a las funciones predeterminadas? Las funciones personalizadas no se eliminarán.",
-          "tooltip": "Restablecer a las funciones predeterminadas, las funciones personalizadas no se eliminarán"
-        },
-        "title": "Función"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "Funcionalidad avanzada, se recomienda que los usuarios con experiencia la configuren solo después de comprenderla",
-          "title": "Lista de filtros"
-        },
-        "filter_mode": {
-          "blacklist": "Lista negra",
-          "default": "Desactivado",
-          "description": "Permite limitar que el asistente de selección de palabras solo funcione en aplicaciones específicas (lista blanca) o no funcione (lista negra)",
-          "title": "Filtrado de aplicaciones",
-          "whitelist": "Lista blanca"
-        },
-        "title": "Avanzado"
-      },
-      "enable": {
-        "description": "Actualmente solo se admite Windows y macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "Ir a la configuración",
-            "open_accessibility_settings": "Abrir la configuración de accesibilidad"
-          },
-          "description": {
-            "0": "El asistente de selección de texto necesita el permiso de «<strong>Accesibilidad</strong>» para funcionar correctamente.",
-            "1": "Haga clic en «<strong>Ir a configuración</strong>», luego, en la ventana emergente de solicitud de permisos que aparecerá, haga clic en el botón «<strong>Abrir configuración del sistema</strong>» y, a continuación, busque «<strong>Cherry Studio</strong>» en la lista de aplicaciones y active el interruptor de permisos.",
-            "2": "Una vez completada la configuración, vuelva a activar el asistente de selección de texto."
-          },
-          "title": "Permisos de accesibilidad"
-        },
-        "title": "Habilitar"
-      },
-      "experimental": "Función experimental",
-      "filter_modal": {
-        "title": "Lista de selección de aplicaciones",
-        "user_tips": {
-          "mac": "Ingrese el ID de paquete de la aplicación, uno por línea, sin distinguir mayúsculas y minúsculas, se permite la coincidencia aproximada. Por ejemplo: com.google.Chrome, com.apple.mail, etc.",
-          "windows": "Ingrese el nombre del archivo ejecutable de la aplicación, uno por línea, sin distinguir mayúsculas y minúsculas, se permite la coincidencia aproximada. Por ejemplo: chrome.exe, weixin.exe, Cherry Studio.exe, etc."
-        }
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "Por favor, ingrese el nombre del motor de búsqueda",
-            "label": "Nombre personalizado",
-            "max_length": "El nombre no puede exceder los 16 caracteres"
-          },
-          "test": "Prueba",
-          "url": {
-            "hint": "Utiliza {{queryString}} para representar el término de búsqueda",
-            "invalid_format": "Por favor, introduce una URL válida que comience con http:// o https://",
-            "label": "URL de búsqueda personalizada",
-            "missing_placeholder": "La URL debe contener el marcador de posición {{queryString}}",
-            "required": "Por favor, introduce la URL de búsqueda"
-          }
-        },
-        "engine": {
-          "custom": "Personalizado",
-          "label": "Motor de búsqueda"
-        },
-        "title": "Configurar motor de búsqueda"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "En modo compacto, solo se muestran los íconos, sin texto",
-          "title": "Modo Compacto"
-        },
-        "title": "Barra de herramientas",
-        "trigger_mode": {
-          "ctrlkey": "Tecla Ctrl",
-          "ctrlkey_note": "Después de seleccionar una palabra, mantenga presionada la tecla Ctrl para mostrar la barra de herramientas",
-          "description": "Forma de activar la captura de palabras y mostrar la barra de herramientas tras seleccionar texto",
-          "description_note": {
-            "mac": "Si se utilizan atajos de teclado o herramientas de mapeo que han reasignado la tecla ⌘, es posible que algunas aplicaciones no permitan seleccionar texto.",
-            "windows": "Algunas aplicaciones no admiten la selección de texto mediante la tecla Ctrl. Si se utilizan herramientas de mapeo de teclas como AHK que han reasignado la tecla Ctrl, es posible que algunas aplicaciones no permitan seleccionar texto."
-          },
-          "selected": "Seleccionar texto",
-          "selected_note": "Mostrar inmediatamente la barra de herramientas tras seleccionar una palabra",
-          "shortcut": "Atajo de teclado",
-          "shortcut_link": "Ir a la configuración de atajos de teclado",
-          "shortcut_note": "Después de seleccionar una palabra, use un atajo de teclado para mostrar la barra de herramientas. Configure el atajo de captura de palabras y actívelo en la página de configuración de atajos.",
-          "title": "Método de captura de palabras"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "Predeterminado",
-          "label": "Seleccionar asistente"
-        },
-        "icon": {
-          "error": "Nombre de icono no válido, por favor verifique la entrada",
-          "label": "Icono",
-          "placeholder": "Ingrese el nombre del icono Lucide",
-          "random": "Icono aleatorio",
-          "tooltip": "El nombre del icono Lucide debe estar en minúsculas, por ejemplo arrow-right",
-          "view_all": "Ver todos los iconos"
-        },
-        "model": {
-          "assistant": "Usar asistente",
-          "default": "Modelo predeterminado",
-          "label": "Modelo",
-          "tooltip": "Usar asistente: utilizará simultáneamente las indicaciones del sistema del asistente y los parámetros del modelo"
-        },
-        "name": {
-          "hint": "Por favor, ingrese el nombre de la función",
-          "label": "Nombre"
-        },
-        "prompt": {
-          "copy_placeholder": "Copiar marcador de posición",
-          "label": "Indicación para el usuario (Prompt)",
-          "placeholder": "Usa el marcador de posición {{text}} para representar el texto seleccionado; si no se completa, el texto seleccionado se añadirá al final de esta indicación",
-          "placeholder_text": "Marcador de posición",
-          "tooltip": "Indicación para el usuario, que complementa la entrada del usuario y no sobrescribe la indicación del sistema del asistente"
-        },
-        "title": {
-          "add": "Agregar función personalizada",
-          "edit": "Editar función personalizada"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "La ventana se cerrará automáticamente cuando no esté en primer plano y pierda el foco",
-          "title": "Cierre Automático"
-        },
-        "auto_pin": {
-          "description": "Coloca la ventana en la parte superior por defecto",
-          "title": "Fijar Automáticamente en la Parte Superior"
-        },
-        "follow_toolbar": {
-          "description": "La posición de la ventana seguirá la barra de herramientas al mostrarse; si se desactiva, se mostrará siempre centrada",
-          "title": "Seguir Barra de Herramientas"
-        },
-        "opacity": {
-          "description": "Establece la opacidad predeterminada de la ventana, 100% es completamente opaco",
-          "title": "Opacidad"
-        },
-        "remember_size": {
-          "description": "Durante la ejecución de la aplicación, la ventana se mostrará con el tamaño ajustado la última vez",
-          "title": "Recordar tamaño"
-        },
-        "title": "Ventana de funciones"
-      }
-    }
-  },
   "settings": {
     "about": {
       "checkUpdate": {
@@ -4358,9 +4172,6 @@
       "provider_key_overridden": "Clave API de {{provider}} actualizada correctamente",
       "provider_key_override_confirm": "Ya existe una clave API idéntica para {{provider}}, ¿desea sobrescribirla?",
       "provider_name": "Nombre del proveedor",
-      "quick_assistant_default_tag": "Predeterminado",
-      "quick_assistant_model": "Modelo del asistente rápido",
-      "quick_assistant_selection": "Seleccionar asistente",
       "quick_model": {
         "description": "El modelo rápido es utilizado para realizar tareas sencillas como nombrar temas, extraer palabras clave de búsqueda, etc.",
         "label": "Modelo rápido",
@@ -4663,13 +4474,6 @@
       },
       "tip": "Admite coincidencia parcial (*.test.com, 192.168.0.0/16)"
     },
-    "quickAssistant": {
-      "click_tray_to_show": "Haz clic en el icono de la bandeja para iniciar",
-      "enable_quick_assistant": "Habilitar Asistente Rápido",
-      "read_clipboard_at_startup": "Leer portapapeles al iniciar",
-      "title": "Asistente Rápido",
-      "use_shortcut_to_show": "Haz clic derecho en el icono de la bandeja o usa un atajo de teclado para iniciar"
-    },
     "quickPanel": {
       "back": "Atrás",
       "close": "Cerrar",
@@ -4705,7 +4509,6 @@
       "enabled": "habilitar",
       "exit_fullscreen": "Salir de pantalla completa",
       "label": "Tecla",
-      "mini_window": "Asistente rápido",
       "new_topic": "Nuevo tema",
       "press_shortcut": "Presionar atajo",
       "rename_topic": "Renombrar tema",
@@ -4714,8 +4517,6 @@
       "reset_to_default": "Restablecer a predeterminado",
       "search_message": "Buscar mensaje",
       "search_message_in_chat": "Buscar mensajes en la conversación actual",
-      "selection_assistant_select_text": "Asistente de selección de texto: obtener palabras",
-      "selection_assistant_toggle": "Activar/desactivar el asistente de selección de texto",
       "show_app": "Mostrar aplicación",
       "show_settings": "Abrir configuración",
       "title": "Atajos",
@@ -5088,7 +4889,6 @@
   },
   "tray": {
     "quit": "Salir",
-    "show_mini_window": "Asistente rápido",
     "show_window": "Mostrar ventana"
   },
   "update": {

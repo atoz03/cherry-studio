@@ -2956,192 +2956,6 @@
       "undo": "Rückgängig"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "Kopieren",
-        "explain": "Erklären",
-        "quote": "Zitat",
-        "refine": "Optimieren",
-        "search": "Suchen",
-        "summary": "Zusammenfassen",
-        "translate": "Übersetzen"
-      },
-      "translate": {
-        "smart_translate_tips": "Intelligente Übersetzung: Inhalt wird bevorzugt in Zielsprache übersetzt; wenn Inhalt bereits in Zielsprache, Übersetzung in Alternativsprache"
-      },
-      "window": {
-        "c_copy": "C zum Kopieren",
-        "esc_close": "Esc Schließen",
-        "esc_stop": "Esc Stoppen",
-        "opacity": "Fenstertransparenz",
-        "original_copy": "Original kopieren",
-        "original_hide": "Original ausblenden",
-        "original_show": "Original anzeigen",
-        "pin": "Anpinnen",
-        "pinned": "Angepinnt",
-        "r_regenerate": "R Neu generieren"
-      }
-    },
-    "name": "Textauswahl-Assistent",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "Maximale Anzahl benutzerdefinierter Funktionen erreicht ({{max}})",
-          "enabled": "Benutzerdefinierte Funktion hinzufügen"
-        },
-        "custom": "Benutzerdefinierte Funktionen",
-        "delete_confirm": "Diese benutzerdefinierte Funktion wirklich löschen?",
-        "drag_hint": "Zum Sortieren ziehen, nach oben bewegen, um Funktion zu aktivieren ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "Zurücksetzen",
-          "confirm": "Wirklich auf Standardfunktionen zurücksetzen? Benutzerdefinierte Funktionen werden nicht gelöscht.",
-          "tooltip": "Auf Standardfunktionen zurücksetzen, benutzerdefinierte Funktionen bleiben"
-        },
-        "title": "Funktionen"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "Erweiterte Funktion. Für erfahrene Benutzer empfohlen, nur nach Verständnis ändern",
-          "title": "Filterliste"
-        },
-        "filter_mode": {
-          "blacklist": "Blacklist",
-          "default": "Schließen",
-          "description": "Kann Textauswahl-Assistent auf bestimmte Apps beschränken (Whitelist) oder ausschließen (Blacklist)",
-          "title": "App-Filter",
-          "whitelist": "Whitelist"
-        },
-        "title": "Erweitert"
-      },
-      "enable": {
-        "description": "Derzeit nur Windows & macOS unterstützt",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "Zu Einstellungen",
-            "open_accessibility_settings": "Bedienungshilfen-Einstellungen öffnen"
-          },
-          "description": {
-            "0": "Der Textauswahl-Assistent benötigt <strong>Bedienungshilfen-Berechtigungen</strong>, um ordnungsgemäß zu funktionieren.",
-            "1": "Klicken Sie auf <strong>Zu Einstellungen</strong> und anschließend im Berechtigungsdialog auf <strong>Systemeinstellungen öffnen</strong>. Suchen Sie danach in der App-Liste <strong>Cherry Studio</strong> und aktivieren Sie den Schalter.",
-            "2": "Nach Abschluss der Einrichtung Textauswahl-Assistent erneut aktivieren."
-          },
-          "title": "Bedienungshilfen-Berechtigung"
-        },
-        "title": "Aktivieren"
-      },
-      "experimental": "Experimentelle Funktionen",
-      "filter_modal": {
-        "title": "App-Filterliste anwenden",
-        "user_tips": {
-          "mac": "Bitte geben Sie die Bundle-ID der App ein, eine pro Zeile, Groß-/Kleinschreibung egal, unscharfe Übereinstimmung möglich. Z. B.: com.google.Chrome, com.apple.mail",
-          "windows": "Bitte geben Sie den ausführbaren Dateinamen der App ein, eine pro Zeile, Groß-/Kleinschreibung egal, unscharfe Übereinstimmung möglich. Z. B.: chrome.exe, weixin.exe, Cherry Studio.exe"
-        }
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "Bitte Suchmaschinennamen eingeben",
-            "label": "Benutzerdefinierter Name",
-            "max_length": "Name darf 16 Zeichen nicht überschreiten"
-          },
-          "test": "Test",
-          "url": {
-            "hint": "{{queryString}} für Suchbegriff verwenden",
-            "invalid_format": "Bitte eine gültige URL eingeben, die mit http:// oder https:// beginnt",
-            "label": "Benutzerdefinierte Such-URL",
-            "missing_placeholder": "URL muss den Platzhalter {{queryString}} enthalten",
-            "required": "Bitte Such-URL eingeben"
-          }
-        },
-        "engine": {
-          "custom": "Benutzerdefiniert",
-          "label": "Suchmaschine"
-        },
-        "title": "Suchmaschine einstellen"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "Im Kompaktmodus nur Symbole anzeigen, keinen Text",
-          "title": "Kompaktmodus"
-        },
-        "title": "Toolbar",
-        "trigger_mode": {
-          "ctrlkey": "Ctrl-Taste",
-          "ctrlkey_note": "Nach der Texterfassung die Ctrl-Taste länger drücken, um die Toolbar anzuzeigen",
-          "description": "Methode zum Auslösen und Anzeigen der Toolbar nach Textauswahl",
-          "description_note": {
-            "mac": "Wenn die ⌘-Taste per Shortcut- oder Key-Mapping-Tool umbelegt wurde, kann die Texterfassung in manchen Apps fehlschlagen.",
-            "windows": "Wenige Apps unterstützen Textauswahl mit Ctrl. Bei Neubelegung von Ctrl (z.B. mit AHK) funktioniert Textauswahl möglicherweise nicht."
-          },
-          "selected": "Textauswahl",
-          "selected_note": "Toolbar sofort nach Textauswahl anzeigen",
-          "shortcut": "Shortcut",
-          "shortcut_link": "Zu Shortcut-Einstellungen",
-          "shortcut_note": "Nach Textauswahl Shortcut für Toolbar verwenden. Bitte in Shortcut-Einstellungen konfigurieren.",
-          "title": "Texterfassungsmethode"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "Standard",
-          "label": "Assistent auswählen"
-        },
-        "icon": {
-          "error": "Ungültiger Symbolname, bitte Eingabe prüfen",
-          "label": "Symbol",
-          "placeholder": "Lucide-Symbolnamen eingeben",
-          "random": "Zufälliges Symbol",
-          "tooltip": "Lucide-Symbolnamen sind kleingeschrieben, z. B. arrow-right",
-          "view_all": "Alle Symbole anzeigen"
-        },
-        "model": {
-          "assistant": "Assistent verwenden",
-          "default": "Standardmodell",
-          "label": "Modell",
-          "tooltip": "Assistent verwenden: Verwendet Systemprompt und Modellparameter des Assistenten"
-        },
-        "name": {
-          "hint": "Bitte Funktionsnamen eingeben",
-          "label": "Name"
-        },
-        "prompt": {
-          "copy_placeholder": "Platzhalter kopieren",
-          "label": "Benutzer-Prompt",
-          "placeholder": "Verwenden Sie den Platzhalter {{text}} für den ausgewählten Text; wenn leer, wird der ausgewählte Text an das Ende dieses Prompts angehängt",
-          "placeholder_text": "Platzhalter",
-          "tooltip": "Benutzer-Prompt als Ergänzung zur Benutzereingabe, überschreibt nicht den Systemprompt des Assistenten"
-        },
-        "title": {
-          "add": "Benutzerdefinierte Funktion hinzufügen",
-          "edit": "Benutzerdefinierte Funktion bearbeiten"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "Wenn Fenster nicht angepinnt ist und Fokus verliert, wird es automatisch geschlossen",
-          "title": "Automatisch schließen"
-        },
-        "auto_pin": {
-          "description": "Standardmäßig Fenster im Vordergrund halten",
-          "title": "Automatisch oben anheften"
-        },
-        "follow_toolbar": {
-          "description": "Fensterposition folgt Toolbar, nach Deaktivierung immer zentriert",
-          "title": "Toolbar folgen"
-        },
-        "opacity": {
-          "description": "Standardtransparenz des Fensters festlegen, 100% ist vollständig undurchsichtig",
-          "title": "Transparenz"
-        },
-        "remember_size": {
-          "description": "Während der Laufzeit wird Fenster in zuletzt eingestellter Größe angezeigt",
-          "title": "Größe merken"
-        },
-        "title": "Funktionsfenster"
-      }
-    }
-  },
   "settings": {
     "about": {
       "checkUpdate": {
@@ -4358,9 +4172,6 @@
       "provider_key_overridden": "API-Schlüssel für {{provider}} erfolgreich aktualisiert",
       "provider_key_override_confirm": "{{provider}} hat bereits denselben API-Schlüssel, der überschrieben wird?",
       "provider_name": "Dienstanbietername",
-      "quick_assistant_default_tag": "Standard",
-      "quick_assistant_model": "Schnellassistent-Modell",
-      "quick_assistant_selection": "Assistent auswählen",
       "quick_model": {
         "description": "Modell für einfache Aufgaben wie Themenbenennung und Keyword-Extraktion",
         "label": "Schnellmodell",
@@ -4663,13 +4474,6 @@
       },
       "tip": "Unterstützt Fuzzy-Matching (*.test.com, 192.168.0.0/16)"
     },
-    "quickAssistant": {
-      "click_tray_to_show": "Klicken auf Tray-Symbol zum Starten",
-      "enable_quick_assistant": "Schnellassistent aktivieren",
-      "read_clipboard_at_startup": "Zwischenablage beim Start lesen",
-      "title": "Schnellassistent",
-      "use_shortcut_to_show": "Rechtsklick auf Tray-Icon oder Shortcut zum Starten"
-    },
     "quickPanel": {
       "back": "Zurück",
       "close": "Schließen",
@@ -4705,7 +4509,6 @@
       "enabled": "Aktivieren",
       "exit_fullscreen": "Vollbildmodus beenden",
       "label": "Taste",
-      "mini_window": "Schnellassistent",
       "new_topic": "Neues Thema",
       "press_shortcut": "Shortcut drücken",
       "rename_topic": "Thema umbenennen",
@@ -4714,8 +4517,6 @@
       "reset_to_default": "Auf Standard zurücksetzen",
       "search_message": "Nachricht suchen",
       "search_message_in_chat": "In aktuellem Chat suchen",
-      "selection_assistant_select_text": "Textauswahl-Assistent: Text erfassen",
-      "selection_assistant_toggle": "Textauswahl-Assistent umschalten",
       "show_app": "App anzeigen/ausblenden",
       "show_settings": "Einstellungen öffnen",
       "title": "Shortcut",
@@ -5088,7 +4889,6 @@
   },
   "tray": {
     "quit": "Beenden",
-    "show_mini_window": "Schnellassistent",
     "show_window": "Fenster anzeigen"
   },
   "update": {

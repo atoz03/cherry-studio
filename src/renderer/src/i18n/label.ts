@@ -204,7 +204,6 @@ const shortcutKeyMap = {
   enabled: 'settings.shortcuts.enabled',
   exit_fullscreen: 'settings.shortcuts.exit_fullscreen',
   label: 'settings.shortcuts.label',
-  mini_window: 'settings.shortcuts.mini_window',
   new_topic: 'settings.shortcuts.new_topic',
   press_shortcut: 'settings.shortcuts.press_shortcut',
   reset_defaults: 'settings.shortcuts.reset_defaults',
@@ -212,8 +211,7 @@ const shortcutKeyMap = {
   reset_to_default: 'settings.shortcuts.reset_to_default',
   search_message: 'settings.shortcuts.search_message',
   search_message_in_chat: 'settings.shortcuts.search_message_in_chat',
-  selection_assistant_select_text: 'settings.shortcuts.selection_assistant_select_text',
-  selection_assistant_toggle: 'settings.shortcuts.selection_assistant_toggle',
+
   show_app: 'settings.shortcuts.show_app',
   show_settings: 'settings.shortcuts.show_settings',
   title: 'settings.shortcuts.title',
@@ -227,15 +225,6 @@ const shortcutKeyMap = {
 
 export const getShortcutLabel = (key: string): string => {
   return getLabel(shortcutKeyMap, key)
-}
-
-const selectionDescriptionKeyMap = {
-  mac: 'selection.settings.toolbar.trigger_mode.description_note.mac',
-  windows: 'selection.settings.toolbar.trigger_mode.description_note.windows'
-} as const
-
-export const getSelectionDescriptionLabel = (key: string): string => {
-  return getLabel(selectionDescriptionKeyMap, key)
 }
 
 const paintingsImageSizeOptionsKeyMap = {

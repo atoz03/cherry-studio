@@ -25,7 +25,6 @@ import ocr from './ocr'
 import paintings from './paintings'
 import preprocess from './preprocess'
 import runtime from './runtime'
-import selectionStore from './selectionStore'
 import settings from './settings'
 import shortcuts from './shortcuts'
 import tabs from './tabs'
@@ -51,7 +50,6 @@ const rootReducer = combineReducers({
   mcp,
   memory,
   copilot,
-  selectionStore,
   tabs,
   preprocess,
   messages: newMessagesReducer,
@@ -86,7 +84,7 @@ const persistedReducer = persistReducer(
  * Call storeSyncService.subscribe() in the window's entryPoint.tsx
  */
 storeSyncService.setOptions({
-  syncList: ['assistants/', 'settings/', 'llm/', 'selectionStore/', 'note/']
+  syncList: ['assistants/', 'settings/', 'llm/', 'note/']
 })
 
 const store = configureStore({

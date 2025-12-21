@@ -16,18 +16,12 @@ export enum ConfigKeys {
   TrayOnClose = 'trayOnClose',
   ZoomFactor = 'ZoomFactor',
   Shortcuts = 'shortcuts',
-  ClickTrayToShowQuickAssistant = 'clickTrayToShowQuickAssistant',
-  EnableQuickAssistant = 'enableQuickAssistant',
+
   AutoUpdate = 'autoUpdate',
   TestPlan = 'testPlan',
   TestChannel = 'testChannel',
   EnableDataCollection = 'enableDataCollection',
-  SelectionAssistantEnabled = 'selectionAssistantEnabled',
-  SelectionAssistantTriggerMode = 'selectionAssistantTriggerMode',
-  SelectionAssistantFollowToolbar = 'selectionAssistantFollowToolbar',
-  SelectionAssistantRemeberWinSize = 'selectionAssistantRemeberWinSize',
-  SelectionAssistantFilterMode = 'selectionAssistantFilterMode',
-  SelectionAssistantFilterList = 'selectionAssistantFilterList',
+
   DisableHardwareAcceleration = 'disableHardwareAcceleration',
   Proxy = 'proxy',
   EnableDeveloperMode = 'enableDeveloperMode',
@@ -128,22 +122,6 @@ export class ConfigManager {
     )
   }
 
-  getClickTrayToShowQuickAssistant(): boolean {
-    return this.get<boolean>(ConfigKeys.ClickTrayToShowQuickAssistant, false)
-  }
-
-  setClickTrayToShowQuickAssistant(value: boolean) {
-    this.set(ConfigKeys.ClickTrayToShowQuickAssistant, value)
-  }
-
-  getEnableQuickAssistant(): boolean {
-    return this.get(ConfigKeys.EnableQuickAssistant, false)
-  }
-
-  setEnableQuickAssistant(value: boolean) {
-    this.setAndNotify(ConfigKeys.EnableQuickAssistant, value)
-  }
-
   getAutoUpdate(): boolean {
     return this.get<boolean>(ConfigKeys.AutoUpdate, true)
   }
@@ -174,57 +152,6 @@ export class ConfigManager {
 
   setEnableDataCollection(value: boolean) {
     this.set(ConfigKeys.EnableDataCollection, value)
-  }
-
-  // Selection Assistant: is enabled the selection assistant
-  getSelectionAssistantEnabled(): boolean {
-    return this.get<boolean>(ConfigKeys.SelectionAssistantEnabled, false)
-  }
-
-  setSelectionAssistantEnabled(value: boolean) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantEnabled, value)
-  }
-
-  // Selection Assistant: trigger mode (selected, ctrlkey)
-  getSelectionAssistantTriggerMode(): string {
-    return this.get<string>(ConfigKeys.SelectionAssistantTriggerMode, 'selected')
-  }
-
-  setSelectionAssistantTriggerMode(value: string) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantTriggerMode, value)
-  }
-
-  // Selection Assistant: if action window position follow toolbar
-  getSelectionAssistantFollowToolbar(): boolean {
-    return this.get<boolean>(ConfigKeys.SelectionAssistantFollowToolbar, true)
-  }
-
-  setSelectionAssistantFollowToolbar(value: boolean) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantFollowToolbar, value)
-  }
-
-  getSelectionAssistantRemeberWinSize(): boolean {
-    return this.get<boolean>(ConfigKeys.SelectionAssistantRemeberWinSize, false)
-  }
-
-  setSelectionAssistantRemeberWinSize(value: boolean) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantRemeberWinSize, value)
-  }
-
-  getSelectionAssistantFilterMode(): string {
-    return this.get<string>(ConfigKeys.SelectionAssistantFilterMode, 'default')
-  }
-
-  setSelectionAssistantFilterMode(value: string) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantFilterMode, value)
-  }
-
-  getSelectionAssistantFilterList(): string[] {
-    return this.get<string[]>(ConfigKeys.SelectionAssistantFilterList, [])
-  }
-
-  setSelectionAssistantFilterList(value: string[]) {
-    this.setAndNotify(ConfigKeys.SelectionAssistantFilterList, value)
   }
 
   getDisableHardwareAcceleration(): boolean {

@@ -62,7 +62,6 @@ import { proxyManager } from './services/ProxyManager'
 import { pythonService } from './services/PythonService'
 import { FileServiceManager } from './services/remotefile/FileServiceManager'
 import { searchService } from './services/SearchService'
-import { SelectionService } from './services/SelectionService'
 import { registerShortcuts, unregisterAllShortcuts } from './services/ShortcutService'
 import {
   addEndMessage,
@@ -783,13 +782,6 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
     vertexAIService.clearAuthCache(projectId, clientEmail)
   })
 
-  // mini window
-  ipcMain.handle(IpcChannel.MiniWindow_Show, () => windowService.showMiniWindow())
-  ipcMain.handle(IpcChannel.MiniWindow_Hide, () => windowService.hideMiniWindow())
-  ipcMain.handle(IpcChannel.MiniWindow_Close, () => windowService.closeMiniWindow())
-  ipcMain.handle(IpcChannel.MiniWindow_Toggle, () => windowService.toggleMiniWindow())
-  ipcMain.handle(IpcChannel.MiniWindow_SetPin, (_, isPinned) => windowService.setPinMiniWindow(isPinned))
-
   // aes
   ipcMain.handle(IpcChannel.Aes_Encrypt, (_, text: string, secretKey: string, iv: string) =>
     encrypt(text, secretKey, iv)
@@ -911,9 +903,6 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
 
   // store sync
   storeSyncService.registerIpcHandler()
-
-  // selection assistant
-  SelectionService.registerIpcHandler()
 
   ipcMain.handle(IpcChannel.App_QuoteToMain, (_, text: string) => windowService.quoteToMainWindow(text))
 

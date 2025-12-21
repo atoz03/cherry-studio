@@ -922,14 +922,6 @@ export function initWebApiBridge() {
     shell: {
       openExternal: (url: string) => openExternal(url)
     },
-    selection: {
-      setEnabled: async () => undefined,
-      setTriggerMode: async () => undefined,
-      setFollowToolbar: async () => undefined,
-      setRemeberWinSize: async () => undefined,
-      setFilterMode: async () => undefined,
-      setFilterList: async () => undefined
-    },
     agentTools: {
       respondToPermission: async () => ({ success: true })
     },
@@ -975,7 +967,6 @@ export function initWebApiBridge() {
     },
     webview: createUnsupportedProxy('window.api.webview'),
     webSocket: createUnsupportedProxy('window.api.webSocket'),
-    miniWindow: createUnsupportedProxy('window.api.miniWindow'),
     codeTools: createUnsupportedProxy('window.api.codeTools'),
     obsidian: createUnsupportedProxy('window.api.obsidian'),
     nutstore: createUnsupportedProxy('window.api.nutstore')

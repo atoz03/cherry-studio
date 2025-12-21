@@ -7,7 +7,6 @@ import icon from '../../../build/tray_icon.png?asset'
 import iconDark from '../../../build/tray_icon_dark.png?asset'
 import iconLight from '../../../build/tray_icon_light.png?asset'
 import { ConfigKeys, configManager } from './ConfigManager'
-import selectionService from './SelectionService'
 import { windowService } from './WindowService'
 
 export class TrayService {
@@ -61,38 +60,18 @@ export class TrayService {
     })
 
     this.tray.on('click', () => {
-      if (configManager.getEnableQuickAssistant() && configManager.getClickTrayToShowQuickAssistant()) {
-        windowService.showMiniWindow()
-      } else {
-        windowService.showMainWindow()
-      }
+      windowService.showMainWindow()
     })
   }
 
   private updateContextMenu() {
     const locale = locales[configManager.getLanguage()]
-    const { tray: trayLocale, selection: selectionLocale } = locale.translation
-
-    const quickAssistantEnabled = configManager.getEnableQuickAssistant()
-    const selectionAssistantEnabled = configManager.getSelectionAssistantEnabled()
+    const { tray: trayLocale } = locale.translation
 
     const template = [
       {
         label: trayLocale.show_window,
         click: () => windowService.showMainWindow()
-      },
-      quickAssistantEnabled && {
-        label: trayLocale.show_mini_window,
-        click: () => windowService.showMiniWindow()
-      },
-      (isWin || isMac) && {
-        label: selectionLocale.name + (selectionAssistantEnabled ? ' - On' : ' - Off'),
-        click: () => {
-          if (selectionService) {
-            selectionService.toggleEnabled()
-            this.updateContextMenu()
-          }
-        }
       },
       { type: 'separator' },
       {
@@ -124,14 +103,6 @@ export class TrayService {
     configManager.subscribe(ConfigKeys.Tray, () => this.updateTray())
 
     configManager.subscribe(ConfigKeys.Language, () => {
-      this.updateContextMenu()
-    })
-
-    configManager.subscribe(ConfigKeys.EnableQuickAssistant, () => {
-      this.updateContextMenu()
-    })
-
-    configManager.subscribe(ConfigKeys.SelectionAssistantEnabled, () => {
       this.updateContextMenu()
     })
   }

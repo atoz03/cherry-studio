@@ -47,7 +47,6 @@ import type {
   UninstallPluginOptions,
   WritePluginContentOptions
 } from '../renderer/src/types/plugin'
-import type { ActionItem } from '../renderer/src/types/selectionTypes'
 
 type DirectoryListOptions = {
   recursive?: boolean
@@ -314,10 +313,6 @@ const api = {
     retrieve: (provider: Provider, fileId: string): Promise<FileUploadResponse> =>
       ipcRenderer.invoke(IpcChannel.FileService_Retrieve, provider, fileId)
   },
-  selectionMenu: {
-    action: (action: string) => ipcRenderer.invoke('selection-menu:action', action)
-  },
-
   vertexAI: {
     getAuthHeaders: (params: { projectId: string; serviceAccount?: { privateKey: string; clientEmail: string } }) =>
       ipcRenderer.invoke(IpcChannel.VertexAI_GetAuthHeaders, params),
@@ -340,13 +335,6 @@ const api = {
     set: (key: string, value: any, isNotify: boolean = false) =>
       ipcRenderer.invoke(IpcChannel.Config_Set, key, value, isNotify),
     get: (key: string) => ipcRenderer.invoke(IpcChannel.Config_Get, key)
-  },
-  miniWindow: {
-    show: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Show),
-    hide: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Hide),
-    close: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Close),
-    toggle: () => ipcRenderer.invoke(IpcChannel.MiniWindow_Toggle),
-    setPin: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.MiniWindow_SetPin, isPinned)
   },
   aes: {
     encrypt: (text: string, secretKey: string, iv: string) =>
@@ -456,28 +444,6 @@ const api = {
     subscribe: () => ipcRenderer.invoke(IpcChannel.StoreSync_Subscribe),
     unsubscribe: () => ipcRenderer.invoke(IpcChannel.StoreSync_Unsubscribe),
     onUpdate: (action: any) => ipcRenderer.invoke(IpcChannel.StoreSync_OnUpdate, action)
-  },
-  selection: {
-    hideToolbar: () => ipcRenderer.invoke(IpcChannel.Selection_ToolbarHide),
-    writeToClipboard: (text: string) => ipcRenderer.invoke(IpcChannel.Selection_WriteToClipboard, text),
-    determineToolbarSize: (width: number, height: number) =>
-      ipcRenderer.invoke(IpcChannel.Selection_ToolbarDetermineSize, width, height),
-    setEnabled: (enabled: boolean) => ipcRenderer.invoke(IpcChannel.Selection_SetEnabled, enabled),
-    setTriggerMode: (triggerMode: string) => ipcRenderer.invoke(IpcChannel.Selection_SetTriggerMode, triggerMode),
-    setFollowToolbar: (isFollowToolbar: boolean) =>
-      ipcRenderer.invoke(IpcChannel.Selection_SetFollowToolbar, isFollowToolbar),
-    setRemeberWinSize: (isRemeberWinSize: boolean) =>
-      ipcRenderer.invoke(IpcChannel.Selection_SetRemeberWinSize, isRemeberWinSize),
-    setFilterMode: (filterMode: string) => ipcRenderer.invoke(IpcChannel.Selection_SetFilterMode, filterMode),
-    setFilterList: (filterList: string[]) => ipcRenderer.invoke(IpcChannel.Selection_SetFilterList, filterList),
-    processAction: (actionItem: ActionItem, isFullScreen: boolean = false) =>
-      ipcRenderer.invoke(IpcChannel.Selection_ProcessAction, actionItem, isFullScreen),
-    closeActionWindow: () => ipcRenderer.invoke(IpcChannel.Selection_ActionWindowClose),
-    minimizeActionWindow: () => ipcRenderer.invoke(IpcChannel.Selection_ActionWindowMinimize),
-    pinActionWindow: (isPinned: boolean) => ipcRenderer.invoke(IpcChannel.Selection_ActionWindowPin, isPinned),
-    // [Windows only] Electron bug workaround - can be removed once https://github.com/electron/electron/issues/48554 is fixed
-    resizeActionWindow: (deltaX: number, deltaY: number, direction: string) =>
-      ipcRenderer.invoke(IpcChannel.Selection_ActionWindowResize, deltaX, deltaY, direction)
   },
   agentTools: {
     respondToPermission: (payload: {

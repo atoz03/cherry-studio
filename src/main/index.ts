@@ -28,7 +28,6 @@ import {
   registerProtocolClient,
   setupAppImageDeepLink
 } from './services/ProtocolClient'
-import selectionService, { initSelectionService } from './services/SelectionService'
 import { registerShortcuts } from './services/ShortcutService'
 import { TrayService } from './services/TrayService'
 import { versionService } from './services/VersionService'
@@ -57,7 +56,7 @@ if (disableHardwareAcceleration) {
 /**
  * Disable chromium's window animations
  * main purpose for this is to avoid the transparent window flashing when it is shown
- * (especially on Windows for SelectionAssistant Toolbar)
+ * (especially on Windows)
  * Know Issue: https://github.com/electron/electron/issues/12130#issuecomment-627198990
  */
 if (isWin) {
@@ -168,9 +167,6 @@ if (!app.requestSingleInstanceLock()) {
         .catch((err) => logger.error('An error occurred: ', err))
     }
 
-    //start selection assistant service
-    initSelectionService()
-
     runAsyncFunction(async () => {
       // Start API server if enabled or if agents exist
       try {
@@ -232,11 +228,6 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     app.isQuitting = true
-
-    // quit selection service
-    if (selectionService) {
-      selectionService.quit()
-    }
   })
 
   app.on('will-quit', async () => {

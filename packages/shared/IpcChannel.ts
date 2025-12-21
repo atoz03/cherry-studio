@@ -68,12 +68,6 @@ export enum IpcChannel {
   Config_Set = 'config:set',
   Config_Get = 'config:get',
 
-  MiniWindow_Show = 'miniwindow:show',
-  MiniWindow_Hide = 'miniwindow:hide',
-  MiniWindow_Close = 'miniwindow:close',
-  MiniWindow_Toggle = 'miniwindow:toggle',
-  MiniWindow_SetPin = 'miniwindow:set-pin',
-
   // Mcp
   Mcp_AddServer = 'mcp:add-server',
   Mcp_RemoveServer = 'mcp:remove-server',
@@ -266,9 +260,6 @@ export enum IpcChannel {
 
   FullscreenStatusChanged = 'fullscreen-status-changed',
 
-  HideMiniWindow = 'hide-mini-window',
-  ShowMiniWindow = 'show-mini-window',
-
   ReduxStateChange = 'redux-state-change',
   ReduxStoreReady = 'redux-store-ready',
 
@@ -285,26 +276,6 @@ export enum IpcChannel {
 
   // Provider
   Provider_AddKey = 'provider:add-key',
-
-  //Selection Assistant
-  Selection_TextSelected = 'selection:text-selected',
-  Selection_ToolbarHide = 'selection:toolbar-hide',
-  Selection_ToolbarVisibilityChange = 'selection:toolbar-visibility-change',
-  Selection_ToolbarDetermineSize = 'selection:toolbar-determine-size',
-  Selection_WriteToClipboard = 'selection:write-to-clipboard',
-  Selection_SetEnabled = 'selection:set-enabled',
-  Selection_SetTriggerMode = 'selection:set-trigger-mode',
-  Selection_SetFilterMode = 'selection:set-filter-mode',
-  Selection_SetFilterList = 'selection:set-filter-list',
-  Selection_SetFollowToolbar = 'selection:set-follow-toolbar',
-  Selection_SetRemeberWinSize = 'selection:set-remeber-win-size',
-  Selection_ActionWindowClose = 'selection:action-window-close',
-  Selection_ActionWindowMinimize = 'selection:action-window-minimize',
-  Selection_ActionWindowPin = 'selection:action-window-pin',
-  // [Windows only] Electron bug workaround - can be removed once https://github.com/electron/electron/issues/48554 is fixed
-  Selection_ActionWindowResize = 'selection:action-window-resize',
-  Selection_ProcessAction = 'selection:process-action',
-  Selection_UpdateActionData = 'selection:update-action-data',
 
   // Memory
   Memory_Add = 'memory:add',
