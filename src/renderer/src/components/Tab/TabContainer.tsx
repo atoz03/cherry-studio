@@ -24,7 +24,6 @@ import type { LRUCache } from 'lru-cache'
 import {
   FileSearch,
   Folder,
-  Hammer,
   Home,
   Languages,
   LayoutGrid,
@@ -44,6 +43,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 
+import { McpLogo } from '../Icons'
 import MinAppIcon from '../Icons/MinAppIcon'
 import MinAppTabsPool from '../MinApp/MinAppTabsPool'
 import WindowControls from '../WindowControls'
@@ -112,7 +112,7 @@ const getTabIcon = (
     case 'knowledge':
       return <FileSearch size={14} />
     case 'mcp':
-      return <Hammer size={14} />
+      return <McpLogo width={14} height={14} />
     case 'files':
       return <Folder size={14} />
     case 'settings':

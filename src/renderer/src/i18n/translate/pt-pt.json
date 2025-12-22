@@ -32,7 +32,7 @@
     },
     "gitBash": {
       "autoDetected": "Usando Git Bash detectado automaticamente",
-      "autoDiscoveredHint": "[to be translated]:Auto-discovered",
+      "autoDiscoveredHint": "Auto-descoberto",
       "clear": {
         "button": "Limpar caminho personalizado"
       },
@@ -55,7 +55,7 @@
       },
       "placeholder": "[to be translated]:Select bash.exe path",
       "success": "Git Bash detectado com sucesso!",
-      "tooltip": "[to be translated]:Git Bash is required to run agents on Windows. Install from git-scm.com if not available."
+      "tooltip": "O Git Bash é necessário para executar agentes no Windows. Instale-o a partir de git-scm.com, caso não esteja disponível."
     },
     "input": {
       "placeholder": "Digite sua mensagem aqui, envie com {{key}} - @ selecionar caminho, / selecionar comando"
@@ -2692,7 +2692,7 @@
     "lanyun": "Lanyun Tecnologia",
     "lmstudio": "Estúdio LM",
     "longcat": "Totoro",
-    "mimo": "[to be translated]:Xiaomi MiMo",
+    "mimo": "Xiaomi MiMo",
     "minimax": "Minimax",
     "mistral": "Mistral",
     "modelscope": "ModelScope MôDá",
@@ -3281,24 +3281,43 @@
         },
         "content": "Exportar parte dos dados, incluindo registros de conversas e configurações. Observe que o processo de backup pode demorar um pouco; agradecemos sua paciência.",
         "lan": {
-          "auto_close_tip": "Fechando automaticamente em {{seconds}} segundos...",
-          "confirm_close_message": "Transferência de arquivo em andamento. Fechar irá interromper a transferência. Tem certeza de que deseja forçar o fechamento?",
-          "confirm_close_title": "Confirmar Fechamento",
           "connected": "Conectado",
           "connection_failed": "Falha na conexão",
           "content": "Certifique-se de que o computador e o telefone estejam na mesma rede para usar a transferência via LAN. Abra o aplicativo Cherry Studio e escaneie este código QR.",
+          "device_list_title": "Dispositivos de rede local",
+          "discovered_devices": "Dispositivos descobertos",
           "error": {
+            "file_too_large": "Arquivo muito grande, máximo de 500MB suportado",
             "init_failed": "Falha na inicialização",
+            "invalid_file_type": "Apenas arquivos ZIP são suportados",
             "no_file": "Nenhum arquivo selecionado",
             "no_ip": "Incapaz de obter endereço IP",
+            "not_connected": "Por favor, complete primeiro o handshake",
             "send_failed": "Falha ao enviar arquivo"
           },
-          "force_close": "Forçar Fechamento",
-          "generating_qr": "Gerando código QR...",
-          "noZipSelected": "Nenhum arquivo de compressão selecionado",
-          "scan_qr": "Por favor, escaneie o código QR com o seu telefone",
-          "selectZip": "Selecionar arquivo compactado",
-          "sendZip": "Iniciar recuperação de dados",
+          "file_transfer": {
+            "cancelled": "Transferência cancelada",
+            "failed": "Falha na transferência de arquivo: {{message}}",
+            "progress": "Enviando... {{progress}}%",
+            "success": "Arquivo enviado com sucesso"
+          },
+          "handshake": {
+            "button": "Aperto de mão",
+            "failed": "Falha no handshake: {{message}}",
+            "in_progress": "Aperto de mãos...",
+            "success": "Handshake concluído com {{device}}",
+            "test_message_received": "Recebido pong de {{device}}",
+            "test_message_sent": "Enviou payload de teste hello world"
+          },
+          "idle_hint": "Digitalização pausada. Inicie a digitalização para encontrar pares do Cherry Studio na sua rede local.",
+          "ip_addresses": "Endereços IP",
+          "last_seen": "Visto pela última vez às {{time}}",
+          "metadata": "Metadados",
+          "no_connection_warning": "Por favor, abra a Transferência LAN no Cherry Studio mobile",
+          "no_devices": "Ainda não foram encontrados pares de LAN.",
+          "scan_devices": "Escaneie dispositivos",
+          "scanning_hint": "Escaneando sua rede local por pares do Cherry Studio...",
+          "send_file": "Enviar Arquivo",
           "status": {
             "completed": "Transferência concluída",
             "connected": "Conectado",
@@ -3307,9 +3326,11 @@
             "error": "Erro de conexão",
             "initializing": "Inicializando conexão...",
             "preparing": "Preparando transferência...",
-            "sending": "Transferindo {{progress}}%",
-            "waiting_qr_scan": "Por favor, escaneie o código QR para conectar"
+            "sending": "Transferindo {{progress}}%"
           },
+          "status_badge_idle": "Ocioso",
+          "status_badge_scanning": "Digitalização",
+          "stop_scan": "Parar digitalização",
           "title": "transmissão de rede local",
           "transfer_progress": "Progresso da transferência"
         },
