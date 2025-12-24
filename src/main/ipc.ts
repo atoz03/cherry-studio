@@ -96,6 +96,7 @@ import {
   isPathInside,
   untildify
 } from './utils/file'
+import { getMacSystemFontFamilies } from './utils/fonts'
 import { updateAppDataConfig } from './utils/init'
 import { compress, decompress } from './utils/zip'
 
@@ -291,6 +292,13 @@ export function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   // Get System Fonts
   ipcMain.handle(IpcChannel.App_GetSystemFonts, async () => {
     try {
+      if (isMac) {
+        const macFonts = await getMacSystemFontFamilies()
+        if (macFonts.length > 0) {
+          return macFonts
+        }
+      }
+
       const fonts = await fontList.getFonts()
       return fonts.map((font: string) => font.replace(/^"(.*)"$/, '$1')).filter((font: string) => font.length > 0)
     } catch (error) {
