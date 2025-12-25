@@ -4,6 +4,7 @@ import { useAssistants } from '@renderer/hooks/useAssistant'
 import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useNavbarPosition, useSettings } from '@renderer/hooks/useSettings'
 import { useActiveTopic } from '@renderer/hooks/useTopic'
+import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { useAppSelector } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
@@ -21,6 +22,7 @@ import styled from 'styled-components'
 import Chat from './Chat'
 import Navbar from './Navbar'
 import HomeTabs from './Tabs'
+import { shouldForceTopicTabOnAssistantSwitch, shouldPreferTopicTab } from './utils/topicAutoSwitch'
 
 const HomePage: FC = () => {
   const { assistants } = useAssistants()
@@ -90,15 +92,23 @@ const HomePage: FC = () => {
     activeAssistant?.id ?? '',
     topicFromRoute || initialTopicFromState || initialTopicFromTab || activeAssistant?.topics[0] || undefined
   )
-  const { showAssistants, showTopics, topicPosition } = useSettings()
+  const { showAssistants, showTopics, topicPosition, clickAssistantToShowTopic } = useSettings()
   const dispatch = useDispatch()
   const { chat } = useRuntime()
   const { activeTopicOrSession } = chat
   const isChatRoute = location.pathname.startsWith('/chat/')
-  const preferTopicTab =
-    topicPosition === 'left' &&
-    isChatRoute &&
-    (state?.preferTopicTab || Boolean(params.topicId) || Boolean(tabChatState?.topicId))
+  const preferTopicTab = shouldPreferTopicTab({
+    topicPosition,
+    isChatRoute,
+    clickAssistantToShowTopic,
+    preferTopicTabFromNavState: Boolean(state?.preferTopicTab),
+    hasTopicIdParam: Boolean(params.topicId),
+    hasPersistedTopicId: Boolean(tabChatState?.topicId)
+  })
+  const forceTopicTabOnAssistantSwitch = shouldForceTopicTabOnAssistantSwitch({
+    topicPosition,
+    clickAssistantToShowTopic
+  })
 
   const persistTabChatState = useCallback(
     (assistantId: string, topicId: string) => {
@@ -113,6 +123,13 @@ const HomePage: FC = () => {
     (newAssistant: Assistant, options?: { topic?: Topic }) => {
       if (isAssistantLocked && lockedAssistantId && newAssistant.id !== lockedAssistantId) return
       if (newAssistant.id === activeAssistant?.id) return
+
+      // 设置项：自动切换到话题（左侧话题布局下生效）
+      if (forceTopicTabOnAssistantSwitch) {
+        dispatch(setActiveTopicOrSessionAction('topic'))
+        EventEmitter.emit(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR)
+      }
+
       startTransition(() => {
         _setActiveAssistant(newAssistant)
         if (newAssistant.id !== 'fake') {
@@ -131,6 +148,7 @@ const HomePage: FC = () => {
       _setActiveTopic,
       activeAssistant?.id,
       dispatch,
+      forceTopicTabOnAssistantSwitch,
       isAssistantLocked,
       isTopicLocked,
       lockedAssistantId,
