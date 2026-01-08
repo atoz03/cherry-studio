@@ -549,6 +549,20 @@
         "description": "Serveur MCP activé par défaut",
         "enableFirst": "Veuillez d'abord activer ce serveur dans les paramètres MCP",
         "label": "Serveur MCP",
+        "mode": {
+          "auto": {
+            "description": "L'IA découvre et utilise des outils automatiquement",
+            "label": "Auto"
+          },
+          "disabled": {
+            "description": "Aucun outil MCP",
+            "label": "Désactivé"
+          },
+          "manual": {
+            "description": "Sélectionner des serveurs MCP spécifiques",
+            "label": "Manuel"
+          }
+        },
         "noServersAvailable": "Aucun serveur MCP disponible. Veuillez ajouter un serveur dans les paramètres",
         "title": "Paramètres MCP"
       },
@@ -1328,6 +1342,7 @@
     "backup": {
       "file_format": "Le format du fichier de sauvegarde est incorrect"
     },
+    "base64DataTruncated": "Données d'image Base64 tronquées, taille",
     "boundary": {
       "default": {
         "devtools": "Ouvrir le panneau de débogage",
@@ -1408,6 +1423,8 @@
     "text": "texte",
     "toolInput": "entrée de l'outil",
     "toolName": "Nom de l'outil",
+    "truncated": "Données tronquées, taille d'origine",
+    "truncatedBadge": "Tronqué",
     "unknown": "Неизвестная ошибка",
     "usage": "Quantité",
     "user_message_not_found": "Impossible de trouver le message d'utilisateur original",
@@ -4509,6 +4526,14 @@
           }
         },
         "options": {
+          "anthropic_cache": {
+            "cache_last_n": "[to be translated]:Cache Last N Messages",
+            "cache_last_n_help": "[to be translated]:Cache the last N conversation messages (excluding system messages)",
+            "cache_system": "[to be translated]:Cache System Message",
+            "cache_system_help": "[to be translated]:Whether to cache the system prompt",
+            "token_threshold": "[to be translated]:Cache Token Threshold",
+            "token_threshold_help": "[to be translated]:Messages exceeding this token count will be cached. Set to 0 to disable caching."
+          },
           "array_content": {
             "help": "Ce fournisseur prend-il en charge le champ content du message sous forme de tableau ?",
             "label": "Prise en charge du format de tableau pour le contenu du message"
