@@ -648,6 +648,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.NotesGit_GetFileDiff, (_, notesPath: string, filePath: string, commitHash: string) =>
     notesGitService.getFileDiff(notesPath, filePath, commitHash)
   )
+  ipcMain.handle(IpcChannel.NotesGit_RestoreFile, (_, notesPath: string, filePath: string, commitHash: string) =>
+    notesGitService.restoreFile(notesPath, filePath, commitHash)
+  )
 
   // file service
   ipcMain.handle(IpcChannel.FileService_Upload, async (_, provider: Provider, file: FileMetadata) => {
