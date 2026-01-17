@@ -3160,6 +3160,30 @@ const migrateConfig = {
       logger.error('migrate 192 error', error as Error)
       return state
     }
+  },
+  '193': (state: RootState) => {
+    try {
+      if (state.note?.settings?.enableGit === undefined) {
+        state.note.settings.enableGit = true
+      }
+      logger.info('migrate 193 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 193 error', error as Error)
+      return state
+    }
+  },
+  '194': (state: RootState) => {
+    try {
+      if (state.note?.settings?.gitCommitIntervalMinutes === undefined) {
+        state.note.settings.gitCommitIntervalMinutes = 5
+      }
+      logger.info('migrate 194 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 194 error', error as Error)
+      return state
+    }
   }
 }
 

@@ -55,6 +55,7 @@ import { localTransferService } from './services/LocalTransferService'
 import mcpService from './services/MCPService'
 import MemoryService from './services/memory/MemoryService'
 import { openTraceWindow, setTraceWindowTitle } from './services/NodeTraceService'
+import notesGitService from './services/NotesGitService'
 import NotificationService from './services/NotificationService'
 import * as NutstoreService from './services/NutstoreService'
 import ObsidianVaultService from './services/ObsidianVaultService'
@@ -640,6 +641,13 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.File_ResumeWatcher, fileManager.resumeFileWatcher.bind(fileManager))
   ipcMain.handle(IpcChannel.File_BatchUploadMarkdown, fileManager.batchUploadMarkdownFiles.bind(fileManager))
   ipcMain.handle(IpcChannel.File_ShowInFolder, fileManager.showInFolder.bind(fileManager))
+  ipcMain.handle(IpcChannel.NotesGit_GetStatus, (_, notesPath: string) => notesGitService.getStatus(notesPath))
+  ipcMain.handle(IpcChannel.NotesGit_GetFileHistory, (_, notesPath: string, filePath: string) =>
+    notesGitService.getFileHistory(notesPath, filePath)
+  )
+  ipcMain.handle(IpcChannel.NotesGit_GetFileDiff, (_, notesPath: string, filePath: string, commitHash: string) =>
+    notesGitService.getFileDiff(notesPath, filePath, commitHash)
+  )
 
   // file service
   ipcMain.handle(IpcChannel.FileService_Upload, async (_, provider: Provider, file: FileMetadata) => {

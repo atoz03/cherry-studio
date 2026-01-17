@@ -6,9 +6,10 @@ import { useActiveNode } from '@renderer/hooks/useNotesQuery'
 import { useNotesSettings } from '@renderer/hooks/useNotesSettings'
 import { useShowWorkspace } from '@renderer/hooks/useShowWorkspace'
 import { findNode } from '@renderer/services/NotesTreeService'
+import type { NotesTreeNode } from '@renderer/types/note'
 import { Breadcrumb, Dropdown, Input, Tooltip } from 'antd'
 import { t } from 'i18next'
-import { MoreHorizontal, PanelLeftClose, PanelRightClose, Star } from 'lucide-react'
+import { MessageSquareDiff, MoreHorizontal, PanelLeftClose, PanelRightClose, Star } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import styled from 'styled-components'
 
@@ -17,7 +18,27 @@ import NotesSettings from './NotesSettings'
 
 const logger = loggerService.withContext('HeaderNavbar')
 
-const HeaderNavbar = ({ notesTree, getCurrentNoteContent, onToggleStar, onExpandPath, onRenameNode }) => {
+interface HeaderNavbarProps {
+  notesTree: NotesTreeNode[]
+  getCurrentNoteContent?: () => string
+  onToggleStar: (nodeId: string) => void
+  onExpandPath?: (treePath: string) => void
+  onRenameNode?: (nodeId: string, newName: string) => void
+  onOpenDiff?: () => void
+  diffDisabled?: boolean
+  diffDisabledReason?: string
+}
+
+const HeaderNavbar = ({
+  notesTree,
+  getCurrentNoteContent,
+  onToggleStar,
+  onExpandPath,
+  onRenameNode,
+  onOpenDiff,
+  diffDisabled,
+  diffDisabledReason
+}: HeaderNavbarProps) => {
   const { showWorkspace, toggleShowWorkspace } = useShowWorkspace()
   const { activeNode } = useActiveNode(notesTree)
   const [breadcrumbItems, setBreadcrumbItems] = useState<
@@ -37,6 +58,13 @@ const HeaderNavbar = ({ notesTree, getCurrentNoteContent, onToggleStar, onExpand
       onToggleStar(activeNode.id)
     }
   }, [activeNode, onToggleStar])
+
+  const handleOpenDiff = useCallback(() => {
+    if (diffDisabled) {
+      return
+    }
+    onOpenDiff?.()
+  }, [diffDisabled, onOpenDiff])
 
   const handleCopyContent = useCallback(async () => {
     try {
@@ -244,6 +272,13 @@ const HeaderNavbar = ({ notesTree, getCurrentNoteContent, onToggleStar, onExpand
         </BreadcrumbsContainer>
       </NavbarCenter>
       <NavbarRight style={{ paddingRight: 0 }}>
+        <Tooltip
+          title={diffDisabled ? diffDisabledReason || t('notes.diff.unavailable') : t('notes.diff.open')}
+          mouseEnterDelay={0.8}>
+          <DiffButton onClick={handleOpenDiff} $disabled={Boolean(diffDisabled)}>
+            <MessageSquareDiff size={18} />
+          </DiffButton>
+        </Tooltip>
         {canShowStarButton && (
           <Tooltip title={activeNode.isStarred ? t('notes.unstar') : t('notes.star')} mouseEnterDelay={0.8}>
             <StarButton onClick={handleToggleStarred}>
@@ -308,6 +343,11 @@ export const NavbarIcon = styled.div`
     background-color: var(--color-background-mute);
     color: var(--color-icon-white);
   }
+`
+
+const DiffButton = styled(NavbarIcon)<{ $disabled: boolean }>`
+  opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+  pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
 `
 
 export const StarButton = styled.div`
