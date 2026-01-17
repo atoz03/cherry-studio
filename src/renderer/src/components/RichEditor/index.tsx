@@ -207,6 +207,7 @@ const RichEditor = ({
   const {
     editor,
     markdown,
+    persistedMarkdown,
     html,
     formattingState,
     tableOfContentsItems,
@@ -487,7 +488,7 @@ const RichEditor = ({
     () => ({
       getContent: () => editor?.getText() || '',
       getHtml: () => html,
-      getMarkdown: () => markdown,
+      getMarkdown: () => persistedMarkdown,
       setContent: (content: string) => {
         editor?.commands.setContent(content)
       },
@@ -548,7 +549,7 @@ const RichEditor = ({
       getAllCommands,
       getToolbarCommands
     }),
-    [editor, html, markdown, setHtml, setMarkdown, clear, getPreviewText]
+    [editor, html, markdown, persistedMarkdown, setHtml, setMarkdown, clear, getPreviewText]
   )
 
   return (
