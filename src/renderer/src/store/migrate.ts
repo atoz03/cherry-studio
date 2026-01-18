@@ -3184,6 +3184,29 @@ const migrateConfig = {
       logger.error('migrate 194 error', error as Error)
       return state
     }
+  },
+  '195': (state: RootState) => {
+    try {
+      if (state.llm?.providers) {
+        state.llm.providers = state.llm.providers.filter((provider) => !provider.isSystem)
+      }
+
+      if (state.minapps) {
+        const allowedDefaultMinapps = new Set(['openai', 'gemini', 'anthropic', 'perplexity', 'grok', 'you'])
+        const filterApps = (apps: any[]) =>
+          apps.filter((app) => app?.type === 'Custom' || allowedDefaultMinapps.has(app?.id))
+
+        state.minapps.enabled = filterApps(state.minapps.enabled || [])
+        state.minapps.disabled = filterApps(state.minapps.disabled || [])
+        state.minapps.pinned = filterApps(state.minapps.pinned || [])
+      }
+
+      logger.info('migrate 195 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 195 error', error as Error)
+      return state
+    }
   }
 }
 

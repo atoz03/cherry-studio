@@ -211,7 +211,8 @@ class BackupManager {
     fileName: string,
     data: string,
     destinationPath: string = this.backupDir,
-    skipBackupFile: boolean = false
+    skipBackupFile: boolean = false,
+    manifest?: string
   ): Promise<string> {
     const mainWindow = windowService.getMainWindow()
 
@@ -241,6 +242,11 @@ class BackupManager {
       })
 
       onProgress({ stage: 'writing_data', progress: 20, total: 100 })
+
+      if (manifest) {
+        const manifestPath = path.join(this.tempDir, 'manifest.json')
+        await fs.writeFile(manifestPath, manifest, 'utf-8')
+      }
 
       logger.debug(`BackupManager IPC, skipBackupFile: ${skipBackupFile}`)
 
@@ -396,30 +402,45 @@ class BackupManager {
       const data = await fs.readFile(dataPath, 'utf-8')
       onProgress({ stage: 'reading_data', progress: 35, total: 100 })
 
+      const manifestPath = path.join(this.tempDir, 'manifest.json')
+      let manifest: Record<string, any> | null = null
+      if (await fs.pathExists(manifestPath)) {
+        try {
+          manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'))
+        } catch (error) {
+          logger.warn('[BackupManager] Failed to parse manifest.json, fallback to full restore', error as Error)
+        }
+      }
+      const backupType = manifest?.backupType || 'full'
+
       logger.debug('step 3: restore Data directory')
-      // 恢复 Data 目录
-      const sourcePath = path.join(this.tempDir, 'Data')
-      const destPath = getDataPath()
+      if (backupType !== 'incremental') {
+        // 恢复 Data 目录
+        const sourcePath = path.join(this.tempDir, 'Data')
+        const destPath = getDataPath()
 
-      const dataExists = await fs.pathExists(sourcePath)
-      const dataFiles = dataExists ? await fs.readdir(sourcePath) : []
+        const dataExists = await fs.pathExists(sourcePath)
+        const dataFiles = dataExists ? await fs.readdir(sourcePath) : []
 
-      if (dataExists && dataFiles.length > 0) {
-        // 获取源目录总大小
-        const totalSize = await this.getDirSize(sourcePath)
-        let copiedSize = 0
+        if (dataExists && dataFiles.length > 0) {
+          // 获取源目录总大小
+          const totalSize = await this.getDirSize(sourcePath)
+          let copiedSize = 0
 
-        await this.setWritableRecursive(destPath)
-        await fs.remove(destPath)
+          await this.setWritableRecursive(destPath)
+          await fs.remove(destPath)
 
-        // 使用流式复制
-        await this.copyDirWithProgress(sourcePath, destPath, (size) => {
-          copiedSize += size
-          const progress = Math.min(85, 35 + Math.floor((copiedSize / totalSize) * 50))
-          onProgress({ stage: 'copying_files', progress, total: 100 })
-        })
+          // 使用流式复制
+          await this.copyDirWithProgress(sourcePath, destPath, (size) => {
+            copiedSize += size
+            const progress = Math.min(85, 35 + Math.floor((copiedSize / totalSize) * 50))
+            onProgress({ stage: 'copying_files', progress, total: 100 })
+          })
+        } else {
+          logger.debug('skipBackupFile is true, skip restoring Data directory')
+        }
       } else {
-        logger.debug('skipBackupFile is true, skip restoring Data directory')
+        logger.debug('[BackupManager] Incremental backup detected, skip restoring Data directory')
       }
 
       logger.debug('step 4: clean up temp directory')
@@ -430,6 +451,16 @@ class BackupManager {
 
       logger.debug('step 5: Restore completed successfully')
 
+      if (manifest) {
+        try {
+          const parsed = JSON.parse(data)
+          parsed.manifest = manifest
+          return JSON.stringify(parsed)
+        } catch (error) {
+          logger.warn('[BackupManager] Failed to attach manifest to data.json payload', error as Error)
+        }
+      }
+
       return data
     } catch (error) {
       logger.error('Restore failed:', error as Error)
@@ -438,9 +469,9 @@ class BackupManager {
     }
   }
 
-  async backupToWebdav(_: Electron.IpcMainInvokeEvent, data: string, webdavConfig: WebDavConfig) {
+  async backupToWebdav(_: Electron.IpcMainInvokeEvent, data: string, webdavConfig: WebDavConfig, manifest?: string) {
     const filename = webdavConfig.fileName || 'cherry-studio.backup.zip'
-    const backupedFilePath = await this.backup(_, filename, data, undefined, webdavConfig.skipBackupFile)
+    const backupedFilePath = await this.backup(_, filename, data, undefined, webdavConfig.skipBackupFile, manifest)
     const webdavClient = this.getWebDavInstance(webdavConfig)
     try {
       let result
@@ -617,14 +648,15 @@ class BackupManager {
     localConfig: {
       localBackupDir: string
       skipBackupFile: boolean
-    }
+    },
+    manifest?: string
   ) {
     try {
       const backupDir = localConfig.localBackupDir
       // Create backup directory if it doesn't exist
       await fs.ensureDir(backupDir)
 
-      const backupedFilePath = await this.backup(_, fileName, data, backupDir, localConfig.skipBackupFile)
+      const backupedFilePath = await this.backup(_, fileName, data, backupDir, localConfig.skipBackupFile, manifest)
       return backupedFilePath
     } catch (error) {
       logger.error('[BackupManager] Local backup failed:', error as Error)
@@ -632,7 +664,7 @@ class BackupManager {
     }
   }
 
-  async backupToS3(_: Electron.IpcMainInvokeEvent, data: string, s3Config: S3Config) {
+  async backupToS3(_: Electron.IpcMainInvokeEvent, data: string, s3Config: S3Config, manifest?: string) {
     const os = require('os')
     const deviceName = os.hostname ? os.hostname() : 'device'
     const timestamp = new Date()
@@ -643,7 +675,7 @@ class BackupManager {
 
     logger.debug(`Starting S3 backup to ${filename}`)
 
-    const backupedFilePath = await this.backup(_, filename, data, undefined, s3Config.skipBackupFile)
+    const backupedFilePath = await this.backup(_, filename, data, undefined, s3Config.skipBackupFile, manifest)
     const s3Client = this.getS3Storage(s3Config)
     try {
       const fileBuffer = await fs.promises.readFile(backupedFilePath)
@@ -789,7 +821,7 @@ class BackupManager {
    * Creates a lightweight backup (skipBackupFile=true) in the temp directory
    * Returns the path to the created ZIP file
    */
-  async createLanTransferBackup(_: Electron.IpcMainInvokeEvent, data: string): Promise<string> {
+  async createLanTransferBackup(_: Electron.IpcMainInvokeEvent, data: string, manifest?: string): Promise<string> {
     const timestamp = new Date()
       .toISOString()
       .replace(/[-:T.Z]/g, '')
@@ -801,7 +833,7 @@ class BackupManager {
     await fs.ensureDir(tempPath)
 
     // Create backup with skipBackupFile=true (no Data folder)
-    const backupedFilePath = await this.backup(_, fileName, data, tempPath, true)
+    const backupedFilePath = await this.backup(_, fileName, data, tempPath, true, manifest)
 
     logger.info(`[BackupManager] Created LAN transfer backup at: ${backupedFilePath}`)
     return backupedFilePath

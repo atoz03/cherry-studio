@@ -12,6 +12,98 @@ import { NotificationService } from './NotificationService'
 
 const logger = loggerService.withContext('BackupService')
 
+type BackupMode = 'full' | 'incremental'
+
+type BackupManifest = {
+  schemaVersion: 1
+  backupType: BackupMode
+  baseTime: number
+  generatedAt: number
+  conversationScope: 'topics'
+}
+
+const BACKUP_LAST_AT_KEY = 'cherry-studio.backup.lastBackupAt'
+
+const toTimestampMs = (value: string | number | undefined): number => {
+  if (typeof value === 'number') {
+    return value > 1e12 ? value : value * 1000
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
+const getMessageTimestamp = (message: { updatedAt?: string; createdAt?: string }) =>
+  toTimestampMs(message.updatedAt) || toTimestampMs(message.createdAt)
+
+const getMessageCreatedTimestamp = (message: { updatedAt?: string; createdAt?: string }) =>
+  toTimestampMs(message.createdAt) || toTimestampMs(message.updatedAt)
+
+const getTopicTimestamp = (topic: { updatedAt?: string; createdAt?: string }) =>
+  toTimestampMs(topic.updatedAt) || toTimestampMs(topic.createdAt)
+
+const getLastBackupAt = () => {
+  const rawValue = localStorage.getItem(BACKUP_LAST_AT_KEY)
+  const parsed = rawValue ? Number(rawValue) : 0
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const setLastBackupAt = (value: number) => {
+  localStorage.setItem(BACKUP_LAST_AT_KEY, String(value))
+}
+
+const buildBackupManifest = (backupType: BackupMode, baseTime: number): BackupManifest => ({
+  schemaVersion: 1,
+  backupType,
+  baseTime,
+  generatedAt: Date.now(),
+  conversationScope: 'topics'
+})
+
+export const resolveBackupPayload = async () => {
+  const lastBackupAt = getLastBackupAt()
+  const backupType: BackupMode = lastBackupAt > 0 ? 'incremental' : 'full'
+  const baseTime = backupType === 'incremental' ? lastBackupAt : 0
+  const data = await getBackupData({ backupType, baseTime })
+  const manifest = buildBackupManifest(backupType, baseTime)
+  return { data, manifest }
+}
+
+export const recordBackupSuccess = (manifest: BackupManifest) => {
+  setLastBackupAt(manifest.generatedAt)
+}
+
+export const mergeMessagesByUpdatedAt = <T extends { id: string; createdAt?: string; updatedAt?: string }>(
+  currentMessages: T[],
+  incomingMessages: T[]
+): T[] => {
+  if (!incomingMessages.length) {
+    return currentMessages
+  }
+
+  const merged = [...currentMessages]
+  const indexById = new Map(currentMessages.map((message, index) => [message.id, index]))
+
+  for (const incoming of incomingMessages) {
+    const existingIndex = indexById.get(incoming.id)
+    if (existingIndex === undefined) {
+      merged.push(incoming)
+      continue
+    }
+
+    const existing = merged[existingIndex]
+    if (getMessageTimestamp(incoming) >= getMessageTimestamp(existing)) {
+      merged[existingIndex] = incoming
+    }
+  }
+
+  return merged.sort((a, b) => getMessageCreatedTimestamp(a) - getMessageCreatedTimestamp(b))
+}
+
 // 重试删除S3文件的辅助函数
 async function deleteS3FileWithRetry(fileName: string, s3Config: S3Config, maxRetries = 3) {
   let lastError: Error | null = null
@@ -64,10 +156,11 @@ async function deleteWebdavFileWithRetry(fileName: string, webdavConfig: WebDavC
 
 export async function backup(skipBackupFile: boolean) {
   const filename = `cherry-studio.${dayjs().format('YYYYMMDDHHmm')}.zip`
-  const fileContnet = await getBackupData()
+  const { data: fileContnet, manifest } = await resolveBackupPayload()
   const selectFolder = await window.api.file.selectFolder()
   if (selectFolder) {
-    await window.api.backup.backup(filename, fileContnet, selectFolder, skipBackupFile)
+    await window.api.backup.backup(filename, fileContnet, selectFolder, skipBackupFile, JSON.stringify(manifest))
+    recordBackupSuccess(manifest)
     window.toast.success(i18n.t('message.backup.success'))
   }
 }
@@ -181,25 +274,30 @@ export async function backupToWebdav({
   const timestamp = dayjs().format('YYYYMMDDHHmmss')
   const backupFileName = customFileName || `cherry-studio.${timestamp}.${hostname}.${deviceType}.zip`
   const finalFileName = backupFileName.endsWith('.zip') ? backupFileName : `${backupFileName}.zip`
-  const backupData = await getBackupData()
+  const { data: backupData, manifest } = await resolveBackupPayload()
 
   // 上传文件
   try {
-    const success = await window.api.backup.backupToWebdav(backupData, {
-      webdavHost,
-      webdavUser,
-      webdavPass,
-      webdavPath,
-      fileName: finalFileName,
-      skipBackupFile: webdavSkipBackupFile,
-      disableStream: webdavDisableStream
-    })
+    const success = await window.api.backup.backupToWebdav(
+      backupData,
+      {
+        webdavHost,
+        webdavUser,
+        webdavPass,
+        webdavPath,
+        fileName: finalFileName,
+        skipBackupFile: webdavSkipBackupFile,
+        disableStream: webdavDisableStream
+      },
+      JSON.stringify(manifest)
+    )
     if (success) {
       store.dispatch(
         setWebDAVSyncState({
           lastSyncError: null
         })
       )
+      recordBackupSuccess(manifest)
       notificationService.send({
         id: uuid(),
         type: 'success',
@@ -355,15 +453,20 @@ export async function backupToS3({
   const timestamp = dayjs().format('YYYYMMDDHHmmss')
   const backupFileName = customFileName || `cherry-studio.${timestamp}.${hostname}.${deviceType}.zip`
   const finalFileName = backupFileName.endsWith('.zip') ? backupFileName : `${backupFileName}.zip`
-  const backupData = await getBackupData()
+  const { data: backupData, manifest } = await resolveBackupPayload()
 
   try {
-    const success = await window.api.backup.backupToS3(backupData, {
-      ...s3Config,
-      fileName: finalFileName
-    })
+    const success = await window.api.backup.backupToS3(
+      backupData,
+      {
+        ...s3Config,
+        fileName: finalFileName
+      },
+      JSON.stringify(manifest)
+    )
 
     if (success) {
+      recordBackupSuccess(manifest)
       store.dispatch(
         setS3SyncState({
           lastSyncError: null,
@@ -820,17 +923,36 @@ export function stopAutoSync(type?: BackupType) {
   }
 }
 
-export async function getBackupData() {
+export async function getBackupData(options?: { backupType?: BackupMode; baseTime?: number }) {
+  const backupType = options?.backupType ?? 'full'
+  const baseTime = options?.baseTime ?? 0
+  const indexedDB =
+    backupType === 'incremental' && baseTime > 0 ? await backupIncrementalDatabase(baseTime) : await backupDatabase()
+
   return JSON.stringify({
     time: new Date().getTime(),
     version: 5,
-    localStorage,
-    indexedDB: await backupDatabase()
+    backupType,
+    baseTime,
+    localStorage: {
+      'persist:cherry-studio': localStorage.getItem('persist:cherry-studio') || '{}'
+    },
+    indexedDB
   })
 }
 
 /************************************* Backup Utils ************************************** */
 export async function handleData(data: Record<string, any>) {
+  const backupType = data?.manifest?.backupType ?? data?.backupType
+
+  if (backupType === 'incremental') {
+    await mergeIncrementalPersistState(data?.localStorage?.['persist:cherry-studio'])
+    await restoreIncrementalDatabase(data?.indexedDB || {})
+    window.toast.success(i18n.t('message.restore.success'))
+    setTimeout(() => window.api.reload(), 1000)
+    return
+  }
+
   if (data.version === 1) {
     await clearDatabase()
 
@@ -891,6 +1013,33 @@ async function backupDatabase() {
   return backup
 }
 
+async function backupIncrementalDatabase(baseTime: number) {
+  const topics = await db.topics.toArray()
+  const incrementalTopics: Array<{ id: string; messages: any[] }> = []
+  const blockIds = new Set<string>()
+
+  for (const topic of topics) {
+    const messages = Array.isArray(topic.messages)
+      ? topic.messages.filter((message) => getMessageTimestamp(message) > baseTime)
+      : []
+    if (messages.length > 0) {
+      incrementalTopics.push({ id: topic.id, messages })
+      messages.forEach((message) => {
+        if (Array.isArray(message.blocks)) {
+          message.blocks.forEach((blockId: string) => blockIds.add(blockId))
+        }
+      })
+    }
+  }
+
+  const messageBlocks = blockIds.size > 0 ? await db.message_blocks.bulkGet([...blockIds]) : []
+
+  return {
+    topics: incrementalTopics,
+    message_blocks: messageBlocks.filter(Boolean)
+  }
+}
+
 async function restoreDatabase(backup: Record<string, any>) {
   await db.transaction('rw', db.tables, async () => {
     for (const tableName in backup) {
@@ -898,6 +1047,120 @@ async function restoreDatabase(backup: Record<string, any>) {
       await db.table(tableName).bulkAdd(backup[tableName])
     }
   })
+}
+
+async function restoreIncrementalDatabase(backup: Record<string, any>) {
+  const incomingTopics = Array.isArray(backup.topics) ? backup.topics : []
+  const incomingBlocks = Array.isArray(backup.message_blocks) ? backup.message_blocks : []
+
+  await db.transaction('rw', db.topics, db.message_blocks, async () => {
+    if (incomingBlocks.length > 0) {
+      await db.message_blocks.bulkPut(incomingBlocks)
+    }
+
+    for (const incomingTopic of incomingTopics) {
+      const existingTopic = await db.topics.get(incomingTopic.id)
+      const mergedMessages = mergeMessagesByUpdatedAt(
+        Array.isArray(existingTopic?.messages) ? existingTopic.messages : [],
+        Array.isArray(incomingTopic.messages) ? incomingTopic.messages : []
+      )
+      await db.topics.put({ id: incomingTopic.id, messages: mergedMessages })
+    }
+  })
+}
+
+const parsePersistedState = (payload?: string) => {
+  if (!payload) return null
+  try {
+    return JSON.parse(payload) as Record<string, string>
+  } catch (error) {
+    logger.error('[Backup] Failed to parse persisted state', error as Error)
+    return null
+  }
+}
+
+const mergeIncrementalPersistState = async (incomingPersist?: string) => {
+  if (!incomingPersist) return
+
+  const currentPersistRaw = localStorage.getItem('persist:cherry-studio') || '{}'
+  const currentPersist = (parsePersistedState(currentPersistRaw) || {}) as Record<string, string>
+  const incomingPersistState = parsePersistedState(incomingPersist) as Record<string, string> | null
+
+  if (!incomingPersistState?.assistants) {
+    return
+  }
+
+  const currentAssistantsState = parsePersistedState(currentPersist.assistants) || {}
+  const incomingAssistantsState = parsePersistedState(incomingPersistState.assistants) || {}
+  const mergedAssistantsState = mergeAssistantTopics(currentAssistantsState, incomingAssistantsState)
+
+  currentPersist.assistants = JSON.stringify(mergedAssistantsState)
+  localStorage.setItem('persist:cherry-studio', JSON.stringify(currentPersist))
+}
+
+const mergeAssistantTopics = (currentState: any, incomingState: any) => {
+  const currentAssistants = Array.isArray(currentState?.assistants) ? currentState.assistants : []
+  const incomingAssistants = Array.isArray(incomingState?.assistants) ? incomingState.assistants : []
+  const mergedAssistants = [...currentAssistants]
+  const indexById = new Map<string, number>()
+  currentAssistants.forEach((assistant: any, index: number) => {
+    if (assistant?.id) {
+      indexById.set(String(assistant.id), index)
+    }
+  })
+  const unifiedListOrder = Array.isArray(currentState?.unifiedListOrder) ? [...currentState.unifiedListOrder] : []
+  const unifiedIds = new Set(unifiedListOrder.map((item: any) => item?.id))
+
+  for (const incoming of incomingAssistants) {
+    const existingIndex = indexById.get(String(incoming?.id ?? ''))
+    if (existingIndex === undefined) {
+      mergedAssistants.push({
+        ...incoming,
+        topics: Array.isArray(incoming.topics) ? incoming.topics.map((topic: any) => ({ ...topic, messages: [] })) : []
+      })
+      if (!unifiedIds.has(incoming.id)) {
+        unifiedListOrder.push({ type: incoming.type || 'assistant', id: incoming.id })
+        unifiedIds.add(incoming.id)
+      }
+      continue
+    }
+
+    const existing = mergedAssistants[existingIndex]
+    const mergedTopics = mergeTopicsByUpdatedAt(existing?.topics, incoming?.topics)
+    mergedAssistants[existingIndex] = {
+      ...existing,
+      topics: mergedTopics
+    }
+  }
+
+  return {
+    ...currentState,
+    assistants: mergedAssistants,
+    unifiedListOrder
+  }
+}
+
+const mergeTopicsByUpdatedAt = (currentTopics: any, incomingTopics: any) => {
+  const safeCurrentTopics = Array.isArray(currentTopics) ? currentTopics : []
+  const safeIncomingTopics = Array.isArray(incomingTopics) ? incomingTopics : []
+
+  const merged = [...safeCurrentTopics]
+  const indexById = new Map(safeCurrentTopics.map((topic: any, index: number) => [topic.id, index]))
+
+  for (const incoming of safeIncomingTopics) {
+    const existingIndex = indexById.get(incoming.id)
+    if (existingIndex === undefined) {
+      merged.push({ ...incoming, messages: [] })
+      continue
+    }
+
+    const existing = merged[existingIndex]
+    if (getTopicTimestamp(incoming) >= getTopicTimestamp(existing)) {
+      merged[existingIndex] = { ...existing, ...incoming, messages: [] }
+    }
+  }
+
+  return merged
 }
 
 async function clearDatabase() {
@@ -953,15 +1216,21 @@ export async function backupToLocal({
   const timestamp = dayjs().format('YYYYMMDDHHmmss')
   const backupFileName = customFileName || `cherry-studio.${timestamp}.${hostname}.${deviceType}.zip`
   const finalFileName = backupFileName.endsWith('.zip') ? backupFileName : `${backupFileName}.zip`
-  const backupData = await getBackupData()
+  const { data: backupData, manifest } = await resolveBackupPayload()
 
   try {
-    const result = await window.api.backup.backupToLocalDir(backupData, finalFileName, {
-      localBackupDir,
-      skipBackupFile: localBackupSkipBackupFile
-    })
+    const result = await window.api.backup.backupToLocalDir(
+      backupData,
+      finalFileName,
+      {
+        localBackupDir,
+        skipBackupFile: localBackupSkipBackupFile
+      },
+      JSON.stringify(manifest)
+    )
 
     if (result) {
+      recordBackupSuccess(manifest)
       store.dispatch(
         setLocalBackupSyncState({
           lastSyncError: null

@@ -14,7 +14,7 @@ import type { Provider, ProviderType } from '@renderer/types'
 import { isSystemProvider } from '@renderer/types'
 import { getFancyProviderName, matchKeywordsInModel, matchKeywordsInProvider, uuid } from '@renderer/utils'
 import type { MenuProps } from 'antd'
-import { Button, Dropdown, Input, Tag } from 'antd'
+import { Button, Dropdown, Empty, Input, Tag } from 'antd'
 import { GripVertical, PlusIcon, Search, UserPen } from 'lucide-react'
 import type { FC } from 'react'
 import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
@@ -47,7 +47,7 @@ const ProviderList: FC = () => {
   const providers = useAllProviders()
   const { updateProviders, addProvider, removeProvider, updateProvider } = useProviders()
   const { setTimeoutTimer } = useTimer()
-  const [selectedProvider, _setSelectedProvider] = useState<Provider>(providers[0])
+  const [selectedProvider, _setSelectedProvider] = useState<Provider | undefined>(providers[0])
   const { t } = useTranslation()
   const [searchText, setSearchText] = useState<string>('')
   const [dragging, setDragging] = useState(false)
@@ -56,7 +56,7 @@ const ProviderList: FC = () => {
 
   const { data: isOvmsSupported } = useSWRImmutable('ovms/isSupported', getIsOvmsSupported)
 
-  const setSelectedProvider = useCallback((provider: Provider) => {
+  const setSelectedProvider = useCallback((provider?: Provider) => {
     startTransition(() => _setSelectedProvider(provider))
   }, [])
 
@@ -96,13 +96,25 @@ const ProviderList: FC = () => {
             100
           )
         }
-      } else {
+      } else if (providers.length > 0) {
         setSelectedProvider(providers[0])
+      } else {
+        setSelectedProvider(undefined)
       }
       searchParams.delete('id')
       setSearchParams(searchParams)
     }
   }, [providers, searchParams, setSearchParams, setSelectedProvider, setTimeoutTimer])
+
+  useEffect(() => {
+    if (providers.length === 0) {
+      setSelectedProvider(undefined)
+      return
+    }
+    if (!selectedProvider || !providers.some((provider) => provider.id === selectedProvider.id)) {
+      setSelectedProvider(providers[0])
+    }
+  }, [providers, selectedProvider, setSelectedProvider])
 
   // Handle provider add key from URL schema
   useEffect(() => {
@@ -264,7 +276,8 @@ const ProviderList: FC = () => {
               }
             }
 
-            setSelectedProvider(providers.filter((p) => isSystemProvider(p))[0])
+            const nextProviders = providers.filter((p) => p.id !== provider.id)
+            setSelectedProvider(nextProviders[0])
             removeProvider(provider)
           }
         })
@@ -393,7 +406,22 @@ const ProviderList: FC = () => {
           </Button>
         </AddButtonWrapper>
       </ProviderListContainer>
-      <ProviderSetting providerId={selectedProvider.id} key={selectedProvider.id} />
+      {selectedProvider ? (
+        <ProviderSetting providerId={selectedProvider.id} key={selectedProvider.id} />
+      ) : (
+        <EmptyState>
+          <Empty
+            description={
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>{t('no_provider_selected')}</div>
+              </div>
+            }>
+            <Button type="primary" icon={<PlusIcon size={16} />} onClick={onAddProvider} disabled={dragging}>
+              {t('button.add')}
+            </Button>
+          </Empty>
+        </EmptyState>
+      )}
     </Container>
   )
 }
@@ -434,6 +462,14 @@ const ProviderListItem = styled.div`
     border: 0.5px solid var(--color-border);
     font-weight: bold !important;
   }
+`
+
+const EmptyState = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100vh - var(--navbar-height));
 `
 
 const DragHandle = styled.div`
