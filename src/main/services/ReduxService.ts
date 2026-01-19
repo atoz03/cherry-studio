@@ -45,9 +45,21 @@ export class ReduxService extends EventEmitter {
     })
 
     // 监听 store 状态变化
-    ipcMain.on(IpcChannel.ReduxStateChange, (_, newState) => {
-      this.stateCache = newState
-      this.emit(this.STATUS_CHANGE_EVENT, newState)
+    ipcMain.on(IpcChannel.ReduxStateChange, (_event, payload, enableGit, gitCommitIntervalMinutes) => {
+      let nextState = payload
+      if (!payload || typeof payload !== 'object') {
+        nextState = {
+          note: {
+            notesPath: typeof payload === 'string' ? payload : '',
+            settings: {
+              enableGit: Boolean(enableGit),
+              gitCommitIntervalMinutes: gitCommitIntervalMinutes ?? null
+            }
+          }
+        }
+      }
+      this.stateCache = nextState
+      this.emit(this.STATUS_CHANGE_EVENT, nextState)
     })
   }
 
@@ -147,18 +159,34 @@ export class ReduxService extends EventEmitter {
     // 在渲染进程中设置监听
     await mainWindow.webContents.executeJavaScript(
       `
-      if (!window._storeSubscriptions) {
-        window._storeSubscriptions = new Set();
+      if (!window._reduxStateChangeSubscribed) {
+        if (!window._storeSubscriptions) {
+          window._storeSubscriptions = new Set();
+        } else {
+          window._storeSubscriptions.forEach((unsub) => {
+            try {
+              unsub();
+            } catch {
+              // 忽略旧订阅清理失败
+            }
+          });
+          window._storeSubscriptions.clear();
+        }
 
         // 设置全局状态变化监听
         const unsubscribe = window.store.subscribe(() => {
           const state = window.store.getState();
+          // 仅发送必要字段，避免 IPC 结构化克隆失败
+          const notesPath = typeof state.note?.notesPath === 'string' ? state.note.notesPath : '';
+          const enableGit = Boolean(state.note?.settings?.enableGit);
+          const interval = state.note?.settings?.gitCommitIntervalMinutes ?? null;
           window.electron.ipcRenderer.send('` +
         IpcChannel.ReduxStateChange +
-        `', state);
+        `', notesPath, enableGit, interval);
         });
 
         window._storeSubscriptions.add(unsubscribe);
+        window._reduxStateChangeSubscribed = true;
       }
     `
     )
