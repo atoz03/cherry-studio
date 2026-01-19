@@ -92,7 +92,28 @@ jobs:
       - name: Build Mac
         if: matrix.os == 'macos-latest'
         run: |
+          set -euo pipefail
           sudo -H pip install setuptools
+          
+          # 仅当提供了有效的签名证书时才启用 codesign。
+          # 如果 CSC_LINK 被误配置为目录（例如 "." 或仓库根目录），electron-builder 会报错：
+          # “<path> not a file”
+          if [ -n "${CSC_LINK:-}" ]; then
+            if [[ "$CSC_LINK" == http*://* ]] || [[ "$CSC_LINK" == base64:* ]] || [[ "$CSC_LINK" =~ ^[A-Za-z0-9+/=]{200,}$ ]]; then
+              echo "codesign: 使用 URL/base64 证书（CSC_LINK）"
+            elif [ -f "$CSC_LINK" ]; then
+              echo "codesign: 使用本地证书文件（CSC_LINK=$CSC_LINK）"
+            else
+              echo "codesign: CSC_LINK 非文件/URL/base64（值可能是目录），已禁用签名以避免构建失败"
+              unset CSC_LINK
+              unset CSC_KEY_PASSWORD
+              export CSC_IDENTITY_AUTO_DISCOVERY=false
+            fi
+          else
+            echo "codesign: 未提供 CSC_LINK，已禁用签名"
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+
           pnpm build:mac
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
