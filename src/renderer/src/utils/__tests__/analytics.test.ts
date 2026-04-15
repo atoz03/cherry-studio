@@ -49,8 +49,7 @@ describe('trackTokenUsage', () => {
       provider: 'openai',
       model: 'gpt-4',
       input_tokens: 100,
-      output_tokens: 50,
-      source: 'chat'
+      output_tokens: 50
     })
   })
 
@@ -70,8 +69,7 @@ describe('trackTokenUsage', () => {
       provider: 'anthropic',
       model: 'claude-3',
       input_tokens: 200,
-      output_tokens: 100,
-      source: 'chat'
+      output_tokens: 100
     })
   })
 

@@ -52,7 +52,7 @@ function getProviderTrackId(id: string): string {
  * Track token usage for analytics
  * Handles both OpenAI format (prompt_tokens) and AI SDK format (inputTokens)
  */
-export function trackTokenUsage({ usage, model, source = 'chat' }: TokenUsageParams): void {
+export function trackTokenUsage({ usage, model }: TokenUsageParams): void {
   if (!usage || !model?.provider || !model?.id) return
 
   const [inputTokens, outputTokens] = isAiSdkUsage(usage)
@@ -64,8 +64,7 @@ export function trackTokenUsage({ usage, model, source = 'chat' }: TokenUsagePar
       provider: getProviderTrackId(model.provider),
       model: model.id,
       input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      source
+      output_tokens: outputTokens
     })
   }
 }
