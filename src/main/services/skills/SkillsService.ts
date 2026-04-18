@@ -1,4 +1,3 @@
-import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -6,10 +5,18 @@ import { loggerService } from '@logger'
 import { isPathInside } from '@main/utils/file'
 import { copyDirectoryRecursive, deleteDirectoryRecursive } from '@main/utils/fileOperations'
 import { parseSkillMetadata } from '@main/utils/markdownParser'
-import type { InstalledSkillEntry, LibrarySkillEntry, PluginError } from '@types'
+import type {
+  InstalledSkill,
+  InstalledSkillEntry,
+  LibrarySkillEntry,
+  PluginError,
+  SkillInstallFromDirectoryOptions
+} from '@types'
 import { app } from 'electron'
 
 const logger = loggerService.withContext('SkillsService')
+
+type SkillDirectoryInstaller = (options: SkillInstallFromDirectoryOptions) => Promise<InstalledSkill>
 
 type SkillsServiceConfig = {
   userDataPath?: string
@@ -17,6 +24,8 @@ type SkillsServiceConfig = {
   maxSkillMdBytes?: number
   /** 扫描库目录最大深度（root=0） */
   maxLibraryScanDepth?: number
+  /** 统一技能主库安装器；运行时接到 SkillService，测试可留空走纯文件模式 */
+  installSkillFromDirectory?: SkillDirectoryInstaller
 }
 
 const SKILL_MD_VARIANTS = ['SKILL.md', 'skill.md'] as const
@@ -34,7 +43,6 @@ const normalizeInstalledFolderName = (rawFolderName: string): string => {
     return trimmed
   }
 
-  // 尝试将常见“可读名字”转为跨平台安全的 kebab-case
   const slug = trimmed
     .normalize('NFKD')
     .toLowerCase()
@@ -46,9 +54,7 @@ const normalizeInstalledFolderName = (rawFolderName: string): string => {
 
   if (slug) return slug
 
-  // 兜底：用哈希保证稳定性
-  const hash = crypto.createHash('sha256').update(trimmed).digest('hex').slice(0, 8)
-  return `skill-${hash}`
+  return `skill-${Buffer.from(trimmed).toString('hex').slice(0, 8)}`
 }
 
 const stripFrontmatter = (content: string): string => {
@@ -67,7 +73,6 @@ const stripFrontmatter = (content: string): string => {
     }
   }
 
-  // 不完整 frontmatter：按原文返回
   if (endIndex === -1) return content.trim()
 
   return lines
@@ -117,15 +122,12 @@ async function scanSkillFoldersNoSymlink(
       if (entry.isSymbolicLink()) continue
 
       const subDir = path.join(resolvedDir, entry.name)
-
-      // 识别技能目录：包含 SKILL.md / skill.md
       const skillMd = await findSkillMdInFolder(subDir)
       if (skillMd) {
         results.push({ folderName: entry.name, absolutePath: subDir })
         continue
       }
 
-      // 没有 SKILL.md 才继续递归，避免重复扫描
       if (item.depth < maxDepth) {
         queue.push({ dir: subDir, depth: item.depth + 1 })
       }
@@ -140,19 +142,21 @@ export class SkillsService {
 
   private readonly userDataPath: string
   private readonly skillsBaseDir: string
+  private readonly legacySkillsBaseDir: string
   private readonly maxSkillMdBytes: number
   private readonly maxLibraryScanDepth: number
+  private readonly installSkillFromDirectory?: SkillDirectoryInstaller
+  private legacyMigrationPromise: Promise<void> | null = null
 
   private constructor(config?: SkillsServiceConfig) {
     this.userDataPath = config?.userDataPath ?? app.getPath('userData')
-    this.skillsBaseDir = path.join(this.userDataPath, 'skills')
+    this.skillsBaseDir = path.join(this.userDataPath, 'Data', 'Skills')
+    this.legacySkillsBaseDir = path.join(this.userDataPath, 'skills')
     this.maxSkillMdBytes = config?.maxSkillMdBytes ?? 1024 * 1024
     this.maxLibraryScanDepth = config?.maxLibraryScanDepth ?? 2
+    this.installSkillFromDirectory = config?.installSkillFromDirectory
   }
 
-  /**
-   * 创建一个独立实例（不影响单例），用于单元测试或隔离场景。
-   */
   static create(config?: SkillsServiceConfig): SkillsService {
     return new SkillsService(config)
   }
@@ -168,7 +172,115 @@ export class SkillsService {
     await fs.promises.mkdir(this.skillsBaseDir, { recursive: true })
   }
 
+  private async ensureLegacySkillsMigrated(): Promise<void> {
+    if (this.legacySkillsBaseDir === this.skillsBaseDir) return
+    if (this.legacyMigrationPromise) {
+      await this.legacyMigrationPromise
+      return
+    }
+
+    this.legacyMigrationPromise = (async () => {
+      try {
+        const stat = await fs.promises.lstat(this.legacySkillsBaseDir)
+        if (!stat.isDirectory()) return
+      } catch {
+        return
+      }
+
+      const legacyFolders = await scanSkillFoldersNoSymlink(this.legacySkillsBaseDir, 0)
+      if (legacyFolders.length === 0) return
+
+      await this.ensureSkillsBaseDir()
+
+      for (const folder of legacyFolders) {
+        const targetFolderName = normalizeInstalledFolderName(folder.folderName)
+        const targetPath = path.join(this.skillsBaseDir, targetFolderName)
+
+        try {
+          await fs.promises.access(targetPath, fs.constants.F_OK)
+          logger.info('检测到已存在的新技能目录，跳过旧目录迁移', {
+            legacyPath: folder.absolutePath,
+            targetPath
+          })
+          continue
+        } catch {
+          // target missing, continue
+        }
+
+        try {
+          await this.installIntoUnifiedStore(folder.absolutePath)
+          logger.info('旧技能目录已迁移到统一技能主库', {
+            legacyPath: folder.absolutePath,
+            targetPath
+          })
+        } catch (error) {
+          logger.warn('旧技能目录迁移失败，已跳过', {
+            legacyPath: folder.absolutePath,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
+      }
+    })()
+
+    await this.legacyMigrationPromise
+  }
+
+  private async installIntoUnifiedStore(directoryPath: string): Promise<InstalledSkillEntry> {
+    if (this.installSkillFromDirectory) {
+      const installed = await this.installSkillFromDirectory({ directoryPath })
+      return this.readInstalledEntry(installed.folderName)
+    }
+
+    await this.ensureSkillsBaseDir()
+
+    const sourceFolderName = path.basename(directoryPath)
+    const destFolderName = normalizeInstalledFolderName(sourceFolderName)
+    if (!isSafeFolderNameSegment(destFolderName)) {
+      throw { type: 'INVALID_METADATA', reason: 'Invalid destination folder name', path: destFolderName } as PluginError
+    }
+
+    const destPath = path.join(this.skillsBaseDir, destFolderName)
+
+    try {
+      await fs.promises.access(destPath, fs.constants.F_OK)
+      await deleteDirectoryRecursive(destPath, { allowedBasePath: this.skillsBaseDir })
+    } catch {
+      // ignore ENOENT
+    }
+
+    try {
+      await copyDirectoryRecursive(directoryPath, destPath)
+    } catch (error) {
+      logger.error('导入技能复制失败', { source: directoryPath, destPath, error })
+      throw {
+        type: 'WRITE_FAILED',
+        path: destPath,
+        reason: error instanceof Error ? error.message : String(error)
+      } as PluginError
+    }
+
+    const destSkillMd = await findSkillMdInFolder(destPath)
+    if (!destSkillMd) {
+      await deleteDirectoryRecursive(destPath, { allowedBasePath: this.skillsBaseDir })
+      throw { type: 'SKILL_MD_NOT_FOUND', path: destPath } as PluginError
+    }
+
+    return this.readInstalledEntry(destFolderName)
+  }
+
+  private async readInstalledEntry(folderName: string): Promise<InstalledSkillEntry> {
+    const absolutePath = path.join(this.skillsBaseDir, folderName)
+    const metadata = await parseSkillMetadata(absolutePath, `skills/${folderName}`, 'skills')
+    return {
+      folderName,
+      absolutePath,
+      metadata
+    }
+  }
+
   async listInstalled(): Promise<InstalledSkillEntry[]> {
+    await this.ensureLegacySkillsMigrated()
+
     const base = this.skillsBaseDir
     try {
       await fs.promises.access(base, fs.constants.R_OK)
@@ -181,12 +293,7 @@ export class SkillsService {
 
     for (const folder of folders) {
       try {
-        const metadata = await parseSkillMetadata(folder.absolutePath, `skills/${folder.folderName}`, 'skills')
-        entries.push({
-          folderName: folder.folderName,
-          absolutePath: folder.absolutePath,
-          metadata
-        })
+        entries.push(await this.readInstalledEntry(folder.folderName))
       } catch (error) {
         logger.warn('解析已安装技能失败，已跳过', {
           folder: folder.absolutePath,
@@ -265,57 +372,17 @@ export class SkillsService {
       throw { type: 'INVALID_METADATA', reason: 'Skill folder must not be a symlink', path: source } as PluginError
     }
 
-    // 校验存在 SKILL.md
     const skillMd = await findSkillMdInFolder(source)
     if (!skillMd) {
       throw { type: 'SKILL_MD_NOT_FOUND', path: source } as PluginError
     }
 
-    await this.ensureSkillsBaseDir()
-
-    const sourceFolderName = path.basename(source)
-    const destFolderName = normalizeInstalledFolderName(sourceFolderName)
-    if (!isSafeFolderNameSegment(destFolderName)) {
-      throw { type: 'INVALID_METADATA', reason: 'Invalid destination folder name', path: destFolderName } as PluginError
-    }
-
-    const destPath = path.join(this.skillsBaseDir, destFolderName)
-
-    // 覆盖更新：先删后拷，删除范围严格限制在 skillsBaseDir 下
-    try {
-      await fs.promises.access(destPath, fs.constants.F_OK)
-      await deleteDirectoryRecursive(destPath, { allowedBasePath: this.skillsBaseDir })
-    } catch {
-      // ignore ENOENT
-    }
-
-    try {
-      await copyDirectoryRecursive(source, destPath)
-    } catch (error) {
-      logger.error('导入技能复制失败', { source, destPath, error })
-      throw {
-        type: 'WRITE_FAILED',
-        path: destPath,
-        reason: error instanceof Error ? error.message : String(error)
-      } as PluginError
-    }
-
-    // 再次确认导入后的目标目录存在 SKILL.md（避免目录被复制但缺少关键文件）
-    const destSkillMd = await findSkillMdInFolder(destPath)
-    if (!destSkillMd) {
-      await deleteDirectoryRecursive(destPath, { allowedBasePath: this.skillsBaseDir })
-      throw { type: 'SKILL_MD_NOT_FOUND', path: destPath } as PluginError
-    }
-
-    const metadata = await parseSkillMetadata(destPath, `skills/${destFolderName}`, 'skills')
-    return {
-      folderName: destFolderName,
-      absolutePath: destPath,
-      metadata
-    }
+    return this.installIntoUnifiedStore(source)
   }
 
   async readBody(folderName: string): Promise<string> {
+    await this.ensureLegacySkillsMigrated()
+
     if (!isSafeFolderNameSegment(folderName)) {
       throw { type: 'INVALID_METADATA', reason: 'Invalid skill folder name', path: folderName } as PluginError
     }
@@ -355,4 +422,9 @@ export class SkillsService {
   }
 }
 
-export const skillsService = SkillsService.getInstance()
+export const skillsService = SkillsService.getInstance({
+  installSkillFromDirectory: async (options) => {
+    const mod = await import('../agents/skills/SkillService')
+    return mod.skillService.installFromDirectory(options)
+  }
+})
