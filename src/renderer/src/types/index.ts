@@ -556,6 +556,7 @@ export type LanguageVarious =
   | 'pt-PT'
   | 'ro-RO'
   | 'ru-RU'
+  | 'vi-VN'
 
 export type CodeStyleVarious = 'auto' | string
 
