@@ -52,7 +52,12 @@ export function useInstalledSkills(agentId?: string) {
       try {
         const result = await window.api.skill.toggle({ skillId, agentId, isEnabled })
         if (result.success) {
-          await refresh()
+          const updatedSkill = result.data
+          if (updatedSkill) {
+            setSkills((currentSkills) =>
+              currentSkills.map((skill) => (skill.id === updatedSkill.id ? updatedSkill : skill))
+            )
+          }
         }
         return result.success
       } catch (err) {
@@ -60,7 +65,7 @@ export function useInstalledSkills(agentId?: string) {
         return false
       }
     },
-    [agentId, refresh]
+    [agentId]
   )
 
   const uninstall = useCallback(
