@@ -95,7 +95,7 @@ export function extractCompareMetaFromMarkdown(markdown: string): ExtractCompare
 
   let lastMatch: RegExpExecArray | null = null
   for (const match of markdown.matchAll(metaTagFullRegex)) {
-    lastMatch = match as RegExpExecArray
+    lastMatch = match
   }
 
   if (!lastMatch) {
