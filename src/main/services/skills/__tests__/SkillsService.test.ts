@@ -121,6 +121,23 @@ describe('SkillsService', () => {
     expect(await service.readBody('my-skill')).toBe('v2')
   })
 
+  it('migrates legacy installed skills into the unified store before reading body', async () => {
+    const SkillsService = await getSkillsService()
+    const userData = await makeTempDir('cherry-skills-userData-')
+    createdDirs.push(userData)
+
+    const legacySkillDir = path.join(userData, 'skills', 'legacy-skill')
+    await writeFile(path.join(legacySkillDir, 'SKILL.md'), `---\nname: Legacy Skill\n---\n\nlegacy-body\n`)
+
+    const service = SkillsService.create({ userDataPath: userData })
+
+    await expect(service.readBody('legacy-skill')).resolves.toBe('legacy-body')
+
+    const migratedSkillMd = path.join(userData, 'Data', 'Skills', 'legacy-skill', 'SKILL.md')
+    const fs = await getFs()
+    await expect(fs.promises.readFile(migratedSkillMd, 'utf-8')).resolves.toContain('legacy-body')
+  })
+
   it('rejects importing a skill outside the library path', async () => {
     const SkillsService = await getSkillsService()
     const userData = await makeTempDir('cherry-skills-userData-')
