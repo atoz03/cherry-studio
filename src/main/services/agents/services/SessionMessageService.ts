@@ -184,13 +184,16 @@ export class SessionMessageService extends BaseService {
     const agentSessionId = await this.getLastAgentSessionId(session.id)
     logger.debug('Session Message stream message data:', { message: req, session_id: agentSessionId })
 
+    // Claude Agent SDK 当前 effort 类型不包含 xhigh，统一映射为 max 以保持最强推理等级语义。
+    const normalizedEffort = req.effort === 'xhigh' ? 'max' : req.effort
+
     const claudeStream = await claudeCodeService.invoke(
       req.content,
       session,
       abortController,
       agentSessionId,
       {
-        effort: req.effort,
+        effort: normalizedEffort,
         thinking: req.thinking
       },
       undefined

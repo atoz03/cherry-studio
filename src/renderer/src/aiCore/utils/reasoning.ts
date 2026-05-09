@@ -740,7 +740,8 @@ export function getAnthropicReasoningParams(
         low: 'low',
         medium: 'medium',
         high: 'high',
-        xhigh: 'xhigh'
+        // Claude 4.7 supports native xhigh, but current SDK type narrows effort to low/medium/high/max.
+        xhigh: 'xhigh' as unknown as AnthropicProviderOptions['effort']
       } as const satisfies Record<Exclude<ReasoningEffortOption, 'none'>, AnthropicProviderOptions['effort']>
       const effort = effort47Map[reasoningEffort]
       const thinking = { type: 'adaptive', display: 'summarized' } as const
