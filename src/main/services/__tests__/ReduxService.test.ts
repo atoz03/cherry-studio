@@ -12,7 +12,8 @@ vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn((_channel: string, handler: () => void) => {
       handler()
-    })
+    }),
+    on: vi.fn()
   }
 }))
 

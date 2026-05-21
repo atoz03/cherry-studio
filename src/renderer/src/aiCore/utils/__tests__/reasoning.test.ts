@@ -1821,7 +1821,7 @@ describe('reasoning utils', () => {
       expect(result.reasoningEffort).toBe('high')
     })
 
-    it('should preserve none for Grok 4.3', () => {
+    it('should omit reasoningEffort when Grok 4.3 uses none', () => {
       const model: Model = {
         id: 'grok-4.3',
         name: 'Grok 4.3',
@@ -1837,7 +1837,7 @@ describe('reasoning utils', () => {
       } as Assistant
 
       const result = getXAIReasoningParams(assistant, model)
-      expect(result).toEqual({ reasoningEffort: 'none' })
+      expect(result).toEqual({})
     })
 
     it('should preserve medium for Grok 4.3', () => {
