@@ -19,6 +19,7 @@ import { IpcChannel } from '@shared/IpcChannel'
 import { ipcMain } from 'electron'
 import { EventEmitter } from 'events'
 
+import { CacheService } from './CacheService'
 import { windowService } from './WindowService'
 
 type StoreValue = any
@@ -26,6 +27,21 @@ type Unsubscribe = () => void
 
 const logger = loggerService.withContext('ReduxService')
 const STORE_READY_TIMEOUT = 10000
+const PROVIDERS_CACHE_KEY = 'api-server:providers'
+const PROVIDER_CACHE_INVALIDATION_ACTIONS = new Set([
+  'llm/updateProvider',
+  'llm/updateProviders',
+  'llm/addProvider',
+  'llm/removeProvider',
+  'llm/addModel',
+  'llm/removeModel'
+])
+
+export const invalidateApiServerProvidersCacheForAction = (actionType: string): void => {
+  if (PROVIDER_CACHE_INVALIDATION_ACTIONS.has(actionType)) {
+    CacheService.remove(PROVIDERS_CACHE_KEY)
+  }
+}
 
 export class ReduxService extends EventEmitter {
   private isReady = false
@@ -129,6 +145,9 @@ export class ReduxService extends EventEmitter {
     try {
       const webContents = await this.getWebContents()
       await webContents.executeJavaScript(`window.store.dispatch(${JSON.stringify(action)})`)
+      if (action?.type && typeof action.type === 'string') {
+        invalidateApiServerProvidersCacheForAction(action.type)
+      }
     } catch (error) {
       logger.error('Failed to dispatch action:', error as Error)
       throw error

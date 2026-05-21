@@ -685,6 +685,7 @@ describe('Reasoning effort helpers', () => {
   it('aggregates other reasoning effort families', () => {
     expect(isSupportedReasoningEffortModel(createModel({ id: 'o3' }))).toBe(true)
     expect(isSupportedReasoningEffortModel(createModel({ id: 'grok-3-mini' }))).toBe(true)
+    expect(isSupportedReasoningEffortModel(createModel({ id: 'grok-4.3' }))).toBe(true)
     expect(isSupportedReasoningEffortModel(createModel({ id: 'sonar-deep-research', provider: 'perplexity' }))).toBe(
       true
     )
@@ -693,6 +694,7 @@ describe('Reasoning effort helpers', () => {
 
   it('flags grok specific helpers correctly', () => {
     expect(isSupportedReasoningEffortGrokModel(createModel({ id: 'grok-3-mini' }))).toBe(true)
+    expect(isSupportedReasoningEffortGrokModel(createModel({ id: 'grok-4.3' }))).toBe(true)
     expect(
       isSupportedReasoningEffortGrokModel(createModel({ id: 'grok-4-fast-openrouter', provider: 'openrouter' }))
     ).toBe(true)
@@ -1901,6 +1903,22 @@ describe('isGemini3ThinkingTokenModel', () => {
         group: ''
       })
     ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-flash-latest',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
+    expect(
+      isGemini3ThinkingTokenModel({
+        id: 'gemini-pro-latest',
+        name: '',
+        provider: '',
+        group: ''
+      })
+    ).toBe(true)
   })
 
   it('should return false for Gemini 3 image models', () => {
@@ -2161,6 +2179,16 @@ describe('getModelSupportedReasoningEffortOptions', () => {
       expect(
         getModelSupportedReasoningEffortOptions(createModel({ id: 'grok-4-fast', provider: 'openrouter' }))
       ).toEqual(['default', 'none', 'auto'])
+    })
+
+    it('should return correct options for Grok 4.3', () => {
+      expect(getModelSupportedReasoningEffortOptions(createModel({ id: 'grok-4.3' }))).toEqual([
+        'default',
+        'none',
+        'low',
+        'medium',
+        'high'
+      ])
     })
   })
 
