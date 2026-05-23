@@ -6,18 +6,21 @@
 import type { ReasoningPart } from '@ai-sdk/provider-utils'
 import { loggerService } from '@logger'
 import { isVisionModel } from '@renderer/config/models'
+import type { MCPCallToolResponse, MCPToolResponse, NormalToolResponse } from '@renderer/types'
 import type { Message, Model } from '@renderer/types'
 import type {
   FileMessageBlock,
   ImageMessageBlock,
   MainTextMessageBlock,
-  ThinkingMessageBlock
+  ThinkingMessageBlock,
+  ToolMessageBlock
 } from '@renderer/types/newMessage'
 import {
   findFileBlocks,
   findImageBlocks,
   findMainTextBlocks,
   findThinkingBlocks,
+  findToolBlocks,
   getMainTextContent
 } from '@renderer/utils/messageUtils/find'
 import { parseDataUrl } from '@shared/utils'
@@ -28,6 +31,9 @@ import type {
   ModelMessage,
   SystemModelMessage,
   TextPart,
+  ToolCallPart,
+  ToolModelMessage,
+  ToolResultPart,
   UserModelMessage
 } from 'ai'
 import i18n from 'i18next'
@@ -35,6 +41,8 @@ import i18n from 'i18next'
 import { convertFileBlockToFilePart, convertFileBlockToTextPart } from './fileProcessor'
 
 const logger = loggerService.withContext('messageConverter')
+
+type RawToolResponse = MCPToolResponse | NormalToolResponse
 
 /**
  * 转换消息为 AI SDK 参数格式
@@ -50,6 +58,7 @@ export async function convertMessageToSdkParam(
   const imageBlocks = findImageBlocks(message)
   const reasoningBlocks = findThinkingBlocks(message)
   const mainTextBlocks = findMainTextBlocks(message)
+  const toolBlocks = findToolBlocks(message)
   if (message.role === 'user' || message.role === 'system') {
     return convertMessageToUserModelMessage(content, fileBlocks, imageBlocks, isVisionModel, model)
   } else {
@@ -59,8 +68,157 @@ export async function convertMessageToSdkParam(
       imageBlocks,
       reasoningBlocks,
       mainTextBlocks,
+      toolBlocks,
       model
     )
+  }
+}
+
+function hasMultimodalContent(result: MCPCallToolResponse): boolean {
+  return (
+    Array.isArray(result?.content) &&
+    result.content.some(
+      (item) => item.type === 'image' || item.type === 'audio' || (item.type === 'resource' && !!item.resource?.blob)
+    )
+  )
+}
+
+function mcpResultToTextSummary(result: MCPCallToolResponse): string {
+  if (!result || !result.content || !Array.isArray(result.content)) {
+    return JSON.stringify(result)
+  }
+
+  const parts: string[] = []
+  for (const item of result.content) {
+    switch (item.type) {
+      case 'text':
+        parts.push(item.text || '')
+        break
+      case 'image':
+        parts.push(`[Image: ${item.mimeType || 'image/png'}, delivered to user]`)
+        break
+      case 'audio':
+        parts.push(`[Audio: ${item.mimeType || 'audio/mp3'}, delivered to user]`)
+        break
+      case 'resource':
+        if (item.resource?.blob) {
+          parts.push(
+            `[Resource: ${item.resource.mimeType || 'application/octet-stream'}, uri=${item.resource.uri || 'unknown'}, delivered to user]`
+          )
+        } else {
+          parts.push(item.resource?.text || JSON.stringify(item))
+        }
+        break
+      default:
+        parts.push(JSON.stringify(item))
+        break
+    }
+  }
+
+  return parts.join('\n')
+}
+
+function toToolResultOutput(rawResponse: unknown): ToolResultPart['output'] {
+  if (typeof rawResponse === 'string') {
+    return { type: 'text', value: rawResponse }
+  }
+
+  if (
+    rawResponse &&
+    typeof rawResponse === 'object' &&
+    'content' in (rawResponse as Record<string, unknown>) &&
+    Array.isArray((rawResponse as MCPCallToolResponse).content)
+  ) {
+    const mcpResponse = rawResponse as MCPCallToolResponse
+    if (hasMultimodalContent(mcpResponse)) {
+      return { type: 'text', value: mcpResultToTextSummary(mcpResponse) }
+    }
+  }
+
+  return { type: 'json', value: (rawResponse ?? null) as any }
+}
+
+function getToolCallId(toolBlock: ToolMessageBlock): string | null {
+  const raw = toolBlock.metadata?.rawMcpToolResponse as RawToolResponse | undefined
+  const toolUseId = raw && 'toolUseId' in raw ? raw.toolUseId : undefined
+  return raw?.toolCallId || toolUseId || raw?.id || toolBlock.toolId || null
+}
+
+function convertToolBlocksToToolMessages(toolBlocks: ToolMessageBlock[]): {
+  assistantToolCallParts: ToolCallPart[]
+  toolMessage?: ToolModelMessage
+} {
+  const assistantToolCallParts: ToolCallPart[] = []
+  const toolResultParts: ToolResultPart[] = []
+
+  for (const toolBlock of toolBlocks) {
+    const raw = toolBlock.metadata?.rawMcpToolResponse as RawToolResponse | undefined
+    const toolCallId = getToolCallId(toolBlock)
+    const toolName = raw?.tool?.name || toolBlock.toolName
+
+    if (!toolCallId || !toolName) {
+      logger.warn('Tool block missing toolCallId/toolName, skip rebuilding tool messages', {
+        blockId: toolBlock.id,
+        toolId: toolBlock.toolId,
+        toolCallId,
+        toolName
+      })
+      continue
+    }
+
+    const hasResponse = raw?.response !== undefined
+    const isResolved =
+      raw?.status === 'done' || raw?.status === 'error' || raw?.status === 'cancelled' || raw?.status === undefined
+    if (!isResolved || (!hasResponse && raw?.status !== 'cancelled')) {
+      continue
+    }
+
+    // 先恢复 assistant 的 tool-call，保证 tool-result 有可关联的上游调用。
+    assistantToolCallParts.push({
+      type: 'tool-call',
+      toolCallId,
+      toolName,
+      input: raw?.arguments ?? {}
+    })
+
+    if (raw?.status === 'error') {
+      toolResultParts.push({
+        type: 'tool-result',
+        toolCallId,
+        toolName,
+        output: { type: 'error-json', value: raw.response ?? null }
+      })
+      continue
+    }
+
+    if (raw?.status === 'cancelled') {
+      toolResultParts.push({
+        type: 'tool-result',
+        toolCallId,
+        toolName,
+        output: { type: 'error-text', value: 'Tool execution cancelled' }
+      })
+      continue
+    }
+
+    toolResultParts.push({
+      type: 'tool-result',
+      toolCallId,
+      toolName,
+      output: toToolResultOutput(raw?.response)
+    })
+  }
+
+  if (toolResultParts.length === 0) {
+    return { assistantToolCallParts }
+  }
+
+  return {
+    assistantToolCallParts,
+    toolMessage: {
+      role: 'tool',
+      content: toolResultParts
+    }
   }
 }
 
@@ -227,8 +385,9 @@ async function convertMessageToAssistantModelMessage(
   imageBlocks: ImageMessageBlock[],
   thinkingBlocks: ThinkingMessageBlock[],
   mainTextBlocks: MainTextMessageBlock[],
+  toolBlocks: ToolMessageBlock[],
   model?: Model
-): Promise<AssistantModelMessage> {
+): Promise<ModelMessage | ModelMessage[]> {
   const parts: Array<TextPart | ReasoningPart | FilePart> = []
 
   // Add reasoning blocks first (required by AWS Bedrock for Claude extended thinking)
@@ -283,10 +442,26 @@ async function convertMessageToAssistantModelMessage(
     parts.push({ type: 'text', text: '[Image]' })
   }
 
-  return {
+  const assistantContent = parts
+  const assistantMessage: AssistantModelMessage = {
     role: 'assistant',
-    content: parts
+    content: assistantContent
   }
+
+  if (toolBlocks.length === 0) {
+    return assistantMessage
+  }
+
+  const { assistantToolCallParts, toolMessage } = convertToolBlocksToToolMessages(toolBlocks)
+  if (assistantToolCallParts.length > 0 && Array.isArray(assistantMessage.content)) {
+    assistantMessage.content.push(...assistantToolCallParts)
+  }
+
+  if (!toolMessage) {
+    return assistantMessage
+  }
+
+  return [assistantMessage, toolMessage]
 }
 
 /**

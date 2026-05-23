@@ -1,7 +1,12 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import { messageBlocksSlice } from '@renderer/store/messageBlock'
 import { MessageBlockStatus } from '@renderer/types/newMessage'
-import { createErrorBlock, createMainTextBlock, createMessage } from '@renderer/utils/messageUtils/create'
+import {
+  createErrorBlock,
+  createMainTextBlock,
+  createMessage,
+  createToolBlock
+} from '@renderer/utils/messageUtils/create'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ConversationService } from '../ConversationService'
@@ -162,5 +167,51 @@ describe('ConversationService.filterMessagesPipeline', () => {
     expect(filtered.find((m) => m.id === 'user-2')).toBeUndefined()
     expect(filtered[0].role).toBe('user')
     expect(filtered[filtered.length - 1].role).toBe('user')
+  })
+
+  it('keeps assistant tool blocks in the model payload', async () => {
+    const topicId = 'topic-2'
+    const assistantId = 'assistant-2'
+
+    const user1Block = createMainTextBlock('user-1', 'Search the docs', { status: MessageBlockStatus.SUCCESS })
+    const user1 = createMessage('user', topicId, assistantId, { id: 'user-1', blocks: [user1Block.id] })
+
+    const toolResponse = {
+      id: 'call-search-1',
+      toolCallId: 'call-search-1',
+      tool: { id: 'search-docs', name: 'searchDocs', type: 'mcp' },
+      arguments: { query: 'tool regression' },
+      status: 'done',
+      response: {
+        content: [{ type: 'text', text: 'matched result' }]
+      }
+    }
+    const toolBlock = createToolBlock(assistantId, 'search-docs', {
+      status: MessageBlockStatus.SUCCESS,
+      metadata: { rawMcpToolResponse: toolResponse as any }
+    })
+    const assistant = createMessage('assistant', topicId, assistantId, {
+      id: assistantId,
+      askId: user1.id,
+      blocks: [toolBlock.id]
+    })
+
+    const user2Block = createMainTextBlock('user-2', 'Continue', { status: MessageBlockStatus.SUCCESS })
+    const user2 = createMessage('user', topicId, assistantId, { id: 'user-2', blocks: [user2Block.id] })
+
+    mockStore.dispatch(messageBlocksSlice.actions.upsertOneBlock(user1Block))
+    mockStore.dispatch(messageBlocksSlice.actions.upsertOneBlock(toolBlock))
+    mockStore.dispatch(messageBlocksSlice.actions.upsertOneBlock(user2Block))
+
+    const assistantConfig = {
+      id: assistantId,
+      settings: { contextCount: 10 }
+    } as any
+
+    const result = await ConversationService.prepareMessagesForModel([user1, assistant, user2], assistantConfig)
+
+    expect(result.uiMessages.map((m) => m.id)).toEqual(['user-1', 'assistant-2', 'user-2'])
+    expect(result.uiMessages.find((m) => m.id === assistantId)?.blocks).toContain(toolBlock.id)
+    expect(result.modelMessages.some((message) => message.role === 'tool')).toBe(true)
   })
 })

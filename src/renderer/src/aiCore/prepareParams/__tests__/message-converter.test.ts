@@ -9,6 +9,7 @@ import {
   MessageBlockStatus,
   MessageBlockType,
   type ThinkingMessageBlock,
+  type ToolMessageBlock,
   UserMessageStatus
 } from '@renderer/types/newMessage'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -37,6 +38,7 @@ type MockableMessage = Message & {
   __mockImageBlocks?: ImageMessageBlock[]
   __mockThinkingBlocks?: ThinkingMessageBlock[]
   __mockMainTextBlocks?: MainTextMessageBlock[]
+  __mockToolBlocks?: ToolMessageBlock[]
 }
 
 vi.mock('@renderer/utils/messageUtils/find', () => ({
@@ -44,7 +46,8 @@ vi.mock('@renderer/utils/messageUtils/find', () => ({
   findFileBlocks: (message: Message) => (message as MockableMessage).__mockFileBlocks ?? [],
   findImageBlocks: (message: Message) => (message as MockableMessage).__mockImageBlocks ?? [],
   findThinkingBlocks: (message: Message) => (message as MockableMessage).__mockThinkingBlocks ?? [],
-  findMainTextBlocks: (message: Message) => (message as MockableMessage).__mockMainTextBlocks ?? []
+  findMainTextBlocks: (message: Message) => (message as MockableMessage).__mockMainTextBlocks ?? [],
+  findToolBlocks: (message: Message) => (message as MockableMessage).__mockToolBlocks ?? []
 }))
 
 import { convertMessagesToSdkMessages, convertMessageToSdkParam, stripMarkdownBase64Images } from '../messageConverter'
@@ -138,6 +141,25 @@ const createMainTextBlock = (
   content: overrides.content ?? '',
   ...overrides
 })
+
+const createToolBlock = (
+  messageId: string,
+  overrides: Partial<Omit<ToolMessageBlock, 'type' | 'messageId' | 'toolId'>> & {
+    rawResponse?: Record<string, unknown>
+  } = {}
+): ToolMessageBlock => {
+  const { rawResponse, ...rest } = overrides
+  return {
+    id: rest.id ?? `tool-block-${++blockCounter}`,
+    messageId,
+    type: MessageBlockType.TOOL,
+    createdAt: rest.createdAt ?? new Date(2024, 0, 1, 0, 0, blockCounter).toISOString(),
+    status: rest.status ?? MessageBlockStatus.SUCCESS,
+    toolId: rest.toolId ?? `tool-call-${blockCounter}`,
+    metadata: rawResponse ? { rawMcpToolResponse: rawResponse as any } : rest.metadata,
+    ...rest
+  }
+}
 
 describe('messageConverter', () => {
   beforeEach(() => {
@@ -423,6 +445,195 @@ describe('messageConverter', () => {
             }
           }
         ]
+      })
+    })
+
+    it('rebuilds resolved tool blocks as assistant tool-call plus tool role results', async () => {
+      const model = createModel()
+      const message = createMessage('assistant')
+      message.__mockContent = '我查到了天气信息。'
+      message.__mockToolBlocks = [
+        createToolBlock(message.id, {
+          rawResponse: {
+            id: 'call-weather-1',
+            toolCallId: 'call-weather-1',
+            tool: { id: 'weather', name: 'getWeather', type: 'builtin' },
+            arguments: { location: 'Beijing' },
+            status: 'done',
+            response: { temp: 26, condition: 'sunny' }
+          }
+        })
+      ]
+
+      const result = await convertMessageToSdkParam(message, false, model)
+
+      expect(result).toEqual([
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '我查到了天气信息。' },
+            {
+              type: 'tool-call',
+              toolCallId: 'call-weather-1',
+              toolName: 'getWeather',
+              input: { location: 'Beijing' }
+            }
+          ]
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call-weather-1',
+              toolName: 'getWeather',
+              output: { type: 'json', value: { temp: 26, condition: 'sunny' } }
+            }
+          ]
+        }
+      ])
+    })
+
+    it('encodes tool error status as error-json output', async () => {
+      const model = createModel()
+      const message = createMessage('assistant')
+      message.__mockContent = '工具调用失败。'
+      message.__mockToolBlocks = [
+        createToolBlock(message.id, {
+          rawResponse: {
+            id: 'call-db-1',
+            toolCallId: 'call-db-1',
+            tool: { id: 'query', name: 'queryDB', type: 'mcp' },
+            arguments: { sql: 'select * from t' },
+            status: 'error',
+            response: { message: 'timeout' }
+          }
+        })
+      ]
+
+      const result = await convertMessageToSdkParam(message, false, model)
+
+      expect(result).toEqual([
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '工具调用失败。' },
+            {
+              type: 'tool-call',
+              toolCallId: 'call-db-1',
+              toolName: 'queryDB',
+              input: { sql: 'select * from t' }
+            }
+          ]
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call-db-1',
+              toolName: 'queryDB',
+              output: { type: 'error-json', value: { message: 'timeout' } }
+            }
+          ]
+        }
+      ])
+    })
+
+    it('skips malformed tool block without tool call id and keeps normal assistant message', async () => {
+      const model = createModel()
+      const message = createMessage('assistant')
+      message.__mockContent = '继续处理。'
+      message.__mockToolBlocks = [
+        createToolBlock(message.id, {
+          toolId: '',
+          rawResponse: {
+            id: '',
+            tool: { id: 'broken', name: 'brokenTool', type: 'builtin' },
+            arguments: { q: 1 },
+            status: 'done',
+            response: { ok: true }
+          }
+        })
+      ]
+
+      const result = await convertMessageToSdkParam(message, false, model)
+
+      expect(result).toEqual({
+        role: 'assistant',
+        content: [{ type: 'text', text: '继续处理。' }]
+      })
+    })
+
+    it('summarizes multimodal MCP results to avoid huge base64 payload in context', async () => {
+      const model = createModel()
+      const message = createMessage('assistant')
+      message.__mockContent = '图片结果如下。'
+      message.__mockToolBlocks = [
+        createToolBlock(message.id, {
+          rawResponse: {
+            id: 'call-img-1',
+            toolCallId: 'call-img-1',
+            tool: { id: 'render', name: 'renderDiagram', type: 'mcp' },
+            arguments: { format: 'png' },
+            status: 'done',
+            response: {
+              content: [{ type: 'image', data: 'base64-data', mimeType: 'image/png' }]
+            }
+          }
+        })
+      ]
+
+      const result = await convertMessageToSdkParam(message, false, model)
+
+      expect(result).toEqual([
+        {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: '图片结果如下。' },
+            {
+              type: 'tool-call',
+              toolCallId: 'call-img-1',
+              toolName: 'renderDiagram',
+              input: { format: 'png' }
+            }
+          ]
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call-img-1',
+              toolName: 'renderDiagram',
+              output: { type: 'text', value: '[Image: image/png, delivered to user]' }
+            }
+          ]
+        }
+      ])
+    })
+
+    it('skips pending tools to avoid unresolved tool-call history', async () => {
+      const model = createModel()
+      const message = createMessage('assistant')
+      message.__mockContent = '正在执行工具。'
+      message.__mockToolBlocks = [
+        createToolBlock(message.id, {
+          rawResponse: {
+            id: 'call-pending-1',
+            toolCallId: 'call-pending-1',
+            tool: { id: 'search', name: 'searchDocs', type: 'mcp' },
+            arguments: { query: 'x' },
+            status: 'pending'
+          }
+        })
+      ]
+
+      const result = await convertMessageToSdkParam(message, false, model)
+
+      expect(result).toEqual({
+        role: 'assistant',
+        content: [{ type: 'text', text: '正在执行工具。' }]
       })
     })
   })
