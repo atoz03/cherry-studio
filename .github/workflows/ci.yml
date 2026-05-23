@@ -26,6 +26,9 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
       - name: Detect code changes
         id: filter
