@@ -2,7 +2,7 @@ import { readdir, readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 
 import { loggerService } from '@logger'
-import type { CherryClawConfiguration } from '@types'
+import type { AgentConfiguration } from '@types'
 
 const logger = loggerService.withContext('PromptBuilder')
 
@@ -130,7 +130,7 @@ ${sections}`
 export class PromptBuilder {
   private cache = new Map<string, CacheEntry>()
 
-  async buildSystemPrompt(workspacePath: string, _config?: CherryClawConfiguration): Promise<string> {
+  async buildSystemPrompt(workspacePath: string, _config?: AgentConfiguration): Promise<string> {
     void _config
     const parts: string[] = []
 

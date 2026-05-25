@@ -380,7 +380,7 @@ export class ChannelMessageHandler {
         }
         case 'help': {
           const agent = await agentService.getAgent(agentId)
-          const name = agent?.name ?? 'CherryClaw'
+          const name = agent?.name ?? 'Agent'
           const description = agent?.description ?? ''
           const helpText = [
             `*${name}*`,

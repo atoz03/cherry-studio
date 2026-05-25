@@ -106,7 +106,7 @@ const QuickAssistantSettings: FC = () => {
           <HStack alignItems="center" justifyContent="space-between">
             <HStack alignItems="center" gap={10}>
               {t('settings.models.quick_assistant_model')}
-              <Tooltip title={t('selection.settings.user_modal.model.tooltip')} arrow>
+              <Tooltip title={t('settings.quickAssistant.use_shortcut_to_show')} arrow>
                 <InfoCircleOutlined style={{ cursor: 'pointer' }} />
               </Tooltip>
               <Spacer />

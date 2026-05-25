@@ -25,7 +25,7 @@ import {
 import type { AgentModelField } from '../errors'
 import { skillService } from '../skills/SkillService'
 import { isBuiltinAgentId } from './builtin/BuiltinAgentIds'
-import { seedWorkspaceTemplates } from './cherryclaw/seedWorkspace'
+import { seedWorkspaceTemplates } from './runtime/seedWorkspace'
 
 const logger = loggerService.withContext('AgentService')
 

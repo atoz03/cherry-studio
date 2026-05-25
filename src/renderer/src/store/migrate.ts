@@ -59,12 +59,28 @@ import { DEFAULT_TOOL_ORDER, DEFAULT_TOOL_ORDER_BY_SCOPE } from './inputTools'
 import { initialState as llmInitialState, moveProvider } from './llm'
 import { mcpSlice } from './mcp'
 import { initialState as notesInitialState } from './note'
-import { defaultActionItems } from './selectionStore'
 import { initialState as settingsInitialState } from './settings'
 import { initialState as shortcutsInitialState } from './shortcuts'
 import { defaultWebSearchProviders } from './websearch'
 
 const logger = loggerService.withContext('Migrate')
+
+const LEGACY_SELECTION_ACTION_ITEMS = [
+  { id: 'translate', name: 'selection.action.builtin.translate', enabled: true, isBuiltIn: true, icon: 'languages' },
+  { id: 'explain', name: 'selection.action.builtin.explain', enabled: true, isBuiltIn: true, icon: 'file-question' },
+  { id: 'summary', name: 'selection.action.builtin.summary', enabled: true, isBuiltIn: true, icon: 'scan-text' },
+  {
+    id: 'search',
+    name: 'selection.action.builtin.search',
+    enabled: true,
+    isBuiltIn: true,
+    icon: 'search',
+    searchEngine: 'Google|https://www.google.com/search?q={{queryString}}'
+  },
+  { id: 'copy', name: 'selection.action.builtin.copy', enabled: true, isBuiltIn: true, icon: 'clipboard-copy' },
+  { id: 'refine', name: 'selection.action.builtin.refine', enabled: false, isBuiltIn: true, icon: 'wand-sparkles' },
+  { id: 'quote', name: 'selection.action.builtin.quote', enabled: false, isBuiltIn: true, icon: 'quote' }
+] as const
 
 // remove logo base64 data to reduce the size of the state
 function removeMiniAppIconsFromState(state: RootState) {
@@ -167,11 +183,17 @@ function updateWebSearchProvider(state: RootState, provider: Partial<WebSearchPr
 }
 
 function addSelectionAction(state: RootState, id: string) {
-  if (state.selectionStore && state.selectionStore.actionItems) {
-    if (!state.selectionStore.actionItems.some((item) => item.id === id)) {
-      const action = defaultActionItems.find((item) => item.id === id)
+  const legacyState = state as RootState & {
+    selectionStore?: {
+      actionItems?: Array<{ id: string }>
+    }
+  }
+  const actionItems = legacyState.selectionStore?.actionItems
+  if (actionItems) {
+    if (!actionItems.some((item) => item.id === id)) {
+      const action = LEGACY_SELECTION_ACTION_ITEMS.find((item) => item.id === id)
       if (action) {
-        state.selectionStore.actionItems.push(action)
+        actionItems.push(action)
       }
     }
   }
@@ -3464,6 +3486,18 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 208 error', error as Error)
+      return state
+    }
+  },
+  '209': (state: RootState) => {
+    try {
+      if ('selectionStore' in state) {
+        delete (state as RootState & { selectionStore?: unknown }).selectionStore
+      }
+      logger.info('migrate 209 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 209 error', error as Error)
       return state
     }
   }

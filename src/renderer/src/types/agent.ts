@@ -96,9 +96,6 @@ export const AgentConfigurationSchema = z
 
 export type AgentConfiguration = z.infer<typeof AgentConfigurationSchema>
 
-/** @deprecated Use AgentConfiguration directly — all fields are now in AgentConfigurationSchema */
-export type CherryClawConfiguration = AgentConfiguration
-
 // ------------------ Scheduled Task types ------------------
 export const TaskScheduleTypeSchema = z.enum(['cron', 'interval', 'once'])
 export type TaskScheduleType = z.infer<typeof TaskScheduleTypeSchema>

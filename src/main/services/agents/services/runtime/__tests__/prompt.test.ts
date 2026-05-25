@@ -14,11 +14,11 @@ vi.mock('node:fs/promises', () => ({
 
 import { readdir, readFile, stat } from 'node:fs/promises'
 
-import type { CherryClawConfiguration } from '@types'
+import type { AgentConfiguration } from '@types'
 
 import { PromptBuilder } from '../prompt'
 
-const baseConfig: CherryClawConfiguration = {
+const baseConfig: AgentConfiguration = {
   permission_mode: 'bypassPermissions',
   max_turns: 100,
   env_vars: {},
@@ -73,7 +73,7 @@ describe('PromptBuilder', () => {
     const result = await builder.buildSystemPrompt('/workspace')
 
     expect(result).toContain('You are a personal assistant running inside CherryStudio.')
-    expect(result).not.toContain('## CherryClaw Tools')
+    expect(result).not.toContain('## Legacy Claw Tools')
     expect(result).not.toContain('## Memories')
   })
 
@@ -232,7 +232,7 @@ describe('PromptBuilder', () => {
       expect(result).toContain('mcp__agent-memory__memory')
       expect(result).toContain('## Web Search Strategy')
       expect(result).toContain('mcp__exa__web_search_exa')
-      expect(result).not.toContain('## CherryClaw Tools')
+      expect(result).not.toContain('## Legacy Claw Tools')
       expect(result).not.toContain('mcp__claw__cron')
       expect(result).not.toContain('mcp__claw__notify')
       expect(result).not.toContain('mcp__claw__config')
@@ -241,7 +241,7 @@ describe('PromptBuilder', () => {
     it('keeps the same guidance when hasClaw is true', () => {
       const result = builder.buildToolGuidance({ hasClaw: true })
 
-      expect(result).not.toContain('## CherryClaw Tools')
+      expect(result).not.toContain('## Legacy Claw Tools')
       expect(result).not.toContain('mcp__claw__cron')
       expect(result).not.toContain('mcp__claw__notify')
       expect(result).not.toContain('mcp__claw__config')

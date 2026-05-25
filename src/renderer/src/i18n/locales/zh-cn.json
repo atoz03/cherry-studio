@@ -268,7 +268,7 @@
         "title": "定时任务"
       },
       "warning": {
-        "bypassPermissions": "CherryClaw Agent 默认以全自动模式运行。所有工具执行时不会请求批准。"
+        "bypassPermissions": "Agent Agent 默认以全自动模式运行。所有工具执行时不会请求批准。"
       }
     },
     "delete": {
@@ -3701,211 +3701,6 @@
       "undo": "撤销"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "复制",
-        "explain": "解释",
-        "quote": "引用",
-        "refine": "优化",
-        "search": "搜索",
-        "summary": "总结",
-        "translate": "翻译"
-      },
-      "prompt": {
-        "explain": "请解释下面的内容。要求：使用 {{language}} 语言进行回复；请不要包含对本提示词的任何解释，直接给出回复： \n\n",
-        "refine": "请对用XML标签<INPUT>包裹的用户输入内容进行优化或润色，并保持原内容的含义和完整性。要求：你的输出应当与用户输入内容的语言相同。；请不要包含对本提示词的任何解释，直接给出回复；请不要输出XML标签，直接输出优化后的内容: \n\n<INPUT>{{text}}</INPUT>",
-        "summary": "请总结下面的内容。要求：使用 {{language}} 语言进行回复；请不要包含对本提示词的任何解释，直接给出回复： \n\n"
-      },
-      "translate": {
-        "smart_translate_tips": "智能翻译：内容将优先翻译为目标语言；内容已是目标语言的，将翻译为备选语言"
-      },
-      "window": {
-        "c_copy": "C 复制",
-        "esc_close": "Esc 关闭",
-        "esc_stop": "Esc 停止",
-        "opacity": "窗口透明度",
-        "original_copy": "复制原文",
-        "original_hide": "隐藏原文",
-        "original_show": "显示原文",
-        "pin": "置顶",
-        "pinned": "已置顶",
-        "r_regenerate": "R 重新生成"
-      }
-    },
-    "name": "划词助手",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "自定义功能已达上限 ({{max}} 个)",
-          "enabled": "添加自定义功能"
-        },
-        "custom": "自定义功能",
-        "delete_confirm": "确定要删除这个自定义功能吗？",
-        "drag_hint": "拖拽排序，移动到上方以启用功能 ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "重置",
-          "confirm": "确定要重置为默认功能吗？自定义功能不会被删除。",
-          "tooltip": "重置为默认功能，自定义功能不会被删除"
-        },
-        "title": "功能"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "高级功能，建议有经验的用户在了解的情况下再进行设置",
-          "title": "筛选名单"
-        },
-        "filter_mode": {
-          "blacklist": "黑名单",
-          "default": "关闭",
-          "description": "可以限制划词助手只在特定应用中生效（白名单）或不生效（黑名单）",
-          "title": "应用筛选",
-          "whitelist": "白名单"
-        },
-        "title": "高级"
-      },
-      "enable": {
-        "description": "当前仅支持 Windows & macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "去设置",
-            "open_accessibility_settings": "打开辅助功能设置"
-          },
-          "description": {
-            "0": "划词助手需「<strong>辅助功能权限</strong>」才能正常工作。",
-            "1": "请点击「<strong>去设置</strong>」，并在稍后弹出的权限请求弹窗中点击 「<strong>打开系统设置</strong>」 按钮，然后在之后的应用列表中找到 「<strong>Cherry Studio</strong>」，并打开权限开关。",
-            "2": "完成设置后，请再次开启划词助手。"
-          },
-          "title": "辅助功能权限"
-        },
-        "title": "启用"
-      },
-      "experimental": "实验性功能",
-      "filter_modal": {
-        "title": "应用筛选名单",
-        "user_tips": {
-          "mac": "请输入应用的Bundle ID，每行一个，不区分大小写，可以模糊匹配。例如：com.google.Chrome、com.apple.mail等",
-          "windows": "请输入应用的执行文件名，每行一个，不区分大小写，可以模糊匹配。例如：chrome.exe、weixin.exe、Cherry Studio.exe等"
-        }
-      },
-      "linux": {
-        "compositor_incompatible": "当前桌面环境不支持划词功能，请切换到 X11 模式以获得完整体验。",
-        "filter_warning_text": "Wayland 模式下不生效",
-        "input_group_fail": "未获取，请执行 `sudo usermod -aG input $USER` 并重新登录生效",
-        "input_group_label": "input 组权限：",
-        "input_group_pass": "已获取",
-        "wayland_checklist_subtitle": "确认以下条件已满足，以尽可能优化 Wayland 下的体验：",
-        "wayland_description": "当前为 Wayland 模式，受系统限制，部分桌面环境下工具栏只能显示在屏幕中央，无法跟随选中文本定位。建议切换到 X11 模式以获得完整体验。",
-        "wayland_title": "Wayland 模式提示",
-        "xwayland_fail": "未启用，请使用 `--ozone-platform=x11` 参数启动 Cherry Studio",
-        "xwayland_label": "XWayland 模式：",
-        "xwayland_pass": "已启用"
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "请输入搜索引擎名称",
-            "label": "自定义名称",
-            "max_length": "名称不能超过 16 个字符"
-          },
-          "test": "测试",
-          "url": {
-            "hint": "用 {{queryString}} 代表搜索词",
-            "invalid_format": "请输入以 http:// 或 https:// 开头的有效 URL",
-            "label": "自定义搜索 URL",
-            "missing_placeholder": "URL 必须包含 {{queryString}} 占位符",
-            "required": "请输入搜索 URL"
-          }
-        },
-        "engine": {
-          "custom": "自定义",
-          "label": "搜索引擎"
-        },
-        "title": "设置搜索引擎"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "紧凑模式下，只显示图标，不显示文字",
-          "title": "紧凑模式"
-        },
-        "title": "工具栏",
-        "trigger_mode": {
-          "ctrlkey": "Ctrl 键",
-          "ctrlkey_note": "划词后，再 长按 Ctrl 键，才显示工具栏",
-          "description": "划词后，触发取词并显示工具栏的方式",
-          "description_note": {
-            "linux": "若使用了 xmodmap 或 xremap 等按键映射工具对修饰键进行了重映射，可能导致部分应用无法划词。",
-            "mac": "若使用了快捷键或键盘映射工具对 ⌘ 键进行了重映射，可能导致部分应用无法划词。",
-            "windows": "少数应用不支持通过 Ctrl 键划词。若使用了AHK等按键映射工具对 Ctrl 键进行了重映射，可能导致部分应用无法划词。"
-          },
-          "selected": "划词",
-          "selected_note": "划词后立即显示工具栏",
-          "shortcut": "快捷键",
-          "shortcut_link": "前往快捷键设置",
-          "shortcut_note": "划词后，使用快捷键显示工具栏。请在快捷键设置页面中设置取词快捷键并启用。",
-          "title": "取词方式"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "默认",
-          "label": "选择助手"
-        },
-        "icon": {
-          "error": "无效的图标名称，请检查输入",
-          "label": "图标",
-          "placeholder": "输入 Lucide 图标名称",
-          "random": "随机图标",
-          "tooltip": "Lucide 图标名称为小写，如 arrow-right",
-          "view_all": "查看所有图标"
-        },
-        "model": {
-          "assistant": "使用助手",
-          "default": "默认模型",
-          "label": "模型",
-          "tooltip": "使用助手：会同时使用助手的系统提示词和模型参数"
-        },
-        "name": {
-          "hint": "请输入功能名称",
-          "label": "名称"
-        },
-        "prompt": {
-          "copy_placeholder": "复制占位符",
-          "label": "用户提示词 (Prompt)",
-          "placeholder": "使用占位符 {{text}} 代表选中的文本，不填写时，选中的文本将添加到本提示词的末尾",
-          "placeholder_text": "占位符",
-          "tooltip": "用户提示词，作为用户输入的补充，不会覆盖助手的系统提示词"
-        },
-        "title": {
-          "add": "添加自定义功能",
-          "edit": "编辑自定义功能"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "当窗口未置顶且失去焦点时，将自动关闭该窗口",
-          "title": "自动关闭"
-        },
-        "auto_pin": {
-          "description": "默认将窗口置于顶部",
-          "title": "自动置顶"
-        },
-        "follow_toolbar": {
-          "description": "窗口位置将跟随工具栏显示，禁用后则始终居中显示",
-          "title": "跟随工具栏"
-        },
-        "opacity": {
-          "description": "设置窗口的默认透明度，100% 为完全不透明",
-          "title": "透明度"
-        },
-        "remember_size": {
-          "description": "应用运行期间，窗口会按上次调整的大小显示",
-          "title": "记住大小"
-        },
-        "title": "功能窗口"
-      }
-    }
-  },
   "settings": {
     "about": {
       "careers": {
@@ -5599,8 +5394,6 @@
       "search_message": "搜索消息",
       "search_message_in_chat": "在当前对话中搜索消息",
       "select_model": "选择模型",
-      "selection_assistant_select_text": "划词助手：取词",
-      "selection_assistant_toggle": "开关划词助手",
       "show_app": "显示 / 隐藏应用",
       "show_settings": "打开设置",
       "title": "快捷键",
@@ -5893,7 +5686,6 @@
     "mcp-servers": "MCP 服务器",
     "memories": "记忆",
     "notes": "笔记",
-    "openclaw": "OpenClaw",
     "paintings": "绘画",
     "settings": "设置",
     "store": "助手库",

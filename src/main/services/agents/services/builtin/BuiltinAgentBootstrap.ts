@@ -6,7 +6,7 @@ const logger = loggerService.withContext('BuiltinAgentBootstrap')
 /**
  * Initialize built-in skills.
  * Built-in agent presets have been removed, so startup no longer provisions
- * CherryClaw / Cherry Assistant agent instances.
+ * legacy preset agent instances.
  */
 export async function bootstrapBuiltinAgents(): Promise<void> {
   try {

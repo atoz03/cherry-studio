@@ -268,7 +268,7 @@
         "title": "Scheduled Tasks"
       },
       "warning": {
-        "bypassPermissions": "CherryClaw agents run with Full Auto Mode by default. All tools execute without asking for approval."
+        "bypassPermissions": "Agent agents run with Full Auto Mode by default. All tools execute without asking for approval."
       }
     },
     "delete": {
@@ -3701,211 +3701,6 @@
       "undo": "Undo"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "Copy",
-        "explain": "Explain",
-        "quote": "Quote",
-        "refine": "Refine",
-        "search": "Search",
-        "summary": "Summarize",
-        "translate": "Translate"
-      },
-      "prompt": {
-        "explain": "Please explain the following content. Requirements: Reply in {{language}}; do not include any explanation of this prompt, just give the response directly: \n\n",
-        "refine": "Please optimize or polish the user input content wrapped in the XML tag <INPUT>, while maintaining the meaning and integrity of the original content. Requirements: Your output should be in the same language as the user input; do not include any explanation of this prompt, just give the response directly; do not output XML tags, output the optimized content directly: \n\n<INPUT>{{text}}</INPUT>",
-        "summary": "Please summarize the following content. Requirements: Reply in {{language}}; do not include any explanation of this prompt, just give the response directly: \n\n"
-      },
-      "translate": {
-        "smart_translate_tips": "Smart Translation: Content will be translated to the target language first; content already in the target language will be translated to the alternative language"
-      },
-      "window": {
-        "c_copy": "C: Copy",
-        "esc_close": "Esc: Close",
-        "esc_stop": "Esc: Stop",
-        "opacity": "Window Opacity",
-        "original_copy": "Copy Original",
-        "original_hide": "Hide Original",
-        "original_show": "Show Original",
-        "pin": "Pin",
-        "pinned": "Pinned",
-        "r_regenerate": "R: Regenerate"
-      }
-    },
-    "name": "Selection Assistant",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "Maximum number of custom actions reached ({{max}})",
-          "enabled": "Add Custom Action"
-        },
-        "custom": "Custom Action",
-        "delete_confirm": "Are you sure you want to delete this custom action?",
-        "drag_hint": "Drag to reorder. Move above to enable action ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "Reset",
-          "confirm": "Are you sure you want to reset to default actions? Custom actions will not be deleted.",
-          "tooltip": "Reset to default actions. Custom actions will not be deleted."
-        },
-        "title": "Actions"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "Advanced feature, recommended for users with experience",
-          "title": "Filter List"
-        },
-        "filter_mode": {
-          "blacklist": "Blacklist",
-          "default": "Off",
-          "description": "Can limit the selection assistant to only work in specific applications (whitelist) or not work (blacklist)",
-          "title": "Application Filter",
-          "whitelist": "Whitelist"
-        },
-        "title": "Advanced"
-      },
-      "enable": {
-        "description": "Currently only supported on Windows & macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "Go to Settings",
-            "open_accessibility_settings": "Open Accessibility Settings"
-          },
-          "description": {
-            "0": "Selection Assistant requires <strong>Accessibility Permission</strong> to work properly.",
-            "1": "Please click \"<strong>Go to Settings</strong>\" and click the \"<strong>Open System Settings</strong>\" button in the permission request popup that appears later. Then find \"<strong>Cherry Studio</strong>\" in the application list that appears later and turn on the permission switch.",
-            "2": "After completing the settings, please reopen the selection assistant."
-          },
-          "title": "Accessibility Permission"
-        },
-        "title": "Enable"
-      },
-      "experimental": "Experimental Features",
-      "filter_modal": {
-        "title": "Application Filter List",
-        "user_tips": {
-          "mac": "Please enter the Bundle ID of the application, one per line, case insensitive, can be fuzzy matched. For example: com.google.Chrome, com.apple.mail, etc.",
-          "windows": "Please enter the executable file name of the application, one per line, case insensitive, can be fuzzy matched. For example: chrome.exe, weixin.exe, Cherry Studio.exe, etc."
-        }
-      },
-      "linux": {
-        "compositor_incompatible": "Your desktop environment does not support the selection feature. Please switch to an X11 session for the full experience.",
-        "filter_warning_text": "Not available in Wayland session",
-        "input_group_fail": "Not granted, please run `sudo usermod -aG input $USER` and re-login",
-        "input_group_label": "input group permission: ",
-        "input_group_pass": "Granted",
-        "wayland_checklist_subtitle": "Ensure the following conditions are met to optimize the Wayland experience:",
-        "wayland_description": "You are in a Wayland session. Due to system limitations, the toolbar may only appear at the center of the screen instead of following the selected text on some desktop environments. It is recommended to switch to an X11 session for the full experience.",
-        "wayland_title": "Wayland Session Notice",
-        "xwayland_fail": "Not enabled, please launch Cherry Studio with the `--ozone-platform=x11` flag",
-        "xwayland_label": "XWayland mode: ",
-        "xwayland_pass": "Enabled"
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "Please enter search engine name",
-            "label": "Custom Name",
-            "max_length": "Name cannot exceed 16 characters"
-          },
-          "test": "Test",
-          "url": {
-            "hint": "Use {{queryString}} to represent the search term",
-            "invalid_format": "Please enter a valid URL starting with http:// or https://",
-            "label": "Custom Search URL",
-            "missing_placeholder": "URL must contain {{queryString}} placeholder",
-            "required": "Please enter search URL"
-          }
-        },
-        "engine": {
-          "custom": "Custom",
-          "label": "Search Engine"
-        },
-        "title": "Set Search Engine"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "In compact mode, only icons are displayed without text",
-          "title": "Compact Mode"
-        },
-        "title": "Toolbar",
-        "trigger_mode": {
-          "ctrlkey": "Ctrl Key",
-          "ctrlkey_note": "After selection, hold down the Ctrl key to show the toolbar",
-          "description": "The way to trigger the selection assistant and show the toolbar",
-          "description_note": {
-            "linux": "If you have remapped modifier keys using tools like xmodmap or xremap, it may cause some applications to fail to select text.",
-            "mac": "If you have remapped the ⌘ key using shortcuts or keyboard mapping tools, it may cause some applications to fail to select text.",
-            "windows": "Some applications do not support selecting text with the Ctrl key. If you have remapped the Ctrl key using tools like AHK, it may cause some applications to fail to select text."
-          },
-          "selected": "Selection",
-          "selected_note": "Show toolbar immediately when text is selected",
-          "shortcut": "Shortcut",
-          "shortcut_link": "Go to Shortcut Settings",
-          "shortcut_note": "After selection, use shortcut to show the toolbar. Please set the shortcut in the shortcut settings page and enable it. ",
-          "title": "Trigger Mode"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "Default",
-          "label": "Select Assistant"
-        },
-        "icon": {
-          "error": "Invalid icon name, please check your input",
-          "label": "Icon",
-          "placeholder": "Enter Lucide icon name",
-          "random": "Random Icon",
-          "tooltip": "Lucide icon names are lowercase, e.g. arrow-right",
-          "view_all": "View All Icons"
-        },
-        "model": {
-          "assistant": "Use Assistant",
-          "default": "Default Model",
-          "label": "Model",
-          "tooltip": "Using Assistant: Will use both the assistant's system prompt and model parameters"
-        },
-        "name": {
-          "hint": "Please enter action name",
-          "label": "Name"
-        },
-        "prompt": {
-          "copy_placeholder": "Copy Placeholder",
-          "label": "User Prompt",
-          "placeholder": "Use placeholder {{text}} to represent selected text. When empty, selected text will be appended to this prompt",
-          "placeholder_text": "Placeholder",
-          "tooltip": "User prompt serves as a supplement to user input and won't override the assistant's system prompt"
-        },
-        "title": {
-          "add": "Add Custom Action",
-          "edit": "Edit Custom Action"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "Automatically close the window when it's not pinned and loses focus",
-          "title": "Auto Close"
-        },
-        "auto_pin": {
-          "description": "Pin the window by default",
-          "title": "Auto Pin"
-        },
-        "follow_toolbar": {
-          "description": "Window position will follow the toolbar. When disabled, it will always be centered.",
-          "title": "Follow Toolbar"
-        },
-        "opacity": {
-          "description": "Set the default opacity of the window, 100% is fully opaque",
-          "title": "Opacity"
-        },
-        "remember_size": {
-          "description": "Window will display at the last adjusted size during the application running",
-          "title": "Remember Size"
-        },
-        "title": "Action Window"
-      }
-    }
-  },
   "settings": {
     "about": {
       "careers": {
@@ -5599,8 +5394,6 @@
       "search_message": "Search Message",
       "search_message_in_chat": "Search Message in Current Chat",
       "select_model": "Select Model",
-      "selection_assistant_select_text": "Selection Assistant: Select Text",
-      "selection_assistant_toggle": "Toggle Selection Assistant",
       "show_app": "Show/Hide App",
       "show_settings": "Open Settings",
       "title": "Keyboard Shortcuts",
@@ -5893,7 +5686,6 @@
     "mcp-servers": "MCP Servers",
     "memories": "Memories",
     "notes": "Notes",
-    "openclaw": "OpenClaw",
     "paintings": "Paintings",
     "settings": "Settings",
     "store": "Assistant Library",

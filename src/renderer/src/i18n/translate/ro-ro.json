@@ -268,7 +268,7 @@
         "title": "Sarcini programate"
       },
       "warning": {
-        "bypassPermissions": "Agenții CherryClaw rulează în mod automat complet în mod implicit. Toate instrumentele se execută fără a solicita aprobare."
+        "bypassPermissions": "Agenții Agent rulează în mod automat complet în mod implicit. Toate instrumentele se execută fără a solicita aprobare."
       }
     },
     "delete": {
@@ -3701,211 +3701,6 @@
       "undo": "Anulează"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "Copiază",
-        "explain": "Explică",
-        "quote": "Citează",
-        "refine": "Rafinează",
-        "search": "Caută",
-        "summary": "Rezumat",
-        "translate": "Tradu"
-      },
-      "prompt": {
-        "explain": "Te rog să explici următorul conținut. Cerințe: Răspunde în {{language}}; nu include nicio explicație a acestui prompt, oferă direct răspunsul:",
-        "refine": "Te rugăm să optimizezi sau să îmbunătățești conținutul introdus de utilizator, cuprins în eticheta XML <INPUT>, păstrând sensul și integritatea textului original. Cerințe: rezultatul tău trebuie să fie în aceeași limbă cu cel introdus de utilizator; nu include nicio explicație referitoare la acest prompt, oferă direct răspunsul; nu afișa etichetele XML, ci doar conținutul optimizat.",
-        "summary": "Vă rog să rezumați următorul conținut. Cerințe: Răspundeți în {{language}}; nu includeți nicio explicație a acestui prompt, oferiți direct răspunsul:"
-      },
-      "translate": {
-        "smart_translate_tips": "Traducere inteligentă: Conținutul va fi tradus mai întâi în limba țintă; conținutul aflat deja în limba țintă va fi tradus în limba alternativă"
-      },
-      "window": {
-        "c_copy": "C: Copiază",
-        "esc_close": "Esc: Închide",
-        "esc_stop": "Esc: Oprește",
-        "opacity": "Opacitate fereastră",
-        "original_copy": "Copiază originalul",
-        "original_hide": "Ascunde originalul",
-        "original_show": "Afișează originalul",
-        "pin": "Fixează",
-        "pinned": "Fixat",
-        "r_regenerate": "R: Regenerează"
-      }
-    },
-    "name": "Asistent de selecție",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "Numărul maxim de acțiuni personalizate a fost atins ({{max}})",
-          "enabled": "Adaugă acțiune personalizată"
-        },
-        "custom": "Acțiune personalizată",
-        "delete_confirm": "Ești sigur că vrei să ștergi această acțiune personalizată?",
-        "drag_hint": "Trage pentru a reordona. Mută deasupra pentru a activa acțiunea ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "Resetează",
-          "confirm": "Ești sigur că vrei să resetezi la acțiunile implicite? Acțiunile personalizate nu vor fi șterse.",
-          "tooltip": "Resetează la acțiunile implicite. Acțiunile personalizate nu vor fi șterse."
-        },
-        "title": "Acțiuni"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "Funcție avansată, recomandată utilizatorilor cu experiență",
-          "title": "Listă de filtrare"
-        },
-        "filter_mode": {
-          "blacklist": "Listă neagră",
-          "default": "Oprit",
-          "description": "Poate limita asistentul de selecție să funcționeze doar în anumite aplicații (listă albă) sau să nu funcționeze (listă neagră)",
-          "title": "Filtru aplicații",
-          "whitelist": "Listă albă"
-        },
-        "title": "Avansat"
-      },
-      "enable": {
-        "description": "Momentan acceptat doar pe Windows și macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "Mergi la Setări",
-            "open_accessibility_settings": "Deschide setările de accesibilitate"
-          },
-          "description": {
-            "0": "Asistentul de selecție necesită <strong>Permisiune de accesibilitate</strong> pentru a funcționa corect.",
-            "1": "Te rugăm să faci clic pe \"<strong>Mergi la Setări</strong>\" și să apeși butonul \"<strong>Deschide setările de sistem</strong>\" în fereastra pop-up de solicitare a permisiunii care apare ulterior. Apoi găsește \"<strong>Cherry Studio</strong>\" în lista de aplicații și activează comutatorul de permisiune.",
-            "2": "După finalizarea setărilor, te rugăm să redeschizi asistentul de selecție."
-          },
-          "title": "Permisiune de accesibilitate"
-        },
-        "title": "Activează"
-      },
-      "experimental": "Funcții experimentale",
-      "filter_modal": {
-        "title": "Listă filtrare aplicații",
-        "user_tips": {
-          "mac": "Te rugăm să introduci Bundle ID-ul aplicației, unul pe linie, nu este sensibil la majuscule/minuscule, poate fi potrivit aproximativ. De exemplu: com.google.Chrome, com.apple.mail etc.",
-          "windows": "Te rugăm să introduci numele fișierului executabil al aplicației, unul pe linie, nu este sensibil la majuscule/minuscule, poate fi potrivit aproximativ. De exemplu: chrome.exe, weixin.exe, Cherry Studio.exe etc."
-        }
-      },
-      "linux": {
-        "compositor_incompatible": "Mediul dvs. desktop nu acceptă funcția de selecție. Vă rugăm să treceți la o sesiune X11 pentru o experiență completă.",
-        "filter_warning_text": "Indisponibil în sesiunea Wayland",
-        "input_group_fail": "Nu a fost acordat, te rog să rulezi `sudo usermod -aG input $USER` și să te reconectezi",
-        "input_group_label": "permisiunea grupului de intrare:",
-        "input_group_pass": "Acordat",
-        "wayland_checklist_subtitle": "Asigurați-vă că sunt îndeplinite următoarele condiții pentru a optimiza experiența Wayland:",
-        "wayland_description": "Vă aflați într-o sesiune Wayland. Din cauza limitărilor sistemului, bara de instrumente poate apărea doar în centrul ecranului în loc să urmărească textul selectat pe unele medii desktop. Se recomandă să treceți la o sesiune X11 pentru o experiență completă.",
-        "wayland_title": "Notificare sesiune Wayland",
-        "xwayland_fail": "Nu este activat, vă rugăm să lansați Cherry Studio cu steagul `--ozone-platform=x11`",
-        "xwayland_label": "Mod XWayland:",
-        "xwayland_pass": "Activat"
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "Te rugăm să introduci numele motorului de căutare",
-            "label": "Nume personalizat",
-            "max_length": "Numele nu poate depăși 16 caractere"
-          },
-          "test": "Test",
-          "url": {
-            "hint": "Folosește {{queryString}} pentru a reprezenta termenul de căutare",
-            "invalid_format": "Te rugăm să introduci un URL valid care începe cu http:// sau https://",
-            "label": "URL căutare personalizată",
-            "missing_placeholder": "URL-ul trebuie să conțină substituentul {{queryString}}",
-            "required": "Te rugăm să introduci URL-ul de căutare"
-          }
-        },
-        "engine": {
-          "custom": "Personalizat",
-          "label": "Motor de căutare"
-        },
-        "title": "Setează motorul de căutare"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "În modul compact, sunt afișate doar pictogramele, fără text",
-          "title": "Mod compact"
-        },
-        "title": "Bară de instrumente",
-        "trigger_mode": {
-          "ctrlkey": "Tasta Ctrl",
-          "ctrlkey_note": "După selecție, ține apăsată tasta Ctrl pentru a afișa bara de instrumente",
-          "description": "Modul de declanșare a asistentului de selecție și de afișare a barei de instrumente",
-          "description_note": {
-            "linux": "Dacă ai remapat tastele modificatoare folosind instrumente precum xmodmap sau xremap, acest lucru poate face ca unele aplicații să nu poată selecta textul.",
-            "mac": "Dacă ai remapat tasta ⌘ folosind scurtături sau instrumente de mapare a tastaturii, acest lucru poate cauza eșecul selecției textului în unele aplicații.",
-            "windows": "Unele aplicații nu acceptă selectarea textului cu tasta Ctrl. Dacă ai remapat tasta Ctrl folosind instrumente precum AHK, acest lucru poate cauza eșecul selecției textului în unele aplicații."
-          },
-          "selected": "Selecție",
-          "selected_note": "Afișează bara de instrumente la selectarea textului",
-          "shortcut": "Comandă rapidă",
-          "shortcut_link": "Mergi la Setările comenzilor rapide",
-          "shortcut_note": "După selecție, folosește comanda rapidă pentru a afișa bara de instrumente. Te rugăm să setezi comanda rapidă în pagina de setări și să o activezi. ",
-          "title": "Mod de declanșare"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "Implicit",
-          "label": "Selectează asistentul"
-        },
-        "icon": {
-          "error": "Nume pictogramă invalid, te rugăm să verifici intrarea",
-          "label": "Pictogramă",
-          "placeholder": "Introdu numele pictogramei Lucide",
-          "random": "Pictogramă aleatorie",
-          "tooltip": "Numele pictogramelor Lucide sunt cu litere mici, de ex. arrow-right",
-          "view_all": "Vezi toate pictogramele"
-        },
-        "model": {
-          "assistant": "Folosește asistent",
-          "default": "Model implicit",
-          "label": "Model",
-          "tooltip": "Folosind Asistent: Va folosi atât promptul de sistem al asistentului, cât și parametrii modelului"
-        },
-        "name": {
-          "hint": "Te rugăm să introduci numele acțiunii",
-          "label": "Nume"
-        },
-        "prompt": {
-          "copy_placeholder": "Copiază substituentul",
-          "label": "Prompt utilizator",
-          "placeholder": "Folosește substituentul {{text}} pentru a reprezenta textul selectat. Dacă este gol, textul selectat va fi adăugat la acest prompt",
-          "placeholder_text": "Substituent",
-          "tooltip": "Promptul utilizatorului servește ca o completare la intrarea utilizatorului și nu va suprascrie promptul de sistem al asistentului"
-        },
-        "title": {
-          "add": "Adaugă acțiune personalizată",
-          "edit": "Editează acțiunea personalizată"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "Închide automat fereastra când nu este fixată și pierde focusul",
-          "title": "Închidere automată"
-        },
-        "auto_pin": {
-          "description": "Fixează fereastra în mod implicit",
-          "title": "Fixare automată"
-        },
-        "follow_toolbar": {
-          "description": "Poziția ferestrei va urmări bara de instrumente. Când este dezactivat, va fi întotdeauna centrată.",
-          "title": "Urmărește bara de instrumente"
-        },
-        "opacity": {
-          "description": "Setează opacitatea implicită a ferestrei, 100% este complet opac",
-          "title": "Opacitate"
-        },
-        "remember_size": {
-          "description": "Fereastra se va afișa la ultima dimensiune ajustată în timpul rulării aplicației",
-          "title": "Memorează dimensiunea"
-        },
-        "title": "Fereastră de acțiune"
-      }
-    }
-  },
   "settings": {
     "about": {
       "careers": {
@@ -5599,8 +5394,6 @@
       "search_message": "Caută mesaj",
       "search_message_in_chat": "Caută mesaj în chat-ul curent",
       "select_model": "Select Model",
-      "selection_assistant_select_text": "Asistent de selecție: Selectează text",
-      "selection_assistant_toggle": "Comută Asistentul de selecție",
       "show_app": "Afișează/Ascunde aplicația",
       "show_settings": "Deschide setările",
       "title": "Comenzi rapide de la tastatură",
@@ -5893,7 +5686,6 @@
     "mcp-servers": "Servere MCP",
     "memories": "Amintiri",
     "notes": "Notițe",
-    "openclaw": "OpenClaw",
     "paintings": "Imagini",
     "settings": "Setări",
     "store": "Bibliotecă asistenți",

@@ -16,7 +16,7 @@ const INVISIBLE_CHARS_RE =
 
 /**
  * Suspicious prompt-injection patterns (advisory — logged, not blocked).
- * Borrowed from OpenClaw's external-content.ts approach.
+ * Borrowed from an earlier external-content.ts hardening approach.
  */
 const SUSPICIOUS_PATTERNS: Array<{ name: string; re: RegExp }> = [
   { name: 'ignore-previous', re: /ignore\s+(all\s+)?previous\s+instructions/i },
@@ -70,7 +70,7 @@ export function detectSuspiciousPatterns(text: string): string[] {
  * Wrap untrusted channel message content with security boundary markers
  * and a SECURITY NOTICE preamble for the LLM.
  *
- * Design rationale (borrowed from OpenClaw):
+ * Design rationale:
  * - The LLM is instructed that the content is untrusted
  * - A random boundary ID prevents the attacker from closing the boundary early
  * - Invisible chars are stripped to prevent steganographic attacks

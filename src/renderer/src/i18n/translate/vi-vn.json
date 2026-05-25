@@ -268,7 +268,7 @@
         "title": "Các Tác Vụ Đã Lên Lịch"
       },
       "warning": {
-        "bypassPermissions": "Các tác nhân CherryClaw hoạt động ở chế độ Tự động hoàn toàn theo mặc định. Mọi công cụ đều thực thi mà không yêu cầu phê duyệt."
+        "bypassPermissions": "Các tác nhân Agent hoạt động ở chế độ Tự động hoàn toàn theo mặc định. Mọi công cụ đều thực thi mà không yêu cầu phê duyệt."
       }
     },
     "delete": {
@@ -3590,211 +3590,6 @@
       "undo": "Hoàn tác"
     }
   },
-  "selection": {
-    "action": {
-      "builtin": {
-        "copy": "Sao chép",
-        "explain": "Giải thích",
-        "quote": "Trích dẫn",
-        "refine": "Tinh chỉnh",
-        "search": "Tìm kiếm",
-        "summary": "Tóm tắt",
-        "translate": "Dịch"
-      },
-      "prompt": {
-        "explain": "Vui lòng giải thích nội dung sau. Yêu cầu: Trả lời bằng {{language}}; không bao gồm bất kỳ lời giải thích nào về lời nhắc này, chỉ đưa ra câu trả lời trực tiếp:",
-        "refine": "Vui lòng tối ưu hóa hoặc mài giũa nội dung người dùng được bao bọc trong thẻ XML <INPUT>, đồng thời giữ nguyên nghĩa gốc và tính toàn vẹn của nội dung. Yêu cầu: kết quả phải cùng ngôn ngữ với đầu vào; không giải thích gì thêm, chỉ xuất ra trực tiếp nội dung đã tối ưu; không xuất thẻ XML, chỉ xuất nội dung đã chỉnh sửa.",
-        "summary": "Vui lòng tóm tắt nội dung sau. Yêu cầu: Trả lời bằng {{language}}; không bao gồm bất kỳ lời giải thích nào về lời nhắc này, chỉ đưa ra câu trả lời trực tiếp:"
-      },
-      "translate": {
-        "smart_translate_tips": "Dịch thông minh: Nội dung sẽ được dịch sang ngôn ngữ đích trước; nội dung đã ở ngôn ngữ đích sẽ được dịch sang ngôn ngữ thay thế"
-      },
-      "window": {
-        "c_copy": "C: Sao chép",
-        "esc_close": "Esc: Đóng",
-        "esc_stop": "Esc: Dừng",
-        "opacity": "Độ mờ cửa sổ",
-        "original_copy": "Sao chép Bản gốc",
-        "original_hide": "Ẩn bản gốc",
-        "original_show": "Hiển thị bản gốc",
-        "pin": "Ghim",
-        "pinned": "Đã ghim",
-        "r_regenerate": "R: Tạo lại"
-      }
-    },
-    "name": "Trợ lý lựa chọn",
-    "settings": {
-      "actions": {
-        "add_tooltip": {
-          "disabled": "Maximum nummer aangepaste acties bereikt ({{max}})",
-          "enabled": "Añadir Acción Personalizada"
-        },
-        "custom": "Hành động Tùy chỉnh",
-        "delete_confirm": "Bạn có chắc chắn muốn xóa hành động tùy chỉnh này không?",
-        "drag_hint": "Kéo để sắp xếp lại. Di chuyển lên trên để kích hoạt hành động ({{enabled}}/{{max}})",
-        "reset": {
-          "button": "Đặt lại",
-          "confirm": "Bạn có chắc chắn muốn đặt lại về các hành động mặc định? Các hành động tùy chỉnh sẽ không bị xóa.",
-          "tooltip": "Đặt lại về hành động mặc định. Các hành động tùy chỉnh sẽ không bị xóa."
-        },
-        "title": "Hành động"
-      },
-      "advanced": {
-        "filter_list": {
-          "description": "Fonction avancée, recommandée aux utilisateurs expérimentés",
-          "title": "Danh sách lọc"
-        },
-        "filter_mode": {
-          "blacklist": "Danh sách đen",
-          "default": "Afuera",
-          "description": "Có thể giới hạn trợ lý chọn chỉ hoạt động trong các ứng dụng cụ thể (danh sách trắng) hoặc không hoạt động (danh sách đen)",
-          "title": "Filtre d'application",
-          "whitelist": "Danh sách trắng"
-        },
-        "title": "Nâng cao"
-      },
-      "enable": {
-        "description": "Hiện tại chỉ hỗ trợ trên Windows & macOS",
-        "mac_process_trust_hint": {
-          "button": {
-            "go_to_settings": "Vào Cài đặt",
-            "open_accessibility_settings": "Mở Cài đặt Trợ năng"
-          },
-          "description": {
-            "0": "Trợ lý Lựa chọn yêu cầu <strong>Quyền Trợ năng</strong> để hoạt động bình thường.",
-            "1": "Vui lòng nhấp vào \"<strong>Đi tới Cài đặt</strong>\" và nhấp vào nút \"<strong>Mở Cài đặt Hệ thống</strong>\" trong cửa sổ yêu cầu quyền xuất hiện sau đó. Sau đó, tìm \"<strong>Cherry Studio</strong>\" trong danh sách ứng dụng xuất hiện và bật công tắc quyền.",
-            "2": "Sau khi hoàn tất cài đặt, vui lòng mở lại trợ lý lựa chọn."
-          },
-          "title": "Quyền truy cập"
-        },
-        "title": "Kích hoạt"
-      },
-      "experimental": "Tính năng thử nghiệm",
-      "filter_modal": {
-        "title": "Danh sách Bộ lọc Ứng dụng",
-        "user_tips": {
-          "mac": "Vui lòng nhập Bundle ID của ứng dụng, mỗi dòng một cái, không phân biệt chữ hoa chữ thường, có thể khớp mờ. Ví dụ: com.google.Chrome, com.apple.mail, v.v.",
-          "windows": "Vui lòng nhập tên tệp thực thi của ứng dụng, mỗi dòng một cái, không phân biệt chữ hoa chữ thường, có thể khớp mờ. Ví dụ: chrome.exe, weixin.exe, Cherry Studio.exe, v.v."
-        }
-      },
-      "linux": {
-        "compositor_incompatible": "Môi trường máy tính để bàn của bạn không hỗ trợ tính năng lựa chọn. Vui lòng chuyển sang phiên X11 để có trải nghiệm đầy đủ.",
-        "filter_warning_text": "Không có sẵn trong phiên Wayland",
-        "input_group_fail": "Không được cấp, vui lòng chạy `sudo usermod -aG input $USER` và đăng nhập lại",
-        "input_group_label": "quyền nhóm đầu vào:",
-        "input_group_pass": "Được cấp",
-        "wayland_checklist_subtitle": "Đảm bảo các điều kiện sau được thỏa mãn để tối ưu hóa trải nghiệm Wayland:",
-        "wayland_description": "Bạn đang ở trong phiên Wayland. Do giới hạn của hệ thống, thanh công cụ có thể chỉ xuất hiện ở giữa màn hình thay vì theo văn bản được chọn trên một số môi trường máy tính để bàn. Khuyến nghị chuyển sang phiên X11 để có trải nghiệm đầy đủ.",
-        "wayland_title": "Thông báo phiên Wayland",
-        "xwayland_fail": "Chưa được kích hoạt, vui lòng khởi chạy Cherry Studio với cờ `--ozone-platform=x11`",
-        "xwayland_label": "Chế độ XWayland:",
-        "xwayland_pass": "Đã bật"
-      },
-      "search_modal": {
-        "custom": {
-          "name": {
-            "hint": "Vui lòng nhập tên công cụ tìm kiếm",
-            "label": "Tên Tùy Chỉnh",
-            "max_length": "Tên không được vượt quá 16 ký tự"
-          },
-          "test": "Kiểm tra",
-          "url": {
-            "hint": "Sử dụng {{queryString}} để biểu thị cụm từ tìm kiếm",
-            "invalid_format": "Vui lòng nhập một URL hợp lệ bắt đầu bằng http:// hoặc https://",
-            "label": "URL Tìm kiếm Tùy chỉnh",
-            "missing_placeholder": "URL phải chứa trình giữ chỗ {{queryString}}",
-            "required": "Vui lòng nhập URL tìm kiếm"
-          }
-        },
-        "engine": {
-          "custom": "Tùy chỉnh",
-          "label": "Công cụ Tìm kiếm"
-        },
-        "title": "Đặt Công cụ Tìm kiếm"
-      },
-      "toolbar": {
-        "compact_mode": {
-          "description": "Trong chế độ thu gọn, chỉ biểu tượng được hiển thị mà không có văn bản",
-          "title": "Chế độ thu gọn"
-        },
-        "title": "Thanh công cụ",
-        "trigger_mode": {
-          "ctrlkey": "Phím Ctrl",
-          "ctrlkey_note": "Sau khi chọn, giữ phím Ctrl để hiển thị thanh công cụ",
-          "description": "Cách kích hoạt trợ lý lựa chọn và hiển thị thanh công cụ",
-          "description_note": {
-            "linux": "Nếu bạn đã ánh xạ lại các phím bổ trợ bằng các công cụ như xmodmap hoặc xremap, điều đó có thể khiến một số ứng dụng không thể chọn văn bản.",
-            "mac": "Nếu bạn đã ánh xạ lại phím ⌘ bằng các phím tắt hoặc công cụ ánh xạ bàn phím, điều đó có thể khiến một số ứng dụng không thể chọn văn bản.",
-            "windows": "Một số ứng dụng không hỗ trợ chọn văn bản bằng phím Ctrl. Nếu bạn đã ánh xạ lại phím Ctrl bằng các công cụ như AHK, điều này có thể khiến một số ứng dụng không thể chọn văn bản."
-          },
-          "selected": "Lựa chọn",
-          "selected_note": "Hiển thị thanh công cụ ngay khi văn bản được chọn",
-          "shortcut": "Phím tắt",
-          "shortcut_link": "Đi tới Cài đặt Phím tắt",
-          "shortcut_note": "Sau khi chọn, hãy dùng phím tắt để hiển thị thanh công cụ. Vui lòng đặt phím tắt trong trang cài đặt phím tắt và bật nó lên.",
-          "title": "Chế độ kích hoạt"
-        }
-      },
-      "user_modal": {
-        "assistant": {
-          "default": "Mặc định",
-          "label": "Chọn Trợ lý"
-        },
-        "icon": {
-          "error": "Nombre de icono no válido, por favor verifique su entrada",
-          "label": "Ícono",
-          "placeholder": "Inserisci il nome dell'icona Lucide",
-          "random": "Biểu tượng Ngẫu nhiên",
-          "tooltip": "Tên biểu tượng Lucide viết thường, ví dụ: arrow-right",
-          "view_all": "undefined"
-        },
-        "model": {
-          "assistant": "Sử dụng Trợ lý",
-          "default": "Mô hình Mặc định",
-          "label": "Mô hình",
-          "tooltip": "Usando Assistente: Utilizará tanto o prompt do sistema do assistente quanto os parâmetros do modelo"
-        },
-        "name": {
-          "hint": "Vui lòng nhập tên hành động",
-          "label": "Nama"
-        },
-        "prompt": {
-          "copy_placeholder": "Sao chép trình giữ chỗ",
-          "label": "Lời nhắc của người dùng",
-          "placeholder": "Sử dụng trình giữ chỗ {{text}} để biểu thị văn bản đã chọn. Khi trống, văn bản đã chọn sẽ được nối vào lời nhắc này",
-          "placeholder_text": "Placeholder",
-          "tooltip": "Lời nhắc của người dùng chỉ đóng vai trò bổ sung cho đầu vào của người dùng và sẽ không ghi đè lên lời nhắc hệ thống của trợ lý."
-        },
-        "title": {
-          "add": "Thêm Hành Động Tùy Chỉnh",
-          "edit": "Chỉnh sửa Hành động Tùy chỉnh"
-        }
-      },
-      "window": {
-        "auto_close": {
-          "description": "Tự động đóng cửa sổ khi không được ghim và mất tiêu điểm",
-          "title": "Tự động đóng"
-        },
-        "auto_pin": {
-          "description": "Ghim cửa sổ theo mặc định",
-          "title": "Ghim tự động"
-        },
-        "follow_toolbar": {
-          "description": "Vị trí cửa sổ sẽ theo thanh công cụ. Khi bị tắt, nó sẽ luôn được căn giữa.",
-          "title": "Theo dõi thanh công cụ"
-        },
-        "opacity": {
-          "description": "Đặt độ mờ mặc định của cửa sổ, 100% là hoàn toàn không trong suốt",
-          "title": "Độ mờ"
-        },
-        "remember_size": {
-          "description": "Cửa sổ sẽ hiển thị ở kích thước đã điều chỉnh lần cuối trong quá trình ứng dụng đang chạy",
-          "title": "Nhớ Kích thước"
-        },
-        "title": "Cửa hành động"
-      }
-    }
-  },
   "settings": {
     "about": {
       "careers": {
@@ -5476,8 +5271,6 @@
       "search_message": "Tin nhắn tìm kiếm",
       "search_message_in_chat": "Tìm Tin nhắn trong Cuộc trò chuyện Hiện tại",
       "select_model": "Chọn Mô hình",
-      "selection_assistant_select_text": "Trợ lý Lựa chọn: Chọn Văn bản",
-      "selection_assistant_toggle": "Bật Trợ lý Chọn",
       "show_app": "Hiện/Ẩn ứng dụng",
       "show_settings": "Mở Cài đặt",
       "title": "Phím tắt",
@@ -5761,7 +5554,6 @@
     "mcp-servers": "MCP Servers",
     "memories": "Kỷ niệm",
     "notes": "Ghi chú",
-    "openclaw": "OpenClaw",
     "paintings": "Tranh vẽ",
     "settings": "Cài đặt",
     "store": "Thư viện Trợ lý",

@@ -218,7 +218,7 @@ type FileItem = NonNullable<MessageItem['file_item']>
 /**
  * Parse a CDNMedia.aes_key into a raw 16-byte AES key.
  *
- * Two encodings exist in the wild (per Tencent/openclaw-weixin):
+ * Two encodings exist in the wild (per Tencent ecosystem implementations):
  *   - base64(raw 16 bytes)            → images
  *   - base64(32-char hex ASCII string) → file / voice / video
  *

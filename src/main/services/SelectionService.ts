@@ -3,8 +3,6 @@ import { IpcChannel } from '@shared/IpcChannel'
 import { clipboard, ipcMain } from 'electron'
 
 import type { ActionItem } from '../../renderer/src/types/selectionTypes'
-import { ConfigKeys, configManager } from './ConfigManager'
-import storeSyncService from './StoreSyncService'
 
 const logger = loggerService.withContext('SelectionService')
 
@@ -47,8 +45,6 @@ export class SelectionService {
 
   setEnabled(enabled: boolean): void {
     this.enabled = enabled
-    configManager.setSelectionAssistantEnabled(enabled)
-    storeSyncService.syncToRenderer('selectionStore/setSelectionEnabled', enabled)
   }
 
   processSelectTextByShortcut(): void {
@@ -150,9 +146,6 @@ export class SelectionService {
  * 保留初始化入口，避免主进程启动链路改动过大。
  */
 export function initSelectionService(): boolean {
-  configManager.subscribe(ConfigKeys.SelectionAssistantEnabled, (enabled: boolean) => {
-    SelectionService.getInstance().setEnabled(enabled)
-  })
   logger.info('Selection assistant disabled at build level.')
   return false
 }
