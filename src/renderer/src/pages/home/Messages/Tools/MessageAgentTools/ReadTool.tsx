@@ -4,9 +4,9 @@ import { formatFileSize } from '@renderer/utils/file'
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { truncateOutput } from '../shared/truncateOutput'
 import { ClickableFilePath } from './ClickableFilePath'
-import { SkeletonValue, ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { SkeletonValue, ToolHeader } from './GenericTools'
 import type { ReadToolInput as ReadToolInputType, ReadToolOutput as ReadToolOutputType, TextOutput } from './types'
 import { AgentToolsType } from './types'
 
@@ -61,8 +61,6 @@ export function ReadTool({
   const stats = getOutputStats(outputString)
   const filename = input?.file_path?.split('/').pop()
   const language = getLanguageByFilePath(input?.file_path ?? '')
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(outputString)
-  const strippedOutput = truncatedOutput ? stripLineNumbers(truncatedOutput) : null
 
   return {
     key: AgentToolsType.Read,
@@ -84,17 +82,21 @@ export function ReadTool({
         showStatus={false}
       />
     ),
-    children: strippedOutput ? (
+    children: outputString ? (
       <div>
-        <CodeViewer
-          value={strippedOutput}
-          language={language}
-          expanded={false}
-          wrapped={false}
-          maxHeight={240}
-          options={{ lineNumbers: true }}
+        <ExpandableTruncatedText
+          output={outputString}
+          render={(value) => (
+            <CodeViewer
+              value={stripLineNumbers(value)}
+              language={language}
+              expanded={false}
+              wrapped={false}
+              maxHeight={240}
+              options={{ lineNumbers: true }}
+            />
+          )}
         />
-        {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
       </div>
     ) : (
       <SkeletonValue value={null} width="100%" fallback={null} />

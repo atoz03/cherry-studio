@@ -2,9 +2,9 @@ import type { CollapseProps } from 'antd'
 import { Tag } from 'antd'
 import ReactMarkdown from 'react-markdown'
 
-import { truncateOutput } from '../shared/truncateOutput'
 import { ClickableFilePath } from './ClickableFilePath'
-import { ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { ToolHeader } from './GenericTools'
 import type { NotebookEditToolInput, NotebookEditToolOutput } from './types'
 import { AgentToolsType } from './types'
 
@@ -15,8 +15,6 @@ export function NotebookEditTool({
   input?: NotebookEditToolInput
   output?: NotebookEditToolOutput
 }): NonNullable<CollapseProps['items']>[number] {
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
-
   return {
     key: AgentToolsType.NotebookEdit,
     label: (
@@ -27,8 +25,7 @@ export function NotebookEditTool({
     ),
     children: (
       <div>
-        <ReactMarkdown>{truncatedOutput}</ReactMarkdown>
-        {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+        <ExpandableTruncatedText output={output} render={(value) => <ReactMarkdown>{value}</ReactMarkdown>} />
       </div>
     )
   }

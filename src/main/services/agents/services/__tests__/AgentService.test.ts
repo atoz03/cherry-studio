@@ -107,7 +107,7 @@ describe('AgentService built-in agent lifecycle', () => {
     expect(mockGetModels).not.toHaveBeenCalled()
   })
 
-  it('soft-deletes built-in agents while preserving the row', async () => {
+  it('hard-deletes agent rows when id is no longer treated as built-in', async () => {
     const deleteWhere = vi.fn().mockResolvedValue({ rowsAffected: 1 })
     const txDelete = vi.fn(() => ({ where: deleteWhere }))
     const updateWhere = vi.fn().mockResolvedValue(undefined)
@@ -126,16 +126,11 @@ describe('AgentService built-in agent lifecycle', () => {
     const deleted = await service.deleteAgent('cherry-claw-default')
 
     expect(deleted).toBe(true)
-    expect(database.transaction).toHaveBeenCalledTimes(1)
-    expect(txDelete).toHaveBeenCalledTimes(3)
-    expect(txUpdate).toHaveBeenCalledTimes(2)
-    expect(database.delete).not.toHaveBeenCalled()
-    expect(txUpdateSet).toHaveBeenCalledWith(expect.objectContaining({ agentId: null }))
-    expect(txUpdateSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        deleted_at: expect.any(String),
-        updated_at: expect.any(String)
-      })
-    )
+    expect(database.transaction).not.toHaveBeenCalled()
+    expect(txDelete).not.toHaveBeenCalled()
+    expect(txUpdate).not.toHaveBeenCalled()
+    expect(database.delete).toHaveBeenCalledTimes(1)
+    expect(deleteWhere).toHaveBeenCalledTimes(1)
+    expect(txUpdateSet).not.toHaveBeenCalled()
   })
 })

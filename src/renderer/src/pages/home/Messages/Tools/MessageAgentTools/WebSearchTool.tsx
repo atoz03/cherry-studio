@@ -1,8 +1,9 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { countLines, truncateOutput } from '../shared/truncateOutput'
-import { ToolHeader, TruncatedIndicator } from './GenericTools'
+import { countLines } from '../shared/truncateOutput'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { ToolHeader } from './GenericTools'
 import { AgentToolsType, type WebSearchToolInput, type WebSearchToolOutput } from './types'
 
 export function WebSearchTool({
@@ -15,7 +16,6 @@ export function WebSearchTool({
   const { t } = useTranslation()
   // 如果有输出，计算结果数量
   const resultCount = countLines(output)
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.WebSearch,
@@ -30,8 +30,7 @@ export function WebSearchTool({
     ),
     children: (
       <div>
-        <div>{truncatedOutput}</div>
-        {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+        <ExpandableTruncatedText output={output} render={(value) => <div>{value}</div>} />
       </div>
     )
   }

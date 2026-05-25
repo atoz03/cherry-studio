@@ -4,8 +4,6 @@ import path from 'node:path'
 import { loggerService } from '@logger'
 import type { CherryClawConfiguration } from '@types'
 
-import { BOOTSTRAP_INSTRUCTIONS, SOUL_CONTENT_THRESHOLD } from './seedWorkspace'
-
 const logger = loggerService.withContext('PromptBuilder')
 
 /**
@@ -36,7 +34,7 @@ type CacheEntry = {
   content: string
 }
 
-const DEFAULT_BASIC_PROMPT = `You are CherryClaw, a personal assistant running inside CherryStudio.
+const DEFAULT_BASIC_PROMPT = `You are a personal assistant running inside CherryStudio.
 
 `
 
@@ -62,23 +60,6 @@ When to act:
 - Before writing to \`FACT.md\`, ask: will this still matter in 6 months? If not, append to the journal instead.
 - Never write to \`memory/FACT.md\` or \`memory/JOURNAL.jsonl\` via direct file tools — always go through the memory tool so writes stay atomic and searchable.`
 
-const CLAW_GUIDANCE = `## CherryClaw Tools
-
-You have exclusive access to these tools for interacting with CherryStudio's autonomous features. Always prefer them over manual alternatives.
-
-| Tool | Purpose | When to use |
-|---|---|---|
-| \`mcp__claw__cron\` | Schedule recurring or one-time tasks. Supports \`timeout_minutes\` param (default 2). | Creating reminders, periodic checks, scheduled reports. Never use builtin Cron* tools — they are disabled. |
-| \`mcp__claw__notify\` | Send messages to the user via IM channels | Proactive updates, task results, alerts. Use when the user is not in the current session. |
-| \`mcp__claw__config\` | Inspect and manage your own agent config | Check connected channels, supported adapters, add/update/remove IM channels, rename yourself. |
-
-Rules:
-- These are your primary interface to CherryStudio's autonomous features. Do not attempt workarounds or alternative approaches.
-- When creating scheduled tasks, always use \`mcp__claw__cron\`. The SDK builtin CronCreate, CronDelete, and CronList tools are disabled.
-- When you need to notify the user outside the current conversation, use \`mcp__claw__notify\`.
-- When adding a WeChat channel, the config tool returns a QR code image. Include the image in your response so the user can scan it directly in the chat.
-- Use \`config status\` to check which channels are actually connected. If a channel shows \`connected: false\`, use \`config reconnect_channel\` to trigger a fresh QR scan.`
-
 const WEB_TOOLS_GUIDANCE = `## Web Search Strategy
 
 You have one web tool: \`mcp__exa__web_search_exa\` for structured search. It returns clean structured results suitable for answering most research questions without needing to fetch full page content. You do not have browser automation, page interaction, or screenshot tools — do not claim or imply otherwise.
@@ -96,9 +77,8 @@ If the user explicitly needs browser automation (filling forms, clicking, naviga
  * section is only included for autonomous (Soul Mode) agents that get the
  * cron / notify / config tools.
  */
-function composeToolGuidance(opts: { hasClaw: boolean }): string {
+function composeToolGuidance(): string {
   const parts: string[] = []
-  if (opts.hasClaw) parts.push(CLAW_GUIDANCE)
   parts.push(SKILLS_GUIDANCE)
   parts.push(MEMORY_GUIDANCE)
   parts.push(WEB_TOOLS_GUIDANCE)
@@ -150,7 +130,8 @@ ${sections}`
 export class PromptBuilder {
   private cache = new Map<string, CacheEntry>()
 
-  async buildSystemPrompt(workspacePath: string, config?: CherryClawConfiguration): Promise<string> {
+  async buildSystemPrompt(workspacePath: string, _config?: CherryClawConfiguration): Promise<string> {
+    void _config
     const parts: string[] = []
 
     // Basic prompt: workspace system.md (case-insensitive) > embedded default
@@ -159,14 +140,7 @@ export class PromptBuilder {
     parts.push(basicPrompt ?? DEFAULT_BASIC_PROMPT)
 
     // Tool guidance — Soul Mode gets the full set including claw (cron / notify / config)
-    parts.push(composeToolGuidance({ hasClaw: true }))
-
-    // Bootstrap detection: inject bootstrap instructions if not completed
-    const needsBootstrap = await this.shouldRunBootstrap(workspacePath, config)
-    if (needsBootstrap) {
-      parts.push(BOOTSTRAP_INSTRUCTIONS)
-      logger.info('Bootstrap mode active — injecting onboarding instructions')
-    }
+    parts.push(composeToolGuidance())
 
     // Memories section (always included so the agent knows file locations)
     const memoriesContent = await this.buildMemoriesSection(workspacePath)
@@ -186,8 +160,9 @@ export class PromptBuilder {
    * claw section is excluded by default (non-Soul agents do not get cron /
    * notify / config).
    */
-  buildToolGuidance(opts: { hasClaw?: boolean } = {}): string {
-    return composeToolGuidance({ hasClaw: opts.hasClaw ?? false })
+  buildToolGuidance(_opts: { hasClaw?: boolean } = {}): string {
+    void _opts
+    return composeToolGuidance()
   }
 
   /**
@@ -219,33 +194,6 @@ These are durable facts and lessons accumulated across past sessions in this wor
 <facts>
 ${content}
 </facts>`
-  }
-
-  /**
-   * Determine whether bootstrap should run.
-   * - If `bootstrap_completed` is explicitly true, skip.
-   * - If SOUL.md has substantial non-template content, skip (legacy agent migration).
-   * - Otherwise, run bootstrap.
-   */
-  private async shouldRunBootstrap(workspacePath: string, config?: CherryClawConfiguration): Promise<boolean> {
-    if (config?.bootstrap_completed === true) {
-      return false
-    }
-
-    // Legacy migration: if SOUL.md already has real content, treat as completed
-    const soulPath = await resolveFile(workspacePath, 'SOUL.md')
-    if (soulPath) {
-      const content = await this.readCachedFile(soulPath)
-      if (content && content.length > SOUL_CONTENT_THRESHOLD) {
-        // Strip template headings to check for actual user content
-        const stripped = content.replace(/^#.*$/gm, '').replace(/^>.*$/gm, '').trim()
-        if (stripped.length > SOUL_CONTENT_THRESHOLD) {
-          return false
-        }
-      }
-    }
-
-    return true
   }
 
   private async buildMemoriesSection(workspacePath: string): Promise<string | undefined> {

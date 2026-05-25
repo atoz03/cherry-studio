@@ -1,6 +1,7 @@
 import type { CollapseProps } from 'antd'
 import { Tag } from 'antd'
 import { CheckCircle, Terminal, XCircle } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { truncateOutput } from '../shared/truncateOutput'
@@ -55,6 +56,7 @@ export function BashOutputTool({
   output?: BashOutputToolOutput
 }): NonNullable<CollapseProps['items']>[number] {
   const { t } = useTranslation()
+  const [showFullOutput, setShowFullOutput] = useState(false)
   const parsedOutput = parseBashOutput(output)
 
   const getStatusConfig = (parsed: ParsedBashOutput | null) => {
@@ -96,11 +98,17 @@ export function BashOutputTool({
 
   const statusConfig = getStatusConfig(parsedOutput)
 
-  // Truncate stdout and stderr separately
-  const truncatedStdout = truncateOutput(parsedOutput?.stdout)
-  const truncatedStderr = truncateOutput(parsedOutput?.stderr)
-  const truncatedError = truncateOutput(parsedOutput?.tool_use_error)
-  const truncatedRawOutput = truncateOutput(output)
+  // 默认展示预览，用户可展开完整输出
+  const truncateLimit = showFullOutput ? Number.MAX_SAFE_INTEGER : undefined
+  const truncatedStdout = truncateOutput(parsedOutput?.stdout, truncateLimit)
+  const truncatedStderr = truncateOutput(parsedOutput?.stderr, truncateLimit)
+  const truncatedError = truncateOutput(parsedOutput?.tool_use_error, truncateLimit)
+  const truncatedRawOutput = truncateOutput(output, truncateLimit)
+  const hasAnyTruncation =
+    truncatedStdout.isTruncated ||
+    truncatedStderr.isTruncated ||
+    truncatedError.isTruncated ||
+    truncatedRawOutput.isTruncated
 
   const children = parsedOutput ? (
     <div className="flex flex-col gap-4">
@@ -145,6 +153,14 @@ export function BashOutputTool({
           {truncatedError.isTruncated && <TruncatedIndicator originalLength={truncatedError.originalLength} />}
         </div>
       )}
+      {hasAnyTruncation && (
+        <button
+          className="w-fit text-primary text-xs underline-offset-2 hover:underline"
+          type="button"
+          onClick={() => setShowFullOutput((prev) => !prev)}>
+          {showFullOutput ? 'Collapse' : 'View full output'}
+        </button>
+      )}
     </div>
   ) : (
     // 原始输出（如果解析失败或非 XML 格式）
@@ -152,6 +168,14 @@ export function BashOutputTool({
       <div>
         <TerminalOutput content={truncatedRawOutput.data} />
         {truncatedRawOutput.isTruncated && <TruncatedIndicator originalLength={truncatedRawOutput.originalLength} />}
+        {truncatedRawOutput.isTruncated && (
+          <button
+            className="mt-2 w-fit text-primary text-xs underline-offset-2 hover:underline"
+            type="button"
+            onClick={() => setShowFullOutput((prev) => !prev)}>
+            {showFullOutput ? 'Collapse' : 'View full output'}
+          </button>
+        )}
       </div>
     )
   )

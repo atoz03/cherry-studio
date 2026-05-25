@@ -1,8 +1,8 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { truncateOutput } from '../shared/truncateOutput'
-import { SkeletonValue, ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { SkeletonValue, ToolHeader } from './GenericTools'
 import { TerminalOutput } from './TerminalOutput'
 import {
   AgentToolsType,
@@ -19,7 +19,6 @@ export function BashTool({
 }): NonNullable<CollapseProps['items']>[number] {
   const { t } = useTranslation()
   const command = input?.command
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.Bash,
@@ -42,11 +41,13 @@ export function BashTool({
         )}
 
         {/* Output 输出区域 */}
-        {truncatedOutput ? (
+        {output ? (
           <div>
             <div className="mb-1 font-medium text-muted-foreground text-xs">{t('message.tools.sections.output')}</div>
-            <TerminalOutput content={truncatedOutput} maxHeight="15rem" />
-            {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+            <ExpandableTruncatedText
+              output={output}
+              render={(value) => <TerminalOutput content={value} maxHeight="15rem" />}
+            />
           </div>
         ) : (
           <SkeletonValue value={null} width="100%" fallback={null} />

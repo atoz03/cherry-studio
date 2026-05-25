@@ -195,6 +195,7 @@ export function getModelLogoById(modelId: string): string | undefined {
     'gpt-5.1-codex': GPT51CodexModelLogo,
     'gpt-5.1-chat': GPT51ChatModelLogo,
     'gpt-5.1': GPT51ModelLogo,
+    'gpt-5.5': isLight ? ChatGptModelLogo : ChatGptModelLogoDark,
     'gpt-5': GPT5ModelLogo,
     gpts: isLight ? ChatGPT4ModelLogo : ChatGPT4ModelLogoDark,
     'gpt-oss(?::|-[\\w-]+)': isLight ? ChatGptModelLogo : ChatGptModelLogoDark,

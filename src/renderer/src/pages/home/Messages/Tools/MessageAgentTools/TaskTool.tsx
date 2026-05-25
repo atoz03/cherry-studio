@@ -1,10 +1,9 @@
 import type { CollapseProps } from 'antd'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Markdown from 'react-markdown'
 
-import { truncateOutput } from '../shared/truncateOutput'
-import { SkeletonValue, ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { SkeletonValue, ToolHeader } from './GenericTools'
 import {
   AgentToolsType,
   type TaskToolInput as TaskToolInputType,
@@ -20,14 +19,7 @@ export function TaskTool({
 }): NonNullable<CollapseProps['items']>[number] {
   const { t } = useTranslation()
   const hasOutput = Array.isArray(output) && output.length > 0
-
-  // Combine all text outputs and truncate
-  const { truncatedText, isTruncated, originalLength } = useMemo(() => {
-    if (!hasOutput) return { truncatedText: '', isTruncated: false, originalLength: 0 }
-    const combinedText = output.map((item) => item.text).join('\n\n')
-    const result = truncateOutput(combinedText)
-    return { truncatedText: result.data, isTruncated: result.isTruncated, originalLength: result.originalLength }
-  }, [output, hasOutput])
+  const combinedText = hasOutput ? output.map((item) => item.text).join('\n\n') : ''
 
   return {
     key: AgentToolsType.Task,
@@ -56,8 +48,7 @@ export function TaskTool({
           <div>
             <div className="mb-1 font-medium text-muted-foreground text-xs">{t('message.tools.sections.output')}</div>
             <div className="rounded-md bg-muted/30 p-2">
-              <Markdown>{truncatedText}</Markdown>
-              {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+              <ExpandableTruncatedText output={combinedText} render={(value) => <Markdown>{value}</Markdown>} />
             </div>
           </div>
         ) : (

@@ -1,9 +1,10 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { countLines, truncateOutput } from '../shared/truncateOutput'
+import { countLines } from '../shared/truncateOutput'
 import { ClickableFilePath } from './ClickableFilePath'
-import { ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { ToolHeader } from './GenericTools'
 import { TerminalContainer } from './TerminalOutput'
 import {
   AgentToolsType,
@@ -21,7 +22,6 @@ export function GlobTool({
   const { t } = useTranslation()
   // 如果有输出，计算文件数量
   const lineCount = countLines(output)
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.Glob,
@@ -36,18 +36,22 @@ export function GlobTool({
     ),
     children: (
       <div>
-        <TerminalContainer>
-          {truncatedOutput?.split('\n').map((line, i) =>
-            line.startsWith('/') ? (
-              <div key={i}>
-                <ClickableFilePath path={line} />
-              </div>
-            ) : (
-              <div key={i}>{line}</div>
-            )
+        <ExpandableTruncatedText
+          output={output}
+          render={(value) => (
+            <TerminalContainer>
+              {value.split('\n').map((line, i) =>
+                line.startsWith('/') ? (
+                  <div key={i}>
+                    <ClickableFilePath path={line} />
+                  </div>
+                ) : (
+                  <div key={i}>{line}</div>
+                )
+              )}
+            </TerminalContainer>
           )}
-        </TerminalContainer>
-        {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+        />
       </div>
     )
   }

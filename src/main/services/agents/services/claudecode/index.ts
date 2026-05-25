@@ -3,7 +3,6 @@ import { fork } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import * as fs from 'node:fs'
 import { createRequire } from 'node:module'
-import os from 'node:os'
 import path from 'node:path'
 
 import type {
@@ -22,8 +21,6 @@ import { loggerService } from '@logger'
 import { config as apiConfigService } from '@main/apiServer/config'
 import { validateModelId } from '@main/apiServer/utils'
 import { isWin } from '@main/constant'
-import AssistantServer from '@main/mcpServers/assistant'
-import ClawServer from '@main/mcpServers/claw'
 import SkillsServer from '@main/mcpServers/skills'
 import WorkspaceMemoryServer from '@main/mcpServers/workspaceMemory'
 import { configManager } from '@main/services/ConfigManager'
@@ -440,22 +437,19 @@ class ClaudeCodeService implements AgentServiceInterface {
     const builtinRole = (session.configuration as Record<string, unknown> | undefined)?.builtin_role as
       | string
       | undefined
-    const isAssistant = builtinRole === 'assistant'
 
     // For non-Soul, non-Assistant agents we still want the model to know how
     // to use the skills + memory MCP servers we inject for everyone, plus the
     // shared web tool strategy. This is a lightweight strategy suffix that
     // sits on top of the SDK's `claude_code` preset rather than replacing it.
-    // Soul agents already get the full guidance via `soulSystemPrompt`, and
-    // Cherry Assistant has its own specialized prompt path.
-    const nonSoulToolGuidance = !soulEnabled && !isAssistant ? promptBuilder.buildToolGuidance() : ''
+    // Soul agents already get the full guidance via `soulSystemPrompt`.
+    const nonSoulToolGuidance = !soulEnabled ? promptBuilder.buildToolGuidance() : ''
 
     // Recall side of the cross-session learning loop for non-Soul agents:
     // load `memory/FACT.md` (written via the memory tool in previous sessions)
     // back into the system prompt so the agent remembers what it learned.
     // Soul agents already get this via `soulSystemPrompt`'s memories section.
-    const nonSoulFactsRecall =
-      !soulEnabled && !isAssistant && cwd ? await promptBuilder.buildFactsSection(cwd) : undefined
+    const nonSoulFactsRecall = !soulEnabled && cwd ? await promptBuilder.buildFactsSection(cwd) : undefined
 
     // Provision built-in agent workspace (copy skills/plugins to working directory)
     if (builtinRole && cwd && !isProvisioned(cwd)) {
@@ -464,18 +458,6 @@ class ClaudeCodeService implements AgentServiceInterface {
         session = { ...session, instructions: agentConfig.instructions }
       }
       logger.info('Provisioned builtin agent workspace', { builtinRole, cwd })
-    }
-
-    // Build lightweight environment snapshot for Cherry Assistant
-    let assistantSystemPrompt: string | undefined
-    if (isAssistant) {
-      try {
-        const context = await buildAssistantContext()
-        assistantSystemPrompt = session.instructions ? `${session.instructions}\n\n${context}` : context
-      } catch (err) {
-        logger.warn('Failed to build assistant context', { error: err })
-        assistantSystemPrompt = session.instructions
-      }
     }
 
     // Build SDK options from session configuration
@@ -522,17 +504,15 @@ class ClaudeCodeService implements AgentServiceInterface {
         })
         return child as unknown as SpawnedProcess
       },
-      systemPrompt: assistantSystemPrompt
-        ? assistantSystemPrompt
-        : soulSystemPrompt
-          ? `${soulSystemPrompt}${session.instructions ? `\n\n${session.instructions}` : ''}${channelSecurityBlock}\n\n${getLanguageInstruction()}`
-          : {
-              type: 'preset',
-              preset: 'claude_code',
-              append:
-                [nonSoulToolGuidance, nonSoulFactsRecall, session.instructions].filter(Boolean).join('\n\n') +
-                `${channelSecurityBlock}\n\n${getLanguageInstruction()}`
-            },
+      systemPrompt: soulSystemPrompt
+        ? `${soulSystemPrompt}${session.instructions ? `\n\n${session.instructions}` : ''}${channelSecurityBlock}\n\n${getLanguageInstruction()}`
+        : {
+            type: 'preset',
+            preset: 'claude_code',
+            append:
+              [nonSoulToolGuidance, nonSoulFactsRecall, session.instructions].filter(Boolean).join('\n\n') +
+              `${channelSecurityBlock}\n\n${getLanguageInstruction()}`
+          },
       // Built-in agents skip CLAUDE.md loading to save tokens
       settingSources: builtinRole ? [] : ['project', 'local'],
       includePartialMessages: true,
@@ -548,12 +528,7 @@ class ClaudeCodeService implements AgentServiceInterface {
           }
         ]
       },
-      disallowedTools: [
-        ...GLOBALLY_DISALLOWED_TOOLS,
-        ...(soulEnabled ? SOUL_MODE_DISALLOWED_TOOLS : []),
-        // Cherry Assistant is a read-only guide; it should not ask users questions via tool
-        ...(isAssistant ? ['AskUserQuestion'] : [])
-      ],
+      disallowedTools: [...GLOBALLY_DISALLOWED_TOOLS, ...(soulEnabled ? SOUL_MODE_DISALLOWED_TOOLS : [])],
       ...(thinkingOptions?.effort ? { effort: thinkingOptions.effort } : {}),
       ...(thinkingOptions?.thinking ? { thinking: thinkingOptions.thinking } : {})
     }
@@ -621,55 +596,6 @@ class ClaudeCodeService implements AgentServiceInterface {
       }
     }
 
-    if (soulEnabled) {
-      // Find the channel that owns this session (if any) for context-aware cron defaults
-      const sourceChannelId = await this.resolveSourceChannel(session.agent_id, session.id)
-      const clawServer = new ClawServer(session.agent_id, sourceChannelId)
-      options.mcpServers.claw = { type: 'sdk', name: 'claw', instance: clawServer.mcpServer }
-
-      // Auto-approve claw MCP tools at both layers (see skills/memory above
-      // for the SDK-glob vs canUseTool-exact-match rationale). Soul agents
-      // typically run in bypassPermissions, so this is defense in depth, but
-      // it lets claw also work for any future non-bypass Soul session.
-      autoAllowTools.add('mcp__claw__cron')
-      autoAllowTools.add('mcp__claw__notify')
-      autoAllowTools.add('mcp__claw__config')
-      if (Array.isArray(options.allowedTools) && options.allowedTools.length > 0) {
-        if (!options.allowedTools.includes('mcp__claw__*')) {
-          options.allowedTools = [...options.allowedTools, 'mcp__claw__*']
-        }
-      }
-
-      logger.debug('Soul Mode: injected claw MCP server', {
-        agentId: session.agent_id,
-        totalMcpServers: Object.keys(options.mcpServers).length
-      })
-    }
-
-    // Cherry Assistant: inject navigate + diagnose MCP server
-    if (isAssistant) {
-      const assistantServer = new AssistantServer()
-      options.mcpServers.assistant = { type: 'sdk', name: 'assistant', instance: assistantServer.mcpServer }
-
-      // Auto-approve assistant MCP tools at both layers (see skills/memory
-      // above for the SDK-glob vs canUseTool-exact-match rationale).
-      autoAllowTools.add('mcp__assistant__navigate')
-      autoAllowTools.add('mcp__assistant__diagnose')
-      if (Array.isArray(options.allowedTools) && options.allowedTools.length > 0) {
-        if (!options.allowedTools.includes('mcp__assistant__*')) {
-          options.allowedTools = [...options.allowedTools, 'mcp__assistant__*']
-        }
-      } else {
-        // When allowed_tools is empty/undefined, set it so assistant MCP tools are auto-approved
-        options.allowedTools = ['mcp__assistant__*']
-      }
-
-      logger.debug('Cherry Assistant: injected assistant MCP server', {
-        agentId: session.agent_id,
-        totalMcpServers: Object.keys(options.mcpServers).length
-      })
-    }
-
     if (lastAgentSessionId && !NO_RESUME_COMMANDS.some((cmd) => prompt.includes(cmd))) {
       options.resume = lastAgentSessionId
       // TODO: use fork session when we support branching sessions
@@ -714,16 +640,6 @@ class ClaudeCodeService implements AgentServiceInterface {
     })
 
     return aiStream
-  }
-
-  private async resolveSourceChannel(agentId: string, sessionId: string): Promise<string | undefined> {
-    try {
-      const { channelService } = await import('../ChannelService')
-      const channels = await channelService.listChannels({ agentId })
-      return channels.find((ch) => ch.sessionId === sessionId)?.id
-    } catch {
-      return undefined
-    }
   }
 
   private async createUserMessageStream(
@@ -1069,65 +985,6 @@ class ClaudeCodeService implements AgentServiceInterface {
     } finally {
       closePromptStream()
     }
-  }
-}
-
-/**
- * Build a lightweight environment snapshot (~200 tokens) for Cherry Assistant.
- * Injected into system prompt so the agent knows the user's setup immediately.
- */
-async function buildAssistantContext(): Promise<string> {
-  const appVersion = app.getVersion()
-  const platform = `${os.platform()} ${os.release()}`
-  const language = configManager.getLanguage()
-  const theme = configManager.getTheme()
-  const proxy = configManager.get<string>('proxy', '')
-
-  // Provider summary (no apiKey exposed)
-  const providers = configManager.get<Record<string, unknown>[]>('providers', [])
-  const configuredProviders = providers
-    .filter((p) => p.apiKey || p.enabled)
-    .map((p) => `${p.name || p.id}(${(p.models as unknown[])?.length || 0} models)`)
-
-  // MCP summary
-  const mcpServers = configManager.get<Record<string, unknown>[]>('mcpServers', [])
-  const activeMcp = mcpServers.filter((s) => s.isActive)
-
-  // Network probe (parallel, 2s timeout each)
-  const probeResults = await Promise.allSettled([
-    probeHost('github.com'),
-    probeHost('google.com'),
-    probeHost('docs.cherry-ai.com')
-  ])
-  const networkLines = probeResults.map((r) => {
-    const v = r.status === 'fulfilled' ? r.value : { host: '?', ok: false, ms: 0 }
-    return `- ${v.host}: ${v.ok ? `reachable (${v.ms}ms)` : 'unreachable'}`
-  })
-
-  return [
-    '## Current Environment',
-    `- App: Cherry Studio v${appVersion}`,
-    `- OS: ${platform}`,
-    `- Language: ${language}, Theme: ${theme}`,
-    proxy ? `- Proxy: ${proxy}` : '- Proxy: none',
-    `- Providers (${configuredProviders.length}): ${configuredProviders.join(', ') || 'none configured'}`,
-    `- MCP Servers: ${activeMcp.length} active / ${mcpServers.length} total`,
-    '',
-    '## Network',
-    ...networkLines
-  ].join('\n')
-}
-
-async function probeHost(host: string): Promise<{ host: string; ok: boolean; ms: number }> {
-  const start = Date.now()
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 2000)
-    await fetch(`https://${host}`, { method: 'HEAD', signal: controller.signal })
-    clearTimeout(timeout)
-    return { host, ok: true, ms: Date.now() - start }
-  } catch {
-    return { host, ok: false, ms: Date.now() - start }
   }
 }
 

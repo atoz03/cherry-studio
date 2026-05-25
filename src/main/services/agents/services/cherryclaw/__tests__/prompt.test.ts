@@ -72,8 +72,8 @@ describe('PromptBuilder', () => {
 
     const result = await builder.buildSystemPrompt('/workspace')
 
-    expect(result).toContain('You are CherryClaw')
-    expect(result).toContain('## CherryClaw Tools')
+    expect(result).toContain('You are a personal assistant running inside CherryStudio.')
+    expect(result).not.toContain('## CherryClaw Tools')
     expect(result).not.toContain('## Memories')
   })
 
@@ -85,7 +85,7 @@ describe('PromptBuilder', () => {
     const result = await builder.buildSystemPrompt('/workspace')
 
     expect(result).toContain('You are CustomBot')
-    expect(result).not.toContain('You are CherryClaw')
+    expect(result).not.toContain('You are a personal assistant running inside CherryStudio.')
   })
 
   it('includes soul.md in memories section', async () => {
@@ -132,7 +132,7 @@ describe('PromptBuilder', () => {
     setupFiles({
       '/workspace/soul.md': 'Be concise.',
       '/workspace/user.md': 'Name: V',
-      '/workspace/memory/FACT.md': 'Project: CherryClaw'
+      '/workspace/memory/FACT.md': 'Project: Cherry Studio'
     })
 
     const result = await builder.buildSystemPrompt('/workspace')
@@ -191,55 +191,24 @@ describe('PromptBuilder', () => {
   })
 
   describe('bootstrap mode', () => {
-    it('injects bootstrap instructions when no config is provided and SOUL.md is empty', async () => {
+    it('does not inject bootstrap instructions when no config is provided and SOUL.md is empty', async () => {
       setupFiles({})
 
       const result = await builder.buildSystemPrompt('/workspace')
 
-      expect(result).toContain('## Bootstrap Mode')
-      expect(result).toContain('complete_bootstrap')
+      expect(result).not.toContain('## Bootstrap Mode')
+      expect(result).not.toContain('complete_bootstrap')
     })
 
-    it('injects bootstrap instructions when bootstrap_completed is false', async () => {
+    it('does not inject bootstrap instructions when bootstrap_completed is false', async () => {
       setupFiles({})
 
       const result = await builder.buildSystemPrompt('/workspace', { ...baseConfig, bootstrap_completed: false })
 
-      expect(result).toContain('## Bootstrap Mode')
-    })
-
-    it('skips bootstrap when bootstrap_completed is true', async () => {
-      setupFiles({})
-
-      const result = await builder.buildSystemPrompt('/workspace', { ...baseConfig, bootstrap_completed: true })
-
       expect(result).not.toContain('## Bootstrap Mode')
     })
 
-    it('skips bootstrap when SOUL.md has substantial content (legacy migration)', async () => {
-      const realContent =
-        'I am a warm, direct assistant. I lead with answers and prefer concise communication. I respect boundaries and always ask before making assumptions.'
-      setupFiles({
-        '/workspace/SOUL.md': `# Soul\n\n> Template header\n\n${realContent}`
-      })
-
-      const result = await builder.buildSystemPrompt('/workspace')
-
-      expect(result).not.toContain('## Bootstrap Mode')
-    })
-
-    it('still shows bootstrap when SOUL.md only has template headings', async () => {
-      setupFiles({
-        '/workspace/SOUL.md':
-          '# Soul\n\n> This file defines who you are. Update it as your personality evolves.\n\n## Personality\n\n\n## Tone\n\n'
-      })
-
-      const result = await builder.buildSystemPrompt('/workspace')
-
-      expect(result).toContain('## Bootstrap Mode')
-    })
-
-    it('includes memories section alongside bootstrap instructions', async () => {
+    it('includes memories section when SOUL.md and USER.md exist', async () => {
       setupFiles({
         '/workspace/SOUL.md': '# Soul\n\n> This file defines who you are.\n\n## Personality\n\n\n## Tone\n\n',
         '/workspace/user.md': 'Name: V'
@@ -247,7 +216,7 @@ describe('PromptBuilder', () => {
 
       const result = await builder.buildSystemPrompt('/workspace')
 
-      expect(result).toContain('## Bootstrap Mode')
+      expect(result).not.toContain('## Bootstrap Mode')
       expect(result).toContain('## Memories')
       expect(result).toContain('<user>')
     })
@@ -269,29 +238,26 @@ describe('PromptBuilder', () => {
       expect(result).not.toContain('mcp__claw__config')
     })
 
-    it('includes claw section when hasClaw is true', () => {
+    it('keeps the same guidance when hasClaw is true', () => {
       const result = builder.buildToolGuidance({ hasClaw: true })
 
-      expect(result).toContain('## CherryClaw Tools')
-      expect(result).toContain('mcp__claw__cron')
-      expect(result).toContain('mcp__claw__notify')
-      expect(result).toContain('mcp__claw__config')
-      // Skills, memory, and web are still included
+      expect(result).not.toContain('## CherryClaw Tools')
+      expect(result).not.toContain('mcp__claw__cron')
+      expect(result).not.toContain('mcp__claw__notify')
+      expect(result).not.toContain('mcp__claw__config')
       expect(result).toContain('mcp__skills__skills')
       expect(result).toContain('mcp__agent-memory__memory')
       expect(result).toContain('## Web Search Strategy')
     })
 
-    it('places claw guidance before skills/memory when present', () => {
+    it('keeps skills/memory/web guidance ordering stable', () => {
       const result = builder.buildToolGuidance({ hasClaw: true })
 
-      const clawIdx = result.indexOf('## CherryClaw Tools')
       const skillsIdx = result.indexOf('## Skills')
       const memoryIdx = result.indexOf('## Workspace Memory')
       const webIdx = result.indexOf('## Web Search Strategy')
 
-      expect(clawIdx).toBeGreaterThanOrEqual(0)
-      expect(clawIdx).toBeLessThan(skillsIdx)
+      expect(skillsIdx).toBeGreaterThanOrEqual(0)
       expect(skillsIdx).toBeLessThan(memoryIdx)
       expect(memoryIdx).toBeLessThan(webIdx)
     })
@@ -312,13 +278,12 @@ describe('PromptBuilder', () => {
       expect(result).toMatch(/6 months|durable/i)
     })
 
-    it('returns the same content soul-mode buildSystemPrompt embeds (with claw)', async () => {
+    it('returns the same content soul-mode buildSystemPrompt embeds', async () => {
       setupFiles({})
       const soulPrompt = await builder.buildSystemPrompt('/workspace')
       const guidance = builder.buildToolGuidance({ hasClaw: true })
 
-      // The Soul prompt should embed every section the with-claw guidance has.
-      expect(soulPrompt).toContain('## CherryClaw Tools')
+      // Soul prompt should embed all guidance sections.
       expect(soulPrompt).toContain('## Skills')
       expect(soulPrompt).toContain('## Workspace Memory')
       expect(soulPrompt).toContain('## Web Search Strategy')

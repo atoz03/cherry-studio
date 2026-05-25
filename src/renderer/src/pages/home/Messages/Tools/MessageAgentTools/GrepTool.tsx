@@ -1,9 +1,10 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { countLines, truncateOutput } from '../shared/truncateOutput'
+import { countLines } from '../shared/truncateOutput'
 import { ClickableFilePath } from './ClickableFilePath'
-import { ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { ToolHeader } from './GenericTools'
 import { TerminalContainer } from './TerminalOutput'
 import { AgentToolsType, type GrepToolInput, type GrepToolOutput } from './types'
 
@@ -19,7 +20,6 @@ export function GrepTool({
   const { t } = useTranslation()
   // 如果有输出，计算结果行数
   const resultLines = countLines(output)
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.Grep,
@@ -39,21 +39,25 @@ export function GrepTool({
     ),
     children: (
       <div>
-        <TerminalContainer>
-          {truncatedOutput?.split('\n').map((line, i) => {
-            const match = line.match(FILE_PATH_RE)
-            if (match) {
-              return (
-                <div key={i}>
-                  <ClickableFilePath path={match[1]} />
-                  {match[2] ?? ''}
-                </div>
-              )
-            }
-            return <div key={i}>{line}</div>
-          })}
-        </TerminalContainer>
-        {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+        <ExpandableTruncatedText
+          output={output}
+          render={(value) => (
+            <TerminalContainer>
+              {value.split('\n').map((line, i) => {
+                const match = line.match(FILE_PATH_RE)
+                if (match) {
+                  return (
+                    <div key={i}>
+                      <ClickableFilePath path={match[1]} />
+                      {match[2] ?? ''}
+                    </div>
+                  )
+                }
+                return <div key={i}>{line}</div>
+              })}
+            </TerminalContainer>
+          )}
+        />
       </div>
     )
   }

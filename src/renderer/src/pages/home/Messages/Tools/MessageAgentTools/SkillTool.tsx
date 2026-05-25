@@ -1,8 +1,8 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { truncateOutput } from '../shared/truncateOutput'
-import { SkeletonValue, ToolHeader, TruncatedIndicator } from './GenericTools'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { SkeletonValue, ToolHeader } from './GenericTools'
 import { AgentToolsType, type SkillToolInput, type SkillToolOutput } from './types'
 
 export function SkillTool({
@@ -13,7 +13,6 @@ export function SkillTool({
   output?: SkillToolOutput
 }): NonNullable<CollapseProps['items']>[number] {
   const { t } = useTranslation()
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.Skill,
@@ -38,13 +37,17 @@ export function SkillTool({
         )}
 
         {/* Output 输出区域 */}
-        {truncatedOutput ? (
+        {output ? (
           <div>
             <div className="mb-1 font-medium text-muted-foreground text-xs">{t('message.tools.sections.output')}</div>
-            <div className="max-h-60 overflow-y-auto rounded-md bg-muted/30 p-2">
-              <pre className="whitespace-pre-wrap font-mono text-xs">{truncatedOutput}</pre>
-            </div>
-            {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+            <ExpandableTruncatedText
+              output={output}
+              render={(value) => (
+                <div className="max-h-60 overflow-y-auto rounded-md bg-muted/30 p-2">
+                  <pre className="whitespace-pre-wrap font-mono text-xs">{value}</pre>
+                </div>
+              )}
+            />
           </div>
         ) : (
           <SkeletonValue value={null} width="100%" fallback={null} />

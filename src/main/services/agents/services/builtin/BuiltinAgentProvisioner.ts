@@ -30,7 +30,6 @@ function resolveLocalizedField(value: unknown): string | undefined {
 }
 
 const ROLE_TO_TEMPLATE: Record<string, string> = {
-  assistant: 'cherry-assistant',
   'skill-creator': 'skill-creator'
 }
 
@@ -64,7 +63,7 @@ export interface BuiltinAgentConfig {
  * working directory so the SDK can auto-discover them.
  *
  * @param workspacePath - The agent's working directory (accessible_paths[0])
- * @param builtinRole - The built-in role identifier ('assistant' or 'skill-creator')
+ * @param builtinRole - The built-in role identifier (for example 'skill-creator')
  * @returns The parsed agent.json config, or undefined if not found
  */
 export async function provisionBuiltinAgent(

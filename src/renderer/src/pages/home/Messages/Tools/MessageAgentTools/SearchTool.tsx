@@ -1,8 +1,9 @@
 import type { CollapseProps } from 'antd'
 import { useTranslation } from 'react-i18next'
 
-import { countLines, truncateOutput } from '../shared/truncateOutput'
-import { StringInputTool, StringOutputTool, ToolHeader, TruncatedIndicator } from './GenericTools'
+import { countLines } from '../shared/truncateOutput'
+import { ExpandableTruncatedText } from './ExpandableTruncatedText'
+import { StringInputTool, StringOutputTool, ToolHeader } from './GenericTools'
 import {
   AgentToolsType,
   type SearchToolInput as SearchToolInputType,
@@ -19,7 +20,6 @@ export function SearchTool({
   const { t } = useTranslation()
   // 如果有输出，计算结果数量
   const resultCount = countLines(output)
-  const { data: truncatedOutput, isTruncated, originalLength } = truncateOutput(output)
 
   return {
     key: AgentToolsType.Search,
@@ -35,16 +35,16 @@ export function SearchTool({
     children: (
       <div>
         {input && <StringInputTool input={input} label={t('message.tools.sections.searchQuery')} />}
-        {truncatedOutput && (
-          <div>
+        <ExpandableTruncatedText
+          output={output}
+          render={(value) => (
             <StringOutputTool
-              output={truncatedOutput}
+              output={value}
               label={t('message.tools.sections.searchResults')}
               textColor="text-yellow-600 dark:text-yellow-400"
             />
-            {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
-          </div>
-        )}
+          )}
+        />
       </div>
     )
   }

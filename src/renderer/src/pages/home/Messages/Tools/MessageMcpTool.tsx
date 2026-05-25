@@ -289,6 +289,7 @@ const ToolResponseContent: FC<{
   const [responseImages, setResponseImages] = useState<Array<{ data: string; mimeType: string }>>([])
   const [isTruncated, setIsTruncated] = useState(false)
   const [originalLength, setOriginalLength] = useState(0)
+  const [showFullOutput, setShowFullOutput] = useState(false)
 
   // Parse args if it's a string (streaming partial JSON)
   const parsedArgs = useMemo(() => {
@@ -314,7 +315,7 @@ const ToolResponseContent: FC<{
         data: truncatedContent,
         isTruncated: wasTruncated,
         originalLength: origLen
-      } = truncateOutput(previewContent)
+      } = truncateOutput(previewContent, showFullOutput ? Number.MAX_SAFE_INTEGER : undefined)
       setIsTruncated(wasTruncated)
       setOriginalLength(origLen)
       const result = await highlightCode(truncatedContent, 'json')
@@ -323,7 +324,7 @@ const ToolResponseContent: FC<{
 
     const timer = setTimeout(highlight, 0)
     return () => clearTimeout(timer)
-  }, [isExpanded, response, highlightCode])
+  }, [isExpanded, response, highlightCode, showFullOutput])
 
   if (!isExpanded) return null
 
@@ -378,7 +379,14 @@ const ToolResponseContent: FC<{
           {highlightedResponse && (
             <MarkdownContainer className="markdown" dangerouslySetInnerHTML={{ __html: highlightedResponse }} />
           )}
-          {isTruncated && <TruncatedIndicator originalLength={originalLength} />}
+          {isTruncated && (
+            <>
+              <TruncatedIndicator originalLength={originalLength} />
+              <ToggleOutputButton type="button" onClick={() => setShowFullOutput((prev) => !prev)}>
+                {showFullOutput ? 'Collapse' : 'View full output'}
+              </ToggleOutputButton>
+            </>
+          )}
           {responseImages.map((img, idx) => (
             <img
               key={idx}
@@ -468,6 +476,20 @@ const MarkdownContainer = styled.div`
     span {
       white-space: pre-wrap;
     }
+  }
+`
+
+const ToggleOutputButton = styled.button`
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
   }
 `
 

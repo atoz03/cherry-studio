@@ -447,27 +447,6 @@ export enum IpcChannel {
   LocalTransfer_SendFile = 'local-transfer:send-file',
   LocalTransfer_CancelTransfer = 'local-transfer:cancel-transfer',
 
-  // OpenClaw
-  OpenClaw_CheckInstalled = 'openclaw:check-installed',
-  OpenClaw_CheckNodeVersion = 'openclaw:check-node-version',
-  OpenClaw_CheckGitAvailable = 'openclaw:check-git-available',
-  OpenClaw_GetNodeDownloadUrl = 'openclaw:get-node-download-url',
-  OpenClaw_GetGitDownloadUrl = 'openclaw:get-git-download-url',
-  OpenClaw_Install = 'openclaw:install',
-  OpenClaw_Uninstall = 'openclaw:uninstall',
-  OpenClaw_InstallProgress = 'openclaw:install-progress',
-  OpenClaw_StartGateway = 'openclaw:start-gateway',
-  OpenClaw_StopGateway = 'openclaw:stop-gateway',
-  OpenClaw_GetStatus = 'openclaw:get-status',
-  OpenClaw_CheckHealth = 'openclaw:check-health',
-  OpenClaw_GetDashboardUrl = 'openclaw:get-dashboard-url',
-  OpenClaw_GetDashboardAuthToken = 'openclaw:get-dashboard-auth-token',
-  OpenClaw_SetDashboardAuthToken = 'openclaw:set-dashboard-auth-token',
-  OpenClaw_SyncConfig = 'openclaw:sync-config',
-  OpenClaw_GetChannels = 'openclaw:get-channels',
-  OpenClaw_CheckUpdate = 'openclaw:check-update',
-  OpenClaw_PerformUpdate = 'openclaw:perform-update',
-
   // Analytics
   Analytics_TrackTokenUsage = 'analytics:track-token-usage'
 }
