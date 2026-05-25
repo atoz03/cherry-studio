@@ -24,6 +24,7 @@ const createMockStore = () => {
 }
 
 let mockStore: ReturnType<typeof createMockStore>
+let mockContextCount = 10
 
 vi.mock('@renderer/services/AssistantService', () => {
   const createDefaultTopic = () => ({
@@ -51,7 +52,7 @@ vi.mock('@renderer/services/AssistantService', () => {
 
   return {
     DEFAULT_ASSISTANT_SETTINGS: defaultAssistantSettings,
-    getAssistantSettings: () => ({ contextCount: 10 }),
+    getAssistantSettings: () => ({ contextCount: mockContextCount }),
     getDefaultModel: () => ({ id: 'default-model' }),
     getDefaultAssistant: () => createDefaultAssistant(),
     getDefaultTopic: () => createDefaultTopic(),
@@ -76,6 +77,7 @@ describe('ConversationService.filterMessagesPipeline', () => {
   beforeEach(() => {
     mockStore = createMockStore()
     vi.clearAllMocks()
+    mockContextCount = 10
   })
 
   it('removes error-only assistant replies together with their user message before trimming trailing assistants', () => {
@@ -213,5 +215,38 @@ describe('ConversationService.filterMessagesPipeline', () => {
     expect(result.uiMessages.map((m) => m.id)).toEqual(['user-1', 'assistant-2', 'user-2'])
     expect(result.uiMessages.find((m) => m.id === assistantId)?.blocks).toContain(toolBlock.id)
     expect(result.modelMessages.some((message) => message.role === 'tool')).toBe(true)
+  })
+
+  it('injects compacted system context when message count exceeds contextCount + 2', async () => {
+    mockContextCount = 10
+    const topicId = 'topic-compact'
+    const assistantId = 'assistant-compact'
+    const messages: any[] = []
+
+    for (let i = 1; i <= 13; i++) {
+      const role = i % 2 === 0 ? 'assistant' : 'user'
+      const messageId = `${role}-${i}`
+      const block = createMainTextBlock(messageId, `${role} message ${i}`, { status: MessageBlockStatus.SUCCESS })
+      const message = createMessage(role, topicId, assistantId, {
+        id: messageId,
+        askId: role === 'assistant' ? `user-${i - 1}` : undefined,
+        blocks: [block.id]
+      })
+      mockStore.dispatch(messageBlocksSlice.actions.upsertOneBlock(block))
+      messages.push(message)
+    }
+
+    const assistantConfig = {
+      id: assistantId,
+      settings: { contextCount: 10 }
+    } as any
+
+    const result = await ConversationService.prepareMessagesForModel(messages, assistantConfig)
+
+    expect(result.modelMessages[0].role).toBe('system')
+    if (result.modelMessages[0].role === 'system') {
+      expect(result.modelMessages[0].content).toContain('Conversation history has been compacted')
+    }
+    expect(result.uiMessages.length).toBe(13)
   })
 })
