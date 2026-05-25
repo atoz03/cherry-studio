@@ -5,7 +5,7 @@
  */
 
 import { loggerService } from '@logger'
-import type { AgentType, BuiltinMCPServerName, BuiltinOcrProviderId, ThinkingOption } from '@renderer/types'
+import type { BuiltinMCPServerName, BuiltinOcrProviderId, ThinkingOption } from '@renderer/types'
 import { BuiltinMCPServerNames } from '@renderer/types'
 
 import i18n from './index'
@@ -378,9 +378,4 @@ export const getBuiltinOcrProviderLabel = (key: BuiltinOcrProviderId) => {
   else if (key == 'paddleocr') return 'PaddleOCR'
   else if (key == 'ovocr') return 'Intel OV(NPU) OCR'
   else return getLabel(builtinOcrProviderKeyMap, key)
-}
-
-// oxlint-disable-next-line no-unused-vars -- placeholder for future agent type labels
-export const getAgentTypeLabel = (_key: AgentType) => {
-  return 'Agent'
 }
