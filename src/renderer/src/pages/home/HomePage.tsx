@@ -13,7 +13,7 @@ import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
 import { AnimatePresence, motion } from 'motion/react'
 import type { FC } from 'react'
-import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch } from 'react-redux'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
@@ -88,6 +88,14 @@ const HomePage: FC = () => {
     activeAssistant?.id ?? '',
     topicFromRoute || initialTopicFromState || initialTopicFromTab || activeAssistant?.topics[0] || undefined
   )
+  const activeAssistantIdRef = useRef(activeAssistant?.id)
+  const activeTopicIdRef = useRef(activeTopic?.id)
+  const tabForPersistenceIdRef = useRef(tabForPersistenceId)
+  const tabChatStateRef = useRef(tabChatState)
+  activeAssistantIdRef.current = activeAssistant?.id
+  activeTopicIdRef.current = activeTopic?.id
+  tabForPersistenceIdRef.current = tabForPersistenceId
+  tabChatStateRef.current = tabChatState
   const { setShowAssistants, toggleShowAssistants } = useShowAssistants()
   const { toggleShowTopics } = useShowTopics()
   const { showAssistants, showTopics, topicPosition, clickAssistantToShowTopic } = useSettings()
@@ -108,10 +116,15 @@ const HomePage: FC = () => {
 
   const persistTabChatState = useCallback(
     (assistantId: string, topicId: string) => {
-      if (!tabForPersistenceId) return
-      dispatch(updateTab({ id: tabForPersistenceId, updates: { chatState: { assistantId, topicId } } }))
+      const currentTabId = tabForPersistenceIdRef.current
+      if (!currentTabId) return
+
+      const currentChatState = tabChatStateRef.current
+      if (currentChatState?.assistantId === assistantId && currentChatState?.topicId === topicId) return
+
+      dispatch(updateTab({ id: currentTabId, updates: { chatState: { assistantId, topicId } } }))
     },
-    [dispatch, tabForPersistenceId]
+    [dispatch]
   )
 
   useShortcut('toggle_show_assistants', () => {
@@ -152,12 +165,13 @@ const HomePage: FC = () => {
     // TODO: allow to set it as null.
     (newAssistant: Assistant, options?: { topic?: Topic }) => {
       if (isAssistantLocked && lockedAssistantId && newAssistant.id !== lockedAssistantId) return
-      if (newAssistant.id === activeAssistant?.id) return
 
       // 设置项：自动切换到话题（左侧话题布局下生效）
       if (forceTopicTabOnAssistantSwitch) {
         void EventEmitter.emit(EVENT_NAMES.SWITCH_TOPIC_SIDEBAR)
       }
+
+      if (newAssistant.id === activeAssistantIdRef.current) return
 
       startTransition(() => {
         _setActiveAssistant(newAssistant)
@@ -172,8 +186,6 @@ const HomePage: FC = () => {
     },
     [
       _setActiveTopic,
-      activeAssistant?.id,
-      dispatch,
       forceTopicTabOnAssistantSwitch,
       isAssistantLocked,
       isTopicLocked,
@@ -229,6 +241,40 @@ const HomePage: FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assistants, params.assistantId, params.topicId])
+
+  useEffect(() => {
+    if (!assistants.length || params.assistantId || params.topicId) return
+    if (state?.assistant || state?.topic) return
+
+    const nextAssistant = resolveAssistantFromTab() || assistants[0]
+    if (!nextAssistant) return
+
+    const nextTopic = resolveTopicFromTab(nextAssistant) || nextAssistant.topics[0]
+    const shouldUpdateAssistant = nextAssistant.id !== activeAssistantIdRef.current
+    const shouldUpdateTopic = Boolean(nextTopic && nextTopic.id !== activeTopicIdRef.current)
+
+    if (!shouldUpdateAssistant && !shouldUpdateTopic) return
+
+    startTransition(() => {
+      if (shouldUpdateAssistant) {
+        _setActiveAssistant(nextAssistant)
+      }
+      if (nextTopic && shouldUpdateTopic) {
+        _setActiveTopic((prev) => (nextTopic.id === prev?.id ? prev : nextTopic))
+      }
+    })
+  }, [
+    _setActiveAssistant,
+    _setActiveTopic,
+    assistants,
+    params.assistantId,
+    params.topicId,
+    resolveAssistantFromTab,
+    resolveTopicFromTab,
+    state?.assistant,
+    state?.topic,
+    tabKey
+  ])
 
   useEffect(() => {
     if (isAssistantLocked && lockedAssistant && activeAssistant?.id !== lockedAssistant.id) {

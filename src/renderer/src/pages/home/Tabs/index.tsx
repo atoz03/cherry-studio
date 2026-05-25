@@ -48,9 +48,9 @@ const HomeTabs: FC<Props> = ({
 
   const [tab, setTab] = useState<Tab>(() => {
     if (position !== 'left') return 'topic'
+    if (topicPosition === 'left' && initialTab === 'topic') return 'topic'
     const remembered = tabMemory.get(tabKey)
     if (remembered) return remembered
-    if (topicPosition === 'left' && initialTab === 'topic') return 'topic'
     return 'assistants'
   })
   const borderStyle = '0.5px solid var(--color-border)'
@@ -70,11 +70,13 @@ const HomeTabs: FC<Props> = ({
       setTab('topic')
       return
     }
+    if (topicPosition === 'left' && initialTab === 'topic' && tab !== 'topic') {
+      setTab('topic')
+      return
+    }
     const remembered = tabMemory.get(tabKey)
     if (remembered && remembered !== tab) {
       setTab(remembered)
-    } else if (!remembered && topicPosition === 'left' && initialTab === 'topic' && tab !== 'topic') {
-      setTab('topic')
     }
   }, [initialTab, position, tab, tabKey, topicPosition])
 
