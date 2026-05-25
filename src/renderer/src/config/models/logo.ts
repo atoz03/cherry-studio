@@ -60,6 +60,11 @@ import {
 import ChatGPTImageModelLogo from '@renderer/assets/images/models/gpt_image_1.png'
 import ChatGPTImage2ModelLogo from '@renderer/assets/images/models/gpt_image_2.png'
 import ChatGPTo1ModelLogo from '@renderer/assets/images/models/gpt_o1.png'
+import GPT53CodexModelLogo from '@renderer/assets/images/models/gpt-5.3-codex.png'
+import GPT54ModelLogo from '@renderer/assets/images/models/gpt-5.4.png'
+import GPT54MiniModelLogo from '@renderer/assets/images/models/gpt-5.4-mini.png'
+import GPT54NanoModelLogo from '@renderer/assets/images/models/gpt-5.4-nano.png'
+import GPT55ModelLogo from '@renderer/assets/images/models/gpt-5.5.png'
 import GPT5ModelLogo from '@renderer/assets/images/models/gpt-5.png'
 import GPT5ChatModelLogo from '@renderer/assets/images/models/gpt-5-chat.png'
 import GPT5CodexModelLogo from '@renderer/assets/images/models/gpt-5-codex.png'
@@ -188,11 +193,13 @@ export function getModelLogoById(modelId: string): string | undefined {
     'gpt-5-chat': GPT5ChatModelLogo,
     'gpt-5\\.5-chat': GPT5ChatModelLogo,
     'gpt-5\\.5-codex': GPT5CodexModelLogo,
-    'gpt-5\\.5': GPT5ModelLogo,
+    'gpt-5\\.5': GPT55ModelLogo,
+    'gpt-5\\.4-mini': GPT54MiniModelLogo,
+    'gpt-5\\.4-nano': GPT54NanoModelLogo,
     'gpt-5\\.4-chat': GPT5ChatModelLogo,
     'gpt-5\\.4-codex': GPT5CodexModelLogo,
-    'gpt-5\\.4': GPT5ModelLogo,
-    'gpt-5\\.3-codex': GPT5CodexModelLogo,
+    'gpt-5\\.4': GPT54ModelLogo,
+    'gpt-5\\.3-codex': GPT53CodexModelLogo,
     'gpt-5\\.1-codex': GPT5CodexModelLogo,
     'gpt-5\\.2-chat': GPT5ChatModelLogo,
     'gpt-5\\.2-codex': GPT5CodexModelLogo,
