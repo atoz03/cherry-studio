@@ -1,7 +1,6 @@
-import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk'
 import { loggerService } from '@logger'
 import { useAppDispatch, useAppSelector } from '@renderer/store'
-import { selectPendingPermission, toolPermissionsActions } from '@renderer/store/toolPermissions'
+import { type PermissionUpdate, selectPendingPermission, toolPermissionsActions } from '@renderer/store/toolPermissions'
 import type { NormalToolResponse } from '@renderer/types'
 import type { ToolMessageBlock } from '@renderer/types/newMessage'
 import { useCallback } from 'react'
@@ -17,7 +16,7 @@ export interface UseAgentToolApprovalOptions {
 }
 
 /**
- * Hook for Agent tool approval logic
+ * Hook for tool approval logic
  * Can be used with:
  * - A ToolMessageBlock (extracts toolCallId from metadata)
  * - A direct toolCallId via options
@@ -51,7 +50,7 @@ export function useAgentToolApproval(
     ) => {
       if (!request) return
 
-      logger.debug('Submitting agent tool permission decision', {
+      logger.debug('Submitting tool permission decision', {
         requestId: request.requestId,
         toolName: request.toolName,
         behavior
@@ -59,37 +58,18 @@ export function useAgentToolApproval(
 
       dispatch(toolPermissionsActions.submissionSent({ requestId: request.requestId, behavior }))
 
-      try {
-        const payload = {
+      dispatch(
+        toolPermissionsActions.requestResolved({
           requestId: request.requestId,
           behavior,
-          ...(behavior === 'allow'
-            ? {
-                updatedInput: extra?.updatedInput ?? request.input,
-                updatedPermissions: extra?.updatedPermissions
-              }
-            : {
-                message: extra?.message ?? t('agent.toolPermission.defaultDenyMessage')
-              })
-        }
-
-        const response = await window.api.agentTools.respondToPermission(payload)
-
-        if (!response?.success) {
-          throw new Error('Renderer response rejected by main process')
-        }
-
-        logger.debug('Tool permission decision acknowledged by main process', {
-          requestId: request.requestId,
-          behavior
+          reason: 'response',
+          updatedInput: behavior === 'allow' ? (extra?.updatedInput ?? request.input) : undefined,
+          message: behavior === 'deny' ? (extra?.message ?? t('agent.toolPermission.defaultDenyMessage')) : undefined,
+          toolCallId
         })
-      } catch (error) {
-        logger.error('Failed to send tool permission response', error as Error)
-        window.toast?.error?.(t('agent.toolPermission.error.sendFailed'))
-        dispatch(toolPermissionsActions.submissionFailed({ requestId: request.requestId }))
-      }
+      )
     },
-    [dispatch, request, t]
+    [dispatch, request, t, toolCallId]
   )
 
   const confirm = useCallback(() => {
@@ -117,7 +97,7 @@ export function useAgentToolApproval(
     isWaiting,
     isExecuting,
     isSubmitting,
-    // Agent-specific: input from permission request
+    // Input from permission request
     input: request?.input,
 
     // Actions

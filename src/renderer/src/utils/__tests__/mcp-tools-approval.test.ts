@@ -72,7 +72,7 @@ describe('isToolAutoApproved', () => {
     })
   })
 
-  describe('agent allowed_tools', () => {
+  describe('request scoped allowed tools', () => {
     it('returns true when tool.id is in allowedTools', () => {
       const tool = makeTool({ id: 'server1__tool1' })
       expect(isToolAutoApproved(tool, undefined, ['server1__tool1'])).toBe(true)
@@ -141,7 +141,7 @@ describe('isToolAutoApproved', () => {
       expect(isToolAutoApproved(tool, hubServer)).toBe(true)
     })
 
-    it('still allows agent allowed_tools for hub', () => {
+    it('still allows request scoped tools for hub', () => {
       const tool = makeTool({ id: 'hub__invoke', serverId: 'hub', name: 'invoke' })
       const hubServer = makeServer({ id: 'hub' })
       expect(isToolAutoApproved(tool, hubServer, ['hub__invoke'])).toBe(true)

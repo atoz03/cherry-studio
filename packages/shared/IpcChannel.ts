@@ -102,34 +102,6 @@ export enum IpcChannel {
   // Python
   Python_Execute = 'python:execute',
 
-  // agent messages
-  AgentMessage_PersistExchange = 'agent-message:persist-exchange',
-  AgentMessage_GetHistory = 'agent-message:get-history',
-
-  AgentToolPermission_Request = 'agent-tool-permission:request',
-  AgentToolPermission_Response = 'agent-tool-permission:response',
-  AgentToolPermission_Result = 'agent-tool-permission:result',
-
-  // Agent session stream (IM channel -> renderer real-time)
-  AgentSessionStream_Subscribe = 'agent-session-stream:subscribe',
-  AgentSessionStream_Unsubscribe = 'agent-session-stream:unsubscribe',
-  AgentSessionStream_Abort = 'agent-session-stream:abort',
-  AgentSessionStream_Chunk = 'agent-session-stream:chunk',
-  AgentSession_Changed = 'agent-session:changed',
-
-  // WeChat channel
-  WeChat_QrLogin = 'wechat:qr-login',
-  WeChat_HasCredentials = 'wechat:has-credentials',
-
-  // Feishu channel
-  Feishu_QrLogin = 'feishu:qr-login',
-
-  // Channel status & logs
-  Channel_StatusChange = 'channel:status-change',
-  Channel_Log = 'channel:log',
-  Channel_GetLogs = 'channel:get-logs',
-  Channel_GetStatuses = 'channel:get-statuses',
-
   //copilot
   Copilot_GetAuthMessage = 'copilot:get-auth-message',
   Copilot_GetCopilotToken = 'copilot:get-copilot-token',

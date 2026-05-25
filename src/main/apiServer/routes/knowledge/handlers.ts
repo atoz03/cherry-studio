@@ -1,7 +1,6 @@
 // TODO(v2): All Redux store reads in this file (state.knowledge.bases, state.llm.providers)
-//           should migrate to the V2 SQLite/Drizzle data layer (src/main/services/agents/).
-//           Redux is blocked for new data-model features until v2.0.0.
-//           See: src/main/services/agents/database/schema/index.ts
+//           should migrate to the V2 data layer. Redux is blocked for new
+//           data-model features until v2.0.0.
 
 import { loggerService } from '@logger'
 import KnowledgeService from '@main/services/KnowledgeService'
@@ -10,7 +9,7 @@ import type { KnowledgeBase, KnowledgeBaseParams, Provider } from '@types'
 import type { Response } from 'express'
 import type * as z from 'zod'
 
-import type { ValidationRequest } from '../agents/validators/zodValidator'
+import type { ValidationRequest } from '../../validators/zodValidator'
 import type { KnowledgeSearchSchema } from './validators/zodSchemas'
 
 const logger = loggerService.withContext('KnowledgeHandlers')
@@ -143,7 +142,7 @@ async function getProviderConfig(providerId: string): Promise<{ apiKey: string; 
   baseURL = baseURL.replace(/#$/, '')
 
   // If multiple API keys are configured (comma-separated), use the first one.
-  // Matches the main-process convention for agent conversations.
+  // Matches the main-process convention for provider requests.
   const apiKey = provider.apiKey ? provider.apiKey.split(',')[0].trim() : ''
 
   return {

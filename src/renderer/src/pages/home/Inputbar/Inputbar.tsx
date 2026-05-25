@@ -263,7 +263,7 @@ const InputbarInner: FC<InputbarInnerProps> = ({ assistant: initialAssistant, se
       const { message, blocks } = getUserMessage(baseUserMessage)
       message.traceId = parent?.spanContext().traceId
 
-      void dispatch(_sendMessage(message, blocks, assistant, topic.id, undefined, attachedSkills))
+      void dispatch(_sendMessage(message, blocks, assistant, topic.id, attachedSkills))
 
       setText('')
       setFiles([])

@@ -24,8 +24,9 @@ import type { LocalTransferConnectPayload } from '@shared/config/types'
 import { IpcChannel } from '@shared/IpcChannel'
 import { extractPdfText } from '@shared/utils/pdf'
 import type {
-  AgentPersistedMessage,
   FileMetadata,
+  InstalledSkill,
+  InstalledSkillEntry,
   Notification,
   OcrProvider,
   Provider,
@@ -38,8 +39,6 @@ import type { ProxyConfig } from 'electron'
 import { BrowserWindow, dialog, ipcMain, session, shell, systemPreferences, webContents } from 'electron'
 import fontList from 'font-list'
 
-import { agentMessageRepository } from './services/agents/database'
-import { skillService } from './services/agents/skills/SkillService'
 import { analyticsService } from './services/AnalyticsService'
 import { apiServerService } from './services/ApiServerService'
 import appService from './services/AppService'
@@ -93,7 +92,7 @@ import { themeService } from './services/ThemeService'
 import VertexAIService from './services/VertexAIService'
 import { setOpenLinkExternal } from './services/WebviewService'
 import { windowService } from './services/WindowService'
-import { calculateDirectorySize, getDataPath, getResourcePath } from './utils'
+import { calculateDirectorySize, getResourcePath } from './utils'
 import { decrypt, encrypt } from './utils/aes'
 import {
   getCacheDir,
@@ -117,6 +116,22 @@ const obsidianVaultService = new ObsidianVaultService()
 const vertexAIService = VertexAIService.getInstance()
 const memoryService = MemoryService.getInstance()
 const dxtService = new DxtService()
+
+const toLegacyInstalledSkill = (entry: InstalledSkillEntry): InstalledSkill => ({
+  id: entry.folderName,
+  name: entry.metadata.name,
+  description: entry.metadata.description ?? null,
+  folderName: entry.folderName,
+  source: 'local',
+  sourceUrl: null,
+  namespace: null,
+  author: entry.metadata.author ?? null,
+  tags: entry.metadata.tags ?? [],
+  contentHash: entry.metadata.contentHash,
+  isEnabled: false,
+  createdAt: entry.metadata.installedAt ?? 0,
+  updatedAt: entry.metadata.updatedAt ?? entry.metadata.installedAt ?? 0
+})
 
 export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) {
   const appUpdater = new AppUpdater()
@@ -250,27 +265,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       configManager.setTestChannel(channel)
     }
   })
-
-  ipcMain.handle(IpcChannel.AgentMessage_PersistExchange, async (_event, payload) => {
-    try {
-      return await agentMessageRepository.persistExchange(payload)
-    } catch (error) {
-      logger.error('Failed to persist agent session messages', error as Error)
-      throw error
-    }
-  })
-
-  ipcMain.handle(
-    IpcChannel.AgentMessage_GetHistory,
-    async (_event, { sessionId }: { sessionId: string }): Promise<AgentPersistedMessage[]> => {
-      try {
-        return await agentMessageRepository.getSessionHistory(sessionId)
-      } catch (error) {
-        logger.error('Failed to get agent session history', error as Error)
-        throw error
-      }
-    }
-  )
 
   //only for mac
   if (isMac) {
@@ -835,17 +829,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   ipcMain.handle(IpcChannel.Mcp_GetServerVersion, mcpService.getServerVersion)
   ipcMain.handle(IpcChannel.Mcp_GetServerLogs, mcpService.getServerLogs)
 
-  // Channel logs & status
-  ipcMain.handle(IpcChannel.Channel_GetLogs, async (_event, channelId: string) => {
-    const { channelManager } = await import('@main/services/agents/services/channels/ChannelManager')
-    return channelManager.getChannelLogs(channelId)
-  })
-
-  ipcMain.handle(IpcChannel.Channel_GetStatuses, async () => {
-    const { channelManager } = await import('@main/services/agents/services/channels/ChannelManager')
-    return channelManager.getAllStatuses()
-  })
-
   // DXT upload handler
   ipcMain.handle(IpcChannel.Mcp_UploadDxt, async (event, fileBuffer: ArrayBuffer, fileName: string) => {
     try {
@@ -1077,8 +1060,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   // Global Skills
   ipcMain.handle(IpcChannel.Skill_List, async (_, agentId?: string) => {
+    void agentId
     try {
-      const data = await skillService.list(agentId)
+      const data = (await skillsService.listInstalled()).map(toLegacyInstalledSkill)
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to list skills', { error })
@@ -1087,9 +1071,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   ipcMain.handle(IpcChannel.Skill_Install, async (_, options) => {
+    void options
     try {
-      const data = await skillService.install(options)
-      return { success: true, data }
+      throw new Error('Remote skill install is unavailable after removing the agents runtime')
     } catch (error) {
       logger.error('Failed to install skill', { options, error })
       return { success: false, error }
@@ -1098,7 +1082,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   ipcMain.handle(IpcChannel.Skill_Uninstall, async (_, skillId: string) => {
     try {
-      await skillService.uninstall(skillId)
+      await skillsService.uninstall(skillId)
       return { success: true, data: undefined }
     } catch (error) {
       logger.error('Failed to uninstall skill', { skillId, error })
@@ -1118,7 +1102,10 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       ) {
         return { success: false, error: 'Invalid toggle options' }
       }
-      const data = await skillService.toggle(options)
+      const skill = (await skillsService.listInstalled())
+        .map(toLegacyInstalledSkill)
+        .find((item) => item.id === options.skillId)
+      const data = skill ? { ...skill, isEnabled: options.isEnabled } : null
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to toggle skill', { options, error })
@@ -1127,9 +1114,9 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
   })
 
   ipcMain.handle(IpcChannel.Skill_InstallFromZip, async (_, options) => {
+    void options
     try {
-      const data = await skillService.installFromZip(options)
-      return { success: true, data }
+      throw new Error('ZIP skill install is unavailable after removing the agents runtime')
     } catch (error) {
       logger.error('Failed to install skill from ZIP', { options, error })
       return { success: false, error }
@@ -1138,7 +1125,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   ipcMain.handle(IpcChannel.Skill_InstallFromDirectory, async (_, options) => {
     try {
-      const data = await skillService.installFromDirectory(options)
+      const data = toLegacyInstalledSkill(await skillsService.installFromDirectory(options.directoryPath))
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to install skill from directory', { options, error })
@@ -1148,7 +1135,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   ipcMain.handle(IpcChannel.Skill_ReadFile, async (_, skillId: string, filename: string) => {
     try {
-      const data = await skillService.readFile(skillId, filename)
+      const data = await skillsService.readFile(skillId, filename)
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to read skill file', { skillId, filename, error })
@@ -1158,7 +1145,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   ipcMain.handle(IpcChannel.Skill_ListFiles, async (_, skillId: string) => {
     try {
-      const data = await skillService.listFiles(skillId)
+      const data = await skillsService.listFiles(skillId)
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to list skill files', { skillId, error })
@@ -1171,7 +1158,7 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
       if (!workdir || typeof workdir !== 'string') {
         return { success: false, error: 'Invalid workdir' }
       }
-      const data = await skillService.listLocal(workdir)
+      const data: Array<{ name: string; description?: string; filename: string }> = []
       return { success: true, data }
     } catch (error) {
       logger.error('Failed to list local plugins', { workdir, error })
@@ -1237,18 +1224,6 @@ export async function registerIpc(mainWindow: BrowserWindow, app: Electron.App) 
 
   ipcMain.handle(IpcChannel.APP_CrashRenderProcess, () => {
     mainWindow.webContents.forcefullyCrashRenderer()
-  })
-
-  // WeChat
-  ipcMain.handle(IpcChannel.WeChat_HasCredentials, async (_, channelId: string) => {
-    const tokenPath = path.join(getDataPath('Channels'), `weixin_bot_${channelId}.json`)
-    try {
-      const raw = await fs.promises.readFile(tokenPath, 'utf8')
-      const parsed = JSON.parse(raw)
-      return { exists: true, userId: parsed.userId as string | undefined }
-    } catch {
-      return { exists: false }
-    }
   })
 
   // Analytics

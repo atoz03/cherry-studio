@@ -15,8 +15,3 @@ export type InputBarToolType =
   | 'clear_topic'
   | 'toggle_expand'
   | 'new_context'
-  // Agent Session tools
-  | 'create_session'
-  | 'slash_commands'
-  | 'activity_directory'
-  | 'permission_mode'

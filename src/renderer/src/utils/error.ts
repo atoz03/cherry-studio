@@ -1,7 +1,5 @@
 import { loggerService } from '@logger'
 import type { McpError } from '@modelcontextprotocol/sdk/types.js'
-import type { AgentServerError } from '@renderer/types'
-import { AgentServerErrorSchema } from '@renderer/types'
 import type {
   AiSdkErrorUnion,
   SerializedAiSdkError,
@@ -17,12 +15,22 @@ import { InvalidToolInputError } from 'ai'
 import type { AxiosError } from 'axios'
 import { isAxiosError } from 'axios'
 import { t } from 'i18next'
-import type * as z from 'zod'
+import * as z from 'zod'
 import { ZodError } from 'zod'
 
 import { parseJSON } from './json'
 
 const logger = loggerService.withContext('Utils:error')
+
+const AgentServerErrorSchema = z.object({
+  error: z.object({
+    message: z.string(),
+    type: z.string(),
+    code: z.string()
+  })
+})
+
+type AgentServerError = z.infer<typeof AgentServerErrorSchema>
 
 export function getErrorDetails(err: any, seen = new WeakSet()): any {
   // Handle circular references

@@ -8,7 +8,6 @@ const logger = loggerService.withContext('URLSchema:handleNavigateProtocolUrl')
 // Allowed route prefixes to prevent arbitrary navigation
 const ALLOWED_ROUTES = [
   '/settings/',
-  '/agents',
   '/knowledge',
   '/paintings',
   '/translate',
@@ -21,19 +20,27 @@ const ALLOWED_ROUTES = [
   '/'
 ]
 
+export function isAllowedRoute(path: string): boolean {
+  return ALLOWED_ROUTES.some((route) => {
+    if (route === '/') return path === '/'
+
+    const normalizedRoute = route.endsWith('/') ? route.slice(0, -1) : route
+    return path === normalizedRoute || path.startsWith(`${normalizedRoute}/`)
+  })
+}
+
 /**
  * Handle cherrystudio://navigate/<path> deep links.
  *
  * Examples:
  *   cherrystudio://navigate/settings/provider
- *   cherrystudio://navigate/agents
  *   cherrystudio://navigate/knowledge
  */
 export function handleNavigateProtocolUrl(url: URL) {
   const targetPath = url.pathname || '/'
   const normalizedPath = targetPath.startsWith('/') ? targetPath : `/${targetPath}`
 
-  if (!ALLOWED_ROUTES.some((route) => normalizedPath === route || normalizedPath.startsWith(route))) {
+  if (!isAllowedRoute(normalizedPath)) {
     logger.warn(`Blocked navigation to disallowed route: ${normalizedPath}`)
     return
   }

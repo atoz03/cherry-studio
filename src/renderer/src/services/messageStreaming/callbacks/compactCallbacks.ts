@@ -4,11 +4,14 @@ import { updateOneBlock } from '@renderer/store/messageBlock'
 import { newMessagesActions } from '@renderer/store/newMessage'
 import type { MainTextMessageBlock } from '@renderer/types/newMessage'
 import { MessageBlockStatus, MessageBlockType } from '@renderer/types/newMessage'
-import type { ClaudeCodeRawValue } from '@shared/agents/claudecode/types'
 
 import type { BlockManager } from '../BlockManager'
 
 const logger = loggerService.withContext('CompactCallbacks')
+
+type RawStreamValue = {
+  type?: string
+}
 
 interface CompactCallbacksDeps {
   blockManager: BlockManager
@@ -58,7 +61,7 @@ export const createCompactCallbacks = (deps: CompactCallbacksDeps) => {
   const onRawData = (content: unknown, metadata?: Record<string, any>) => {
     logger.debug('Raw data received', { content, metadata })
 
-    const rawValue = content as ClaudeCodeRawValue
+    const rawValue = content as RawStreamValue
 
     // Check if this is a compact_boundary message
     if (rawValue.type === 'compact') {

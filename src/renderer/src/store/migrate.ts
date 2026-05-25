@@ -3409,18 +3409,10 @@ const migrateConfig = {
   '206': (state: RootState) => {
     try {
       const { sessionToolOrder } = state.inputTools
-      const permissionModeKey = 'permission_mode'
-      if (
-        sessionToolOrder &&
-        !sessionToolOrder?.visible?.includes(permissionModeKey) &&
-        !sessionToolOrder?.hidden?.includes(permissionModeKey)
-      ) {
-        const createSessionIndex = sessionToolOrder.visible.indexOf('create_session')
-        if (createSessionIndex !== -1) {
-          sessionToolOrder.visible.splice(createSessionIndex + 1, 0, permissionModeKey)
-        } else {
-          sessionToolOrder.visible.unshift(permissionModeKey)
-        }
+      const removedSessionToolKeys = new Set(['create_session', 'permission_mode'])
+      if (sessionToolOrder) {
+        sessionToolOrder.visible = sessionToolOrder.visible.filter((tool) => !removedSessionToolKeys.has(String(tool)))
+        sessionToolOrder.hidden = sessionToolOrder.hidden.filter((tool) => !removedSessionToolKeys.has(String(tool)))
       }
       logger.info('migrate 206 success')
       return state

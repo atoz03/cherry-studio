@@ -12,12 +12,17 @@ import { ProviderSpecificError } from '@renderer/types/provider-specific-error'
 import { formatErrorMessage, isAbortError } from '@renderer/utils/error'
 import type { IdleTimeoutHandle } from '@renderer/utils/IdleTimeoutController'
 import { convertLinks, flushLinkConverterBuffer } from '@renderer/utils/linkConverter'
-import type { ClaudeCodeRawValue } from '@shared/agents/claudecode/types'
 import { AISDKError, type TextStreamPart, type ToolSet } from 'ai'
 
 import { ToolCallChunkHandler } from './handleToolCallChunk'
 
 const logger = loggerService.withContext('AiSdkToChunkAdapter')
+
+type RawStreamValue = {
+  type?: string
+  session_id?: string
+  [key: string]: unknown
+}
 
 /**
  * AI SDK 到 Cherry Studio Chunk 适配器类
@@ -176,15 +181,15 @@ export class AiSdkToChunkAdapter {
     logger.silly(`AI SDK chunk type: ${chunk.type}`, chunk)
     switch (chunk.type) {
       case 'raw': {
-        const agentRawMessage = chunk.rawValue as ClaudeCodeRawValue
-        if (agentRawMessage.type === 'init' && agentRawMessage.session_id) {
-          this.onSessionUpdate?.(agentRawMessage.session_id)
-        } else if (agentRawMessage.type === 'compact' && agentRawMessage.session_id) {
-          this.onSessionUpdate?.(agentRawMessage.session_id)
+        const rawMessage = chunk.rawValue as RawStreamValue
+        if (rawMessage.type === 'init' && typeof rawMessage.session_id === 'string') {
+          this.onSessionUpdate?.(rawMessage.session_id)
+        } else if (rawMessage.type === 'compact' && typeof rawMessage.session_id === 'string') {
+          this.onSessionUpdate?.(rawMessage.session_id)
         }
         this.onChunk({
           type: ChunkType.RAW,
-          content: agentRawMessage
+          content: rawMessage
         })
         break
       }

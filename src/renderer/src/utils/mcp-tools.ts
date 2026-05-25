@@ -109,7 +109,7 @@ export function isToolAutoApproved(tool: MCPTool, server?: MCPServer, allowedToo
   if (tool.isBuiltIn) {
     return true
   }
-  // Check agent-level pre-authorization (allowed_tools from Agent Settings)
+  // Request-scoped pre-authorization supplied by the caller.
   if (allowedTools?.includes(tool.id)) {
     return true
   }

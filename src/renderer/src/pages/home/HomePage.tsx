@@ -8,7 +8,6 @@ import { EVENT_NAMES, EventEmitter } from '@renderer/services/EventService'
 import NavigationService from '@renderer/services/NavigationService'
 import { useAppSelector } from '@renderer/store'
 import { newMessagesActions } from '@renderer/store/newMessage'
-import { setActiveAgentId } from '@renderer/store/runtime'
 import { updateTab } from '@renderer/store/tabs'
 import type { Assistant, Topic } from '@renderer/types'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, SECOND_MIN_WINDOW_WIDTH } from '@shared/config/constant'
@@ -162,9 +161,6 @@ const HomePage: FC = () => {
 
       startTransition(() => {
         _setActiveAssistant(newAssistant)
-        if (newAssistant.id !== 'fake') {
-          dispatch(setActiveAgentId(null))
-        }
         const lockedTopic =
           isTopicLocked && lockedTopicId ? newAssistant.topics.find((t) => t.id === lockedTopicId) : null
         const newTopic = lockedTopic || options?.topic || newAssistant.topics[0]

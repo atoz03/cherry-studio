@@ -89,7 +89,7 @@ const ApiServerSettings: FC = () => {
       </HeaderSection>
 
       {!apiServerRunning && (
-        <Alert type="warning" message={t('agent.warning.enable_server')} style={{ marginBottom: 10 }} showIcon />
+        <Alert type="warning" message={t('apiServer.messages.notEnabled')} style={{ marginBottom: 10 }} showIcon />
       )}
 
       {/* Server Control Panel with integrated configuration */}

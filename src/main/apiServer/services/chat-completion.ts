@@ -68,7 +68,7 @@ export class ChatCompletionService {
     const modelId = modelValidation.modelId!
 
     // If multiple API keys are configured (comma-separated), use the first one.
-    // Matches the main-process convention for agent conversations.
+    // Matches the main-process convention for provider requests.
     const apiKey = provider.apiKey ? provider.apiKey.split(',')[0].trim() : ''
 
     const client = new OpenAI({

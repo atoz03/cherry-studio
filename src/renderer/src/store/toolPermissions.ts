@@ -14,9 +14,10 @@
  * - v2 Refactor PR   : https://github.com/CherryHQ/cherry-studio/pull/10162
  * --------------------------------------------------------------------------
  */
-import type { PermissionUpdate } from '@anthropic-ai/claude-agent-sdk'
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { createSlice } from '@reduxjs/toolkit'
+
+export type PermissionUpdate = Record<string, unknown>
 
 export type ToolPermissionRequestPayload = {
   requestId: string

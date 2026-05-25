@@ -16,10 +16,6 @@ vi.mock('@renderer/hooks/useMCPServers', () => ({
   })
 }))
 
-vi.mock('@renderer/hooks/agents/useActiveAgent', () => ({
-  useActiveAgent: () => ({ agent: null })
-}))
-
 vi.mock('@renderer/utils/mcp-tools', () => ({
   isToolAutoApproved: vi.fn(() => false)
 }))

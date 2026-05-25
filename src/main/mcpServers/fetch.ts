@@ -3,7 +3,6 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js'
 import { net } from 'electron'
-import { JSDOM } from 'jsdom'
 import TurndownService from 'turndown'
 import * as z from 'zod'
 
@@ -13,6 +12,48 @@ export const RequestPayloadSchema = z.object({
 })
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>
+
+const HTML_ENTITIES: Record<string, string> = {
+  amp: '&',
+  apos: "'",
+  gt: '>',
+  lt: '<',
+  nbsp: ' ',
+  quot: '"'
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value.replace(/&(#x[\da-f]+|#\d+|[a-z][\w-]*);/gi, (match, entity: string) => {
+    const normalized = entity.toLowerCase()
+    if (normalized.startsWith('#x')) {
+      const codePoint = Number.parseInt(normalized.slice(2), 16)
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match
+    }
+    if (normalized.startsWith('#')) {
+      const codePoint = Number.parseInt(normalized.slice(1), 10)
+      return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match
+    }
+    return HTML_ENTITIES[normalized] ?? match
+  })
+}
+
+function htmlToPlainText(html: string): string {
+  const visibleHtml = html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript\b[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|section|article|header|footer|main|aside|li|tr|h[1-6])>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+
+  return decodeHtmlEntities(visibleHtml)
+    .replace(/\r/g, '\n')
+    .replace(/[ \t\f\v]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
 
 export class Fetcher {
   private static async _fetch({ url, headers }: RequestPayload): Promise<Response> {
@@ -71,18 +112,7 @@ export class Fetcher {
     try {
       const response = await this._fetch(requestPayload)
       const html = await response.text()
-
-      const dom = new JSDOM(html)
-      const document = dom.window.document
-
-      const scripts = document.getElementsByTagName('script')
-      const styles = document.getElementsByTagName('style')
-      Array.from(scripts).forEach((script: any) => script.remove())
-      Array.from(styles).forEach((style: any) => style.remove())
-
-      const text = document.body.textContent || ''
-
-      const normalizedText = text.replace(/\s+/g, ' ').trim()
+      const normalizedText = htmlToPlainText(html)
 
       return {
         content: [{ type: 'text', text: normalizedText }],

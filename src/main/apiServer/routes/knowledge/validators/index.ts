@@ -1,4 +1,4 @@
-import { createZodValidator } from '../../agents/validators/zodValidator'
+import { createZodValidator } from '../../../validators/zodValidator'
 import { KnowledgeBaseIdParamSchema, KnowledgeSearchSchema, PaginationQuerySchema } from './zodSchemas'
 
 /**

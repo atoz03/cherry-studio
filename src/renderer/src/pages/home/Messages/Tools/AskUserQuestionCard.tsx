@@ -372,19 +372,15 @@ export function AskUserQuestionCard({ toolResponse }: { toolResponse: NormalTool
     setSubmittedAnswers(collectedAnswers)
     dispatch(toolPermissionsActions.submissionSent({ requestId: request.requestId, behavior: 'allow' }))
 
-    try {
-      const response = await window.api.agentTools.respondToPermission({
+    dispatch(
+      toolPermissionsActions.requestResolved({
         requestId: request.requestId,
         behavior: 'allow' as const,
-        updatedInput: { ...request.input, answers: collectedAnswers }
+        reason: 'response',
+        updatedInput: { ...request.input, answers: collectedAnswers },
+        toolCallId: request.toolCallId
       })
-
-      if (!response?.success) throw new Error('Response rejected by main process')
-    } catch (error) {
-      logger.error('Failed to submit AskUserQuestion answers', { error })
-      window.toast?.error?.(t('agent.toolPermission.error.sendFailed'))
-      dispatch(toolPermissionsActions.submissionFailed({ requestId: request.requestId }))
-    }
+    )
   }, [dispatch, request, questions, selectedAnswers, customInputs, showCustomInput, t])
 
   if (isPending && (questions.length === 0 || !currentQuestion)) {

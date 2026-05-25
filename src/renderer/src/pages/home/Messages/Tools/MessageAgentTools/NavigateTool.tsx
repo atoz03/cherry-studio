@@ -17,7 +17,6 @@ const ROUTE_LABELS: Record<string, { icon: string; label: string }> = {
   '/apps': { icon: '📦', label: 'Mini Apps' },
   '/code': { icon: '💻', label: 'Code Tools' },
   '/launchpad': { icon: '🚀', label: 'Launchpad' },
-  '/agents': { icon: '🤖', label: 'Agents' },
 
   // Settings pages
   '/settings/provider': { icon: '🔑', label: 'Provider' },

@@ -10,6 +10,7 @@ import type {
   InstalledSkillEntry,
   LibrarySkillEntry,
   PluginError,
+  SkillFileNode,
   SkillInstallFromDirectoryOptions
 } from '@types'
 import { app } from 'electron'
@@ -24,7 +25,7 @@ type SkillsServiceConfig = {
   maxSkillMdBytes?: number
   /** 扫描库目录最大深度（root=0） */
   maxLibraryScanDepth?: number
-  /** 统一技能主库安装器；运行时接到 SkillService，测试可留空走纯文件模式 */
+  /** 可选的目录安装器；测试可留空走纯文件模式 */
   installSkillFromDirectory?: SkillDirectoryInstaller
 }
 
@@ -135,6 +136,52 @@ async function scanSkillFoldersNoSymlink(
   }
 
   return results
+}
+
+async function listSkillFiles(rootDir: string, currentDir: string = rootDir): Promise<SkillFileNode[]> {
+  let entries: fs.Dirent[]
+  try {
+    entries = await fs.promises.readdir(currentDir, { withFileTypes: true })
+  } catch (error) {
+    throw {
+      type: 'READ_FAILED',
+      path: currentDir,
+      reason: error instanceof Error ? error.message : String(error)
+    } as PluginError
+  }
+
+  const nodes: SkillFileNode[] = []
+  for (const entry of entries) {
+    if (entry.isSymbolicLink()) continue
+
+    const absolutePath = path.join(currentDir, entry.name)
+    const relativePath = path.relative(rootDir, absolutePath)
+
+    if (entry.isDirectory()) {
+      nodes.push({
+        name: entry.name,
+        path: relativePath,
+        type: 'directory',
+        children: await listSkillFiles(rootDir, absolutePath)
+      })
+      continue
+    }
+
+    if (entry.isFile()) {
+      nodes.push({
+        name: entry.name,
+        path: relativePath,
+        type: 'file'
+      })
+    }
+  }
+
+  nodes.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'directory' ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
+
+  return nodes
 }
 
 export class SkillsService {
@@ -380,6 +427,77 @@ export class SkillsService {
     return this.installIntoUnifiedStore(source)
   }
 
+  async installFromDirectory(directoryPath: string): Promise<InstalledSkillEntry> {
+    const source = path.resolve(directoryPath)
+    let sourceStat: fs.Stats
+    try {
+      sourceStat = await fs.promises.lstat(source)
+    } catch {
+      throw { type: 'FILE_NOT_FOUND', path: source } as PluginError
+    }
+    if (!sourceStat.isDirectory()) {
+      throw { type: 'INVALID_METADATA', reason: 'Skill folder is not a directory', path: source } as PluginError
+    }
+    if (sourceStat.isSymbolicLink()) {
+      throw { type: 'INVALID_METADATA', reason: 'Skill folder must not be a symlink', path: source } as PluginError
+    }
+
+    return this.installIntoUnifiedStore(source)
+  }
+
+  async uninstall(folderName: string): Promise<void> {
+    await this.ensureLegacySkillsMigrated()
+
+    if (!isSafeFolderNameSegment(folderName)) {
+      throw { type: 'INVALID_METADATA', reason: 'Invalid skill folder name', path: folderName } as PluginError
+    }
+
+    await deleteDirectoryRecursive(path.join(this.skillsBaseDir, folderName), { allowedBasePath: this.skillsBaseDir })
+  }
+
+  async listFiles(folderName: string): Promise<SkillFileNode[]> {
+    await this.ensureLegacySkillsMigrated()
+
+    if (!isSafeFolderNameSegment(folderName)) {
+      throw { type: 'INVALID_METADATA', reason: 'Invalid skill folder name', path: folderName } as PluginError
+    }
+
+    return listSkillFiles(path.join(this.skillsBaseDir, folderName))
+  }
+
+  async readFile(folderName: string, filename: string): Promise<string> {
+    await this.ensureLegacySkillsMigrated()
+
+    if (!isSafeFolderNameSegment(folderName)) {
+      throw { type: 'INVALID_METADATA', reason: 'Invalid skill folder name', path: folderName } as PluginError
+    }
+
+    const skillDir = path.join(this.skillsBaseDir, folderName)
+    const filePath = path.resolve(skillDir, filename)
+    if (!isPathInside(filePath, skillDir)) {
+      throw {
+        type: 'INVALID_METADATA',
+        reason: 'Skill file must be inside the skill folder',
+        path: filename
+      } as PluginError
+    }
+
+    let stat: fs.Stats
+    try {
+      stat = await fs.promises.lstat(filePath)
+    } catch {
+      throw { type: 'FILE_NOT_FOUND', path: filePath } as PluginError
+    }
+    if (!stat.isFile() || stat.isSymbolicLink()) {
+      throw { type: 'INVALID_METADATA', reason: 'Skill file is not a regular file', path: filePath } as PluginError
+    }
+    if (stat.size > this.maxSkillMdBytes) {
+      throw { type: 'FILE_TOO_LARGE', size: stat.size, max: this.maxSkillMdBytes } as PluginError
+    }
+
+    return fs.promises.readFile(filePath, 'utf-8')
+  }
+
   async readBody(folderName: string): Promise<string> {
     await this.ensureLegacySkillsMigrated()
 
@@ -422,9 +540,4 @@ export class SkillsService {
   }
 }
 
-export const skillsService = SkillsService.getInstance({
-  installSkillFromDirectory: async (options) => {
-    const mod = await import('../agents/skills/SkillService')
-    return mod.skillService.installFromDirectory(options)
-  }
-})
+export const skillsService = SkillsService.getInstance()

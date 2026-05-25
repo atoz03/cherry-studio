@@ -1,5 +1,4 @@
 import { loggerService } from '@logger'
-import { useRuntime } from '@renderer/hooks/useRuntime'
 import { useSettings } from '@renderer/hooks/useSettings'
 import store from '@renderer/store'
 import type { AssistantPreset } from '@renderer/types'
@@ -8,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 
 const logger = loggerService.withContext('useSystemAgents')
 
-let _agents: AssistantPreset[] = []
+const _agents: AssistantPreset[] = []
 
 export const getAgentsFromSystemAgents = (systemAgents: any) => {
   const agents: AssistantPreset[] = []
@@ -29,7 +28,6 @@ export const getAgentsFromSystemAgents = (systemAgents: any) => {
 export function useSystemAssistantPresets() {
   const { defaultAgent: defaultPreset } = useSettings()
   const [presets, setPresets] = useState<AssistantPreset[]>([])
-  const { resourcesPath } = useRuntime()
   const { agentssubscribeUrl } = store.getState().settings
   const { i18n } = useTranslation()
   const currentLanguage = i18n.language
@@ -54,17 +52,7 @@ export function useSystemAssistantPresets() {
           }
         }
 
-        // 如果没有远程配置或获取失败，加载本地代理
-        if (resourcesPath) {
-          try {
-            const fileName = currentLanguage === 'zh-CN' ? 'agents-zh.json' : 'agents-en.json'
-            const localAgentsData = await window.api.fs.read(`${resourcesPath}/data/${fileName}`, 'utf-8')
-            _agents = JSON.parse(localAgentsData) as AssistantPreset[]
-          } catch (error) {
-            logger.error('Failed to load local agents:', error as Error)
-          }
-        }
-
+        // Built-in agent preset files were removed with the agents subsystem.
         setPresets(_agents)
       } catch (error) {
         logger.error('Failed to load agents:', error as Error)
@@ -74,7 +62,7 @@ export function useSystemAssistantPresets() {
     }
 
     void loadAgents()
-  }, [defaultPreset, resourcesPath, agentssubscribeUrl, currentLanguage])
+  }, [defaultPreset, agentssubscribeUrl, currentLanguage])
 
   return presets
 }

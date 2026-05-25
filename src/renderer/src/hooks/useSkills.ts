@@ -9,9 +9,9 @@ const logger = loggerService.withContext('useSkills')
 /**
  * Hook to manage installed skills.
  *
- * Pass `agentId` to get per-agent enablement state and to scope toggle calls
- * to that agent. Without `agentId`, the hook returns the global skill library
- * with `isEnabled` forced to false — callers without an agent context (e.g.
+ * Pass `agentId` to get scoped enablement state and to scope toggle calls.
+ * Without `agentId`, the hook returns the global skill library
+ * with `isEnabled` forced to false — callers without a scoped context (e.g.
  * the global Settings → Skills page) should rely on uninstall only.
  */
 export function useInstalledSkills(agentId?: string) {
@@ -44,9 +44,7 @@ export function useInstalledSkills(agentId?: string) {
   const toggle = useCallback(
     async (skillId: string, isEnabled: boolean) => {
       if (!agentId) {
-        // Without an agent context there is nothing to toggle — per-agent
-        // enablement has no target. Callers that want to toggle must scope
-        // to an agent.
+        // Without a scoped context there is nothing to toggle.
         return false
       }
       try {

@@ -1,5 +1,4 @@
 import { loggerService } from '@logger'
-import { toAsarUnpackedPath } from '@main/utils'
 import {
   checkName,
   getFilesDir,
@@ -32,71 +31,6 @@ import { v4 as uuidv4 } from 'uuid'
 import WordExtractor from 'word-extractor'
 
 const logger = loggerService.withContext('FileStorage')
-
-// Get ripgrep binary path
-const getRipgrepBinaryPath = (): string | null => {
-  try {
-    const arch = process.arch === 'arm64' ? 'arm64' : 'x64'
-    const platform = process.platform === 'darwin' ? 'darwin' : process.platform === 'win32' ? 'win32' : 'linux'
-    let ripgrepBinaryPath = path.join(
-      __dirname,
-      '../../node_modules/@anthropic-ai/claude-agent-sdk/vendor/ripgrep',
-      `${arch}-${platform}`,
-      process.platform === 'win32' ? 'rg.exe' : 'rg'
-    )
-
-    ripgrepBinaryPath = toAsarUnpackedPath(ripgrepBinaryPath)
-
-    if (fs.existsSync(ripgrepBinaryPath)) {
-      return ripgrepBinaryPath
-    }
-    return null
-  } catch (error) {
-    logger.error('Failed to locate ripgrep binary:', error as Error)
-    return null
-  }
-}
-
-/**
- * Execute ripgrep with captured output
- */
-function executeRipgrep(args: string[]): Promise<{ exitCode: number; output: string }> {
-  return new Promise((resolve, reject) => {
-    const ripgrepBinaryPath = getRipgrepBinaryPath()
-
-    if (!ripgrepBinaryPath) {
-      reject(new Error('Ripgrep binary not available'))
-      return
-    }
-
-    const { spawn } = require('child_process')
-    const child = spawn(ripgrepBinaryPath, ['--no-config', '--ignore-case', ...args], {
-      stdio: ['pipe', 'pipe', 'pipe']
-    })
-
-    let output = ''
-    let errorOutput = ''
-
-    child.stdout.on('data', (data: Buffer) => {
-      output += data.toString()
-    })
-
-    child.stderr.on('data', (data: Buffer) => {
-      errorOutput += data.toString()
-    })
-
-    child.on('close', (code: number) => {
-      resolve({
-        exitCode: code || 0,
-        output: output || errorOutput
-      })
-    })
-
-    child.on('error', (error: Error) => {
-      reject(error)
-    })
-  })
-}
 
 interface FileWatcherConfig {
   watchExtensions?: string[]
@@ -897,12 +831,7 @@ class FileStorage {
       throw new Error(`Path is not a directory: ${resolvedPath}`)
     }
 
-    // Use ripgrep for file listing with relevance-based sorting
-    if (!getRipgrepBinaryPath()) {
-      throw new Error('Ripgrep binary not available')
-    }
-
-    return await this.listDirectoryWithRipgrep(resolvedPath, mergedOptions)
+    return await this.listDirectoryWithNativeSearch(resolvedPath, mergedOptions)
   }
 
   /**
@@ -971,57 +900,8 @@ class FileStorage {
     const files: string[] = []
     const directories: string[] = []
 
-    // Search for files using ripgrep
     if (options.includeFiles) {
-      const args: string[] = ['--files']
-
-      // Handle hidden files
-      if (!options.includeHidden) {
-        args.push('--glob', '!.*')
-      }
-
-      // Use --iglob to let ripgrep filter filenames (case-insensitive)
-      if (options.searchPattern && options.searchPattern !== '.') {
-        args.push('--iglob', `*${options.searchPattern}*`)
-      }
-
-      // Exclude common hidden directories and large directories
-      args.push('-g', '!**/node_modules/**')
-      args.push('-g', '!**/.git/**')
-      args.push('-g', '!**/.idea/**')
-      args.push('-g', '!**/.vscode/**')
-      args.push('-g', '!**/.DS_Store')
-      args.push('-g', '!**/dist/**')
-      args.push('-g', '!**/build/**')
-      args.push('-g', '!**/.next/**')
-      args.push('-g', '!**/.nuxt/**')
-      args.push('-g', '!**/coverage/**')
-      args.push('-g', '!**/.cache/**')
-
-      // Handle max depth
-      if (!options.recursive) {
-        args.push('--max-depth', '1')
-      } else if (options.maxDepth > 0) {
-        args.push('--max-depth', options.maxDepth.toString())
-      }
-
-      // Add the directory path
-      args.push(resolvedPath)
-
-      const { exitCode, output } = await executeRipgrep(args)
-
-      // Exit code 0 means files found, 1 means no files found (still success), 2+ means error
-      if (exitCode >= 2) {
-        throw new Error(`Ripgrep failed with exit code ${exitCode}: ${output}`)
-      }
-
-      // Parse ripgrep output (no need to filter by filename - ripgrep already did it)
-      files.push(
-        ...output
-          .split('\n')
-          .filter((line) => line.trim())
-          .map((line) => line.replace(/\\/g, '/'))
-      )
+      files.push(...(await this.searchFilesByName(resolvedPath, options)))
     }
 
     // Search for directories
@@ -1043,6 +923,59 @@ class FileStorage {
     })
 
     return [...sortedDirectories, ...sortedFiles].slice(0, options.maxEntries)
+  }
+
+  private shouldSkipDirectory(name: string): boolean {
+    return new Set([
+      'node_modules',
+      '.git',
+      '.idea',
+      '.vscode',
+      'dist',
+      'build',
+      '.next',
+      '.nuxt',
+      'coverage',
+      '.cache'
+    ]).has(name)
+  }
+
+  private async searchFilesByName(
+    resolvedPath: string,
+    options: Required<DirectoryListOptions>,
+    currentDepth: number = 0
+  ): Promise<string[]> {
+    if (!options.recursive && currentDepth > 0) return []
+    if (options.maxDepth > 0 && currentDepth >= options.maxDepth) return []
+
+    const files: string[] = []
+    const searchPatternLower = options.searchPattern.toLowerCase()
+
+    try {
+      const entries = await fs.promises.readdir(resolvedPath, { withFileTypes: true })
+
+      for (const entry of entries) {
+        if (files.length >= options.maxEntries) break
+        if (!options.includeHidden && entry.name.startsWith('.')) continue
+
+        const fullPath = path.join(resolvedPath, entry.name).replace(/\\/g, '/')
+
+        if (entry.isFile()) {
+          if (options.searchPattern === '.' || entry.name.toLowerCase().includes(searchPatternLower)) {
+            files.push(fullPath)
+          }
+          continue
+        }
+
+        if (entry.isDirectory() && !this.shouldSkipDirectory(entry.name)) {
+          files.push(...(await this.searchFilesByName(fullPath, options, currentDepth + 1)))
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to search files in: ${resolvedPath}`, error as Error)
+    }
+
+    return files
   }
 
   /**
@@ -1144,17 +1077,6 @@ class FileStorage {
     score -= Math.log(filePath.length + 1) * FileStorage.PATH_LENGTH_PENALTY_FACTOR
 
     return score
-  }
-
-  /**
-   * Convert query to glob pattern for ripgrep pre-filtering
-   * e.g., "updater" -> "*u*p*d*a*t*e*r*"
-   */
-  private queryToGlobPattern(query: string): string {
-    // Escape special glob characters (including ! for negation)
-    const escaped = query.replace(/[[\]{}()*+?.,\\^$|#!]/g, '\\$&')
-    // Convert to fuzzy glob: each char separated by *
-    return '*' + escaped.split('').join('*') + '*'
   }
 
   /**
@@ -1261,66 +1183,16 @@ class FileStorage {
     return score
   }
 
-  /**
-   * Build common ripgrep arguments for file listing
-   */
-  private buildRipgrepBaseArgs(options: Required<DirectoryListOptions>, resolvedPath: string): string[] {
-    const args: string[] = ['--files']
-
-    // Handle hidden files
-    if (!options.includeHidden) {
-      args.push('--glob', '!.*')
-    }
-
-    // Exclude common hidden directories and large directories
-    args.push('-g', '!**/node_modules/**')
-    args.push('-g', '!**/.git/**')
-    args.push('-g', '!**/.idea/**')
-    args.push('-g', '!**/.vscode/**')
-    args.push('-g', '!**/.DS_Store')
-    args.push('-g', '!**/dist/**')
-    args.push('-g', '!**/build/**')
-    args.push('-g', '!**/.next/**')
-    args.push('-g', '!**/.nuxt/**')
-    args.push('-g', '!**/coverage/**')
-    args.push('-g', '!**/.cache/**')
-
-    // Handle max depth
-    if (!options.recursive) {
-      args.push('--max-depth', '1')
-    } else if (options.maxDepth > 0) {
-      args.push('--max-depth', options.maxDepth.toString())
-    }
-
-    args.push(resolvedPath)
-
-    return args
-  }
-
-  private async listDirectoryWithRipgrep(
+  private async listDirectoryWithNativeSearch(
     resolvedPath: string,
     options: Required<DirectoryListOptions>
   ): Promise<string[]> {
-    // Fuzzy search mode: use ripgrep glob for pre-filtering, then score in JS
+    // Fuzzy search mode: collect candidate files locally, then score in JS.
     if (options.fuzzy && options.searchPattern && options.searchPattern !== '.') {
-      const args = this.buildRipgrepBaseArgs(options, resolvedPath)
+      const candidateOptions = { ...options, searchPattern: '.', maxEntries: Number.MAX_SAFE_INTEGER }
+      const allFiles = options.includeFiles ? await this.searchFilesByName(resolvedPath, candidateOptions) : []
+      const filteredFiles = allFiles.filter((file) => this.isFuzzyMatch(file, options.searchPattern))
 
-      // Insert glob pattern before the path (last element)
-      const globPattern = this.queryToGlobPattern(options.searchPattern)
-      args.splice(args.length - 1, 0, '--iglob', globPattern)
-
-      const { exitCode, output } = await executeRipgrep(args)
-
-      if (exitCode >= 2) {
-        throw new Error(`Ripgrep failed with exit code ${exitCode}: ${output}`)
-      }
-
-      const filteredFiles = output
-        .split('\n')
-        .filter((line) => line.trim())
-        .map((line) => line.replace(/\\/g, '/'))
-
-      // If fuzzy glob found results, validate fuzzy match, sort and return
       if (filteredFiles.length > 0) {
         return filteredFiles
           .filter((file) => this.isFuzzyMatch(file, options.searchPattern))
@@ -1329,21 +1201,6 @@ class FileStorage {
           .slice(0, options.maxEntries)
           .map((item) => item.file)
       }
-
-      // Fallback: if no results, try greedy substring match on all files
-      logger.debug('Fuzzy glob returned no results, falling back to greedy substring match')
-      const fallbackArgs = this.buildRipgrepBaseArgs(options, resolvedPath)
-
-      const fallbackResult = await executeRipgrep(fallbackArgs)
-
-      if (fallbackResult.exitCode >= 2) {
-        return []
-      }
-
-      const allFiles = fallbackResult.output
-        .split('\n')
-        .filter((line) => line.trim())
-        .map((line) => line.replace(/\\/g, '/'))
 
       const greedyMatched = allFiles.filter((file) => this.isGreedySubstringMatch(file, options.searchPattern))
 

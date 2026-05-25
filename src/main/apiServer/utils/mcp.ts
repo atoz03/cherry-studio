@@ -75,9 +75,8 @@ export async function getMCPServersFromRedux(): Promise<MCPServer[]> {
  *
  * A new Server is created for each transport session because the MCP SDK's
  * Protocol.connect() throws "Already connected" if the Server is already
- * bound to a transport. Since the Claude Agent SDK spawns a new CLI process
- * per query (including resumes), each process establishes a new HTTP
- * transport, so the proxy must provide a fresh Server instance every time.
+ * bound to a transport. Streamable HTTP clients can establish independent
+ * transports, so the proxy must provide a fresh Server instance every time.
  */
 export async function createMcpServerForTransport(id: string): Promise<Server> {
   const servers = await getMCPServersFromRedux()
