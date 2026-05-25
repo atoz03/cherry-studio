@@ -81,10 +81,51 @@ function createSelectQuery(rows: unknown[]) {
   }
 }
 
+function createWhereQuery(rows: unknown[]) {
+  return {
+    from: vi.fn(() => ({
+      where: vi.fn().mockResolvedValue(rows)
+    }))
+  }
+}
+
+function createOrderedSelectQuery(rows: unknown[]) {
+  return {
+    from: vi.fn(() => ({
+      where: vi.fn(() => ({
+        orderBy: vi.fn().mockResolvedValue(rows)
+      }))
+    }))
+  }
+}
+
+function createAgentRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'agent_current',
+    type: 'claude-code',
+    name: 'Current Agent',
+    description: 'Active user agent',
+    deleted_at: null,
+    accessible_paths: '[]',
+    instructions: 'You are a helpful assistant.',
+    model: 'claude-sonnet-4',
+    plan_model: null,
+    small_model: null,
+    mcps: '[]',
+    allowed_tools: '[]',
+    configuration: '{}',
+    sort_order: 0,
+    created_at: '2026-05-25T00:00:00.000Z',
+    updated_at: '2026-05-25T00:00:00.000Z',
+    ...overrides
+  }
+}
+
 describe('AgentService built-in agent lifecycle', () => {
   const service = AgentService.getInstance()
 
   beforeEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
@@ -132,5 +173,80 @@ describe('AgentService built-in agent lifecycle', () => {
     expect(database.delete).toHaveBeenCalledTimes(1)
     expect(deleteWhere).toHaveBeenCalledTimes(1)
     expect(txUpdateSet).not.toHaveBeenCalled()
+  })
+
+  it('filters legacy preset agents from list responses and totals', async () => {
+    const rows = [
+      createAgentRow({ id: 'agent_current', name: 'Current Agent', sort_order: 0 }),
+      createAgentRow({
+        id: 'legacy_by_name',
+        name: 'Cherry Claw',
+        description: 'Default autonomous CherryClaw agent',
+        configuration: JSON.stringify({
+          avatar: '🦞',
+          soul_enabled: true,
+          scheduler_enabled: true,
+          heartbeat_enabled: true
+        }),
+        sort_order: 1
+      }),
+      createAgentRow({ id: 'cherry-assistant-default', name: 'Cherry Assistant', sort_order: 2 })
+    ]
+    const database = {
+      select: vi.fn(() => createOrderedSelectQuery(rows))
+    }
+
+    vi.spyOn(service as never, 'getDatabase').mockResolvedValue(database as never)
+    vi.spyOn(service as never, 'listMcpTools').mockResolvedValue({ tools: [], legacyIdMap: new Map() } as never)
+
+    const result = await service.listAgents({ sortBy: 'sort_order', orderBy: 'asc' })
+
+    expect(result.total).toBe(1)
+    expect(result.agents.map((agent) => agent.id)).toEqual(['agent_current'])
+  })
+
+  it('hides legacy preset agents from direct lookups and existence checks', async () => {
+    const database = {
+      select: vi.fn(() =>
+        createSelectQuery([
+          createAgentRow({
+            id: 'cherry-assistant-default',
+            name: 'Cherry Assistant',
+            description: 'Cherry Studio 内置使用顾问。诊断问题、引导操作、收录 FAQ、提交 Bug/需求、搜索和创建 Skills'
+          })
+        ])
+      )
+    }
+
+    vi.spyOn(service as never, 'getDatabase').mockResolvedValue(database as never)
+
+    await expect(service.getAgent('cherry-assistant-default')).resolves.toBeNull()
+    await expect(service.agentExists('cherry-assistant-default')).resolves.toBe(false)
+  })
+
+  it('purges legacy preset agents matched by id or persisted metadata', async () => {
+    const rows = [
+      createAgentRow({ id: 'agent_current', name: 'Current Agent' }),
+      createAgentRow({ id: 'cherry-assistant-default', name: 'Cherry Assistant' }),
+      createAgentRow({
+        id: 'renamed_legacy_claw',
+        name: 'assistant',
+        description: 'Default autonomous CherryClaw agent',
+        accessible_paths: JSON.stringify(['/mock/Data/Agents/w-default'])
+      })
+    ]
+    const database = {
+      select: vi.fn(() => createWhereQuery(rows))
+    }
+    const deleteAgent = vi.spyOn(service, 'deleteAgent').mockResolvedValue(true)
+
+    vi.spyOn(service as never, 'getDatabase').mockResolvedValue(database as never)
+
+    const deletedIds = await service.purgeLegacyPresetAgents()
+
+    expect(deletedIds).toEqual(['cherry-assistant-default', 'renamed_legacy_claw'])
+    expect(deleteAgent).toHaveBeenCalledTimes(2)
+    expect(deleteAgent).toHaveBeenNthCalledWith(1, 'cherry-assistant-default')
+    expect(deleteAgent).toHaveBeenNthCalledWith(2, 'renamed_legacy_claw')
   })
 })

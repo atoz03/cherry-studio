@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockInstallBuiltinSkills, mockLoggerError, mockLoggerInfo, mockDeleteAgent } = vi.hoisted(() => ({
+const { mockInstallBuiltinSkills, mockLoggerError, mockLoggerInfo, mockPurgeLegacyPresetAgents } = vi.hoisted(() => ({
   mockInstallBuiltinSkills: vi.fn(),
   mockLoggerError: vi.fn(),
   mockLoggerInfo: vi.fn(),
-  mockDeleteAgent: vi.fn()
+  mockPurgeLegacyPresetAgents: vi.fn()
 }))
 
 vi.mock('@logger', () => ({
@@ -22,7 +22,7 @@ vi.mock('@main/utils/builtinSkills', () => ({
 
 vi.mock('@main/services/agents/services/AgentService', () => ({
   agentService: {
-    deleteAgent: mockDeleteAgent
+    purgeLegacyPresetAgents: mockPurgeLegacyPresetAgents
   }
 }))
 
@@ -32,7 +32,7 @@ describe('bootstrapBuiltinAgents', () => {
     vi.useFakeTimers()
     vi.resetModules()
     mockInstallBuiltinSkills.mockResolvedValue(undefined)
-    mockDeleteAgent.mockResolvedValue(false)
+    mockPurgeLegacyPresetAgents.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -44,23 +44,20 @@ describe('bootstrapBuiltinAgents', () => {
 
     await bootstrapBuiltinAgents()
 
-    expect(mockDeleteAgent).toHaveBeenCalledTimes(2)
-    expect(mockDeleteAgent).toHaveBeenNthCalledWith(1, 'cherry-assistant-default')
-    expect(mockDeleteAgent).toHaveBeenNthCalledWith(2, 'cherry-claw-default')
+    expect(mockPurgeLegacyPresetAgents).toHaveBeenCalledTimes(1)
     expect(mockInstallBuiltinSkills).toHaveBeenCalledTimes(1)
     expect(mockLoggerError).not.toHaveBeenCalled()
   })
 
   it('logs purge success when legacy presets are removed', async () => {
-    mockDeleteAgent
-      .mockResolvedValueOnce(true) // cherry-assistant-default
-      .mockResolvedValueOnce(false) // cherry-claw-default
+    mockPurgeLegacyPresetAgents.mockResolvedValueOnce(['cherry-assistant-default', 'renamed_legacy_claw'])
 
     const { bootstrapBuiltinAgents } = await import('../BuiltinAgentBootstrap')
 
     await bootstrapBuiltinAgents()
 
     expect(mockLoggerInfo).toHaveBeenCalledWith('Purged legacy preset agent', { id: 'cherry-assistant-default' })
+    expect(mockLoggerInfo).toHaveBeenCalledWith('Purged legacy preset agent', { id: 'renamed_legacy_claw' })
   })
 
   it('logs and swallows install errors', async () => {
@@ -71,22 +68,20 @@ describe('bootstrapBuiltinAgents', () => {
 
     await bootstrapBuiltinAgents()
 
-    expect(mockDeleteAgent).toHaveBeenCalledTimes(2)
+    expect(mockPurgeLegacyPresetAgents).toHaveBeenCalledTimes(1)
     expect(mockInstallBuiltinSkills).toHaveBeenCalledTimes(1)
     expect(mockLoggerError).toHaveBeenCalledWith('Failed to install built-in skills', error)
   })
 
-  it('continues when purge fails for a legacy preset', async () => {
-    const deleteError = new Error('delete failed')
-    mockDeleteAgent
-      .mockRejectedValueOnce(deleteError) // cherry-assistant-default
-      .mockResolvedValueOnce(false) // cherry-claw-default
+  it('continues when purging legacy presets fails', async () => {
+    const purgeError = new Error('purge failed')
+    mockPurgeLegacyPresetAgents.mockRejectedValueOnce(purgeError)
 
     const { bootstrapBuiltinAgents } = await import('../BuiltinAgentBootstrap')
 
     await bootstrapBuiltinAgents()
 
-    expect(mockLoggerError).toHaveBeenCalledWith('Failed to purge legacy preset agent', deleteError)
+    expect(mockLoggerError).toHaveBeenCalledWith('Failed to purge legacy preset agents', purgeError)
     expect(mockInstallBuiltinSkills).toHaveBeenCalledTimes(1)
   })
 })

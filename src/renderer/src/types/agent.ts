@@ -47,6 +47,87 @@ export const isAgentType = (type: unknown): type is AgentType => {
   return AgentTypeSchema.safeParse(type).success
 }
 
+export const LEGACY_PRESET_AGENT_IDS = ['cherry-assistant-default', 'cherry-claw-default'] as const
+
+const LEGACY_PRESET_AGENT_ID_MARKERS = ['cherry-assistant', 'cherry-claw', 'cherryclaw', 'openclaw'] as const
+const LEGACY_PRESET_AGENT_NAMES = ['cherry assistant', 'cherry claw', 'cherryclaw', 'openclaw'] as const
+const LEGACY_PRESET_AGENT_ROLE_NAMES = ['assistant'] as const
+const LEGACY_PRESET_AGENT_DESCRIPTION_MARKERS = [
+  'Cherry Studio 内置使用顾问',
+  'Default autonomous CherryClaw agent',
+  'CherryClaw'
+] as const
+const LEGACY_PRESET_AGENT_PATH_MARKERS = ['/Agents/t-default', '/Agents/w-default'] as const
+
+type LegacyPresetAgentCandidate = {
+  id?: unknown
+  name?: unknown
+  type?: unknown
+  description?: unknown
+  accessible_paths?: unknown
+  configuration?: unknown
+}
+
+const normalizeLegacyPresetText = (value: unknown): string =>
+  typeof value === 'string' ? value.trim().toLowerCase() : ''
+
+const getLegacyPresetConfiguration = (value: unknown): Record<string, unknown> | undefined => {
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : undefined
+    } catch {
+      return undefined
+    }
+  }
+
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : undefined
+}
+
+const hasLegacyPresetMetadata = (agent: LegacyPresetAgentCandidate): boolean => {
+  const description = typeof agent.description === 'string' ? agent.description : ''
+  if (LEGACY_PRESET_AGENT_DESCRIPTION_MARKERS.some((marker) => description.includes(marker))) {
+    return true
+  }
+
+  const accessiblePaths = Array.isArray(agent.accessible_paths) ? agent.accessible_paths : []
+  if (
+    accessiblePaths.some(
+      (path) => typeof path === 'string' && LEGACY_PRESET_AGENT_PATH_MARKERS.some((marker) => path.endsWith(marker))
+    )
+  ) {
+    return true
+  }
+
+  const configuration = getLegacyPresetConfiguration(agent.configuration)
+  return (
+    configuration?.avatar === '🦞' ||
+    (configuration?.soul_enabled === true &&
+      configuration?.scheduler_enabled === true &&
+      configuration?.heartbeat_enabled === true)
+  )
+}
+
+export const isLegacyPresetAgent = (agent: LegacyPresetAgentCandidate): boolean => {
+  const id = normalizeLegacyPresetText(agent.id)
+  if (LEGACY_PRESET_AGENT_IDS.includes(id as (typeof LEGACY_PRESET_AGENT_IDS)[number])) {
+    return true
+  }
+  if (LEGACY_PRESET_AGENT_ID_MARKERS.some((marker) => id.includes(marker))) {
+    return true
+  }
+
+  const name = normalizeLegacyPresetText(agent.name)
+  if (LEGACY_PRESET_AGENT_NAMES.includes(name as (typeof LEGACY_PRESET_AGENT_NAMES)[number])) {
+    return true
+  }
+
+  return (
+    LEGACY_PRESET_AGENT_ROLE_NAMES.includes(name as (typeof LEGACY_PRESET_AGENT_ROLE_NAMES)[number]) &&
+    hasLegacyPresetMetadata(agent)
+  )
+}
+
 // ------------------ Tool metadata ------------------
 export const ToolSchema = z.object({
   id: z.string(),

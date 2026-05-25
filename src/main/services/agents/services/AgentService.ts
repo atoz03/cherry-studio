@@ -9,8 +9,8 @@ import type {
   UpdateAgentRequest,
   UpdateAgentResponse
 } from '@types'
-import { AgentBaseSchema } from '@types'
-import { and, asc, count, desc, eq, isNull, min } from 'drizzle-orm'
+import { AgentBaseSchema, isLegacyPresetAgent } from '@types'
+import { and, asc, desc, eq, isNull, min } from 'drizzle-orm'
 
 import { BaseService } from '../BaseService'
 import {
@@ -131,6 +131,10 @@ export class AgentService extends BaseService {
     }
 
     const agent = this.deserializeJsonFields(row) as GetAgentResponse
+    if (isLegacyPresetAgent(agent)) {
+      return null
+    }
+
     const { tools, legacyIdMap } = await this.listMcpTools(agent.type, agent.mcps)
     agent.tools = tools
     agent.allowed_tools = this.normalizeAllowedTools(agent.allowed_tools, agent.tools, legacyIdMap)
@@ -142,7 +146,6 @@ export class AgentService extends BaseService {
     // Build query with pagination
     const database = await this.getDatabase()
     const visibleAgents = isNull(agentsTable.deleted_at)
-    const totalResult = await database.select({ count: count() }).from(agentsTable).where(visibleAgents)
 
     const sortBy = options.sortBy || 'sort_order'
     const orderBy = options.orderBy || (sortBy === 'sort_order' ? 'asc' : 'desc')
@@ -160,14 +163,19 @@ export class AgentService extends BaseService {
             .orderBy(orderFn(sortField), desc(agentsTable.created_at))
         : database.select().from(agentsTable).where(visibleAgents).orderBy(orderFn(sortField))
 
-    const result =
-      options.limit !== undefined
-        ? options.offset !== undefined
-          ? await baseQuery.limit(options.limit).offset(options.offset)
-          : await baseQuery.limit(options.limit)
-        : await baseQuery
+    const result = await baseQuery
 
-    const agents = result.map((row) => this.deserializeJsonFields(row)) as GetAgentResponse[]
+    // 旧版预置 agent 已移除；这里在服务端列表层兜底过滤，避免历史脏数据继续进入 UI。
+    const visibleAgentList = (result.map((row) => this.deserializeJsonFields(row)) as GetAgentResponse[]).filter(
+      (agent) => !isLegacyPresetAgent(agent)
+    )
+    const offset = options.offset ?? 0
+    const agents =
+      options.limit !== undefined
+        ? visibleAgentList.slice(offset, offset + options.limit)
+        : offset > 0
+          ? visibleAgentList.slice(offset)
+          : visibleAgentList
 
     await Promise.all(
       agents.map(async (agent) => {
@@ -177,7 +185,29 @@ export class AgentService extends BaseService {
       })
     )
 
-    return { agents, total: totalResult[0].count }
+    return { agents, total: visibleAgentList.length }
+  }
+
+  async purgeLegacyPresetAgents(): Promise<string[]> {
+    const database = await this.getDatabase()
+    const rows = await database.select().from(agentsTable).where(isNull(agentsTable.deleted_at))
+    const legacyAgentIds = [
+      ...new Set(
+        (rows.map((row) => this.deserializeJsonFields(row)) as GetAgentResponse[])
+          .filter((agent) => isLegacyPresetAgent(agent))
+          .map((agent) => agent.id)
+      )
+    ]
+
+    const deletedIds: string[] = []
+    for (const id of legacyAgentIds) {
+      const deleted = await this.deleteAgent(id)
+      if (deleted) {
+        deletedIds.push(id)
+      }
+    }
+
+    return deletedIds
   }
 
   /**
@@ -477,7 +507,7 @@ export class AgentService extends BaseService {
   async agentExists(id: string): Promise<boolean> {
     const result = await this.findAgentRow(id)
 
-    return !!result
+    return !!result && !isLegacyPresetAgent(this.deserializeJsonFields(result))
   }
 }
 

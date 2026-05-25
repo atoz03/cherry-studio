@@ -1,8 +1,9 @@
 import { useAppDispatch } from '@renderer/store'
 import { setActiveAgentId, setActiveSessionIdAction } from '@renderer/store/runtime'
 import type { AddAgentForm, CreateAgentResponse, GetAgentResponse } from '@renderer/types'
+import { isLegacyPresetAgent } from '@renderer/types'
 import { formatErrorMessageWithPrefix } from '@renderer/utils/error'
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import useSWR from 'swr'
 
@@ -40,10 +41,11 @@ export const useAgents = () => {
     // The /agents listing endpoint defaults to the schema max so a single fetch returns the full
     // list. NOTE: useUpdateAgent depends on a flat array result.
     const result = await client.listAgents({ sortBy: 'sort_order', orderBy: 'asc' })
-    return result.data
+    return result.data.filter((agent) => !isLegacyPresetAgent(agent))
   }, [apiServerConfig.enabled, apiServerRunning, client, t])
 
   const { data, error, isLoading, mutate } = useSWR(swrKey, fetcher)
+  const visibleAgents = useMemo(() => data?.filter((agent) => !isLegacyPresetAgent(agent)), [data])
   const { chat } = useRuntime()
   const { activeAgentId } = chat
   const dispatch = useAppDispatch()
@@ -74,7 +76,7 @@ export const useAgents = () => {
         await client.deleteAgent(id)
         dispatch(setActiveSessionIdAction({ agentId: id, sessionId: null }))
         if (activeAgentId === id) {
-          const newId = data?.filter((a) => a.id !== id).find(() => true)?.id
+          const newId = visibleAgents?.filter((a) => a.id !== id).find(() => true)?.id
           if (newId) {
             dispatch(setActiveAgentId(newId))
           } else {
@@ -87,7 +89,7 @@ export const useAgents = () => {
         window.toast.error(formatErrorMessageWithPrefix(error, t('agent.delete.error.failed')))
       }
     },
-    [activeAgentId, client, data, dispatch, mutate, t]
+    [activeAgentId, client, dispatch, mutate, t, visibleAgents]
   )
 
   const getAgent = useCallback(
@@ -114,7 +116,7 @@ export const useAgents = () => {
   )
 
   return {
-    agents: data,
+    agents: visibleAgents,
     error,
     isLoading,
     addAgent,
