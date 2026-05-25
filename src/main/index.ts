@@ -204,7 +204,7 @@ if (!app.requestSingleInstanceLock()) {
         .catch((err) => logger.error('An error occurred: ', err))
     }
 
-    //start selection assistant service
+    // Selection assistant is disabled (kept as no-op init for compatibility)
     initSelectionService()
 
     void runAsyncFunction(async () => {
@@ -235,13 +235,13 @@ if (!app.requestSingleInstanceLock()) {
           await apiServerService.start()
         }
 
-        // Restore CherryClaw schedulers after services are ready
+        // Restore schedulers after services are ready
         await schedulerService.restoreSchedulers()
 
         // Register IPC handlers for session stream before starting channels
         registerSessionStreamIpc()
 
-        // Start CherryClaw channel adapters (Telegram, etc.)
+        // Start channel adapters (Telegram, etc.)
         await channelManager.start()
       } catch (error: any) {
         logger.error('Failed to check/start API server:', error)

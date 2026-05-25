@@ -1,5 +1,5 @@
 import { loggerService } from '@logger'
-import type { CherryClawConfiguration, ScheduledTaskEntity } from '@types'
+import type { AgentConfiguration, ScheduledTaskEntity } from '@types'
 
 import { agentService } from './AgentService'
 import type { ChannelAdapter } from './channels'
@@ -208,7 +208,7 @@ class SchedulerService {
         throw new Error(`Agent not found: ${task.agent_id}`)
       }
 
-      const config = (agent.configuration ?? {}) as CherryClawConfiguration
+      const config = (agent.configuration ?? {}) as AgentConfiguration
       const workspacePath = agent.accessible_paths?.[0]
 
       // For heartbeat tasks, read prompt from workspace heartbeat.md file

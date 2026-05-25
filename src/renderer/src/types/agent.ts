@@ -28,7 +28,7 @@ export type SessionMessageType = TextStreamPart<Record<string, any>>['type']
 export const AgentTypeSchema = z.enum(['claude-code'])
 export type AgentType = z.infer<typeof AgentTypeSchema>
 
-// ------------------ CherryClaw-specific types ------------------
+// ------------------ Agent scheduling and channel types ------------------
 export const SchedulerTypeSchema = z.enum(['cron', 'interval', 'one-time'])
 export type SchedulerType = z.infer<typeof SchedulerTypeSchema>
 
