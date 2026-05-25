@@ -32,7 +32,6 @@ import {
   MessagesSquare,
   Monitor,
   Moon,
-  MousePointerClick,
   NotepadText,
   Palette,
   Settings,
@@ -49,7 +48,7 @@ import styled from 'styled-components'
 import MinAppIcon from '../Icons/MinAppIcon'
 import MinAppTabsPool from '../MinApp/MinAppTabsPool'
 import WindowControls from '../WindowControls'
-import { ensureHomeTab, getStartupRedirectPath } from './tabRestore'
+import { getStartupRedirectPath, isRemovedAgentTab, sanitizeRestoredTabs } from './tabRestore'
 
 interface TabsContainerProps {
   children: React.ReactNode
@@ -101,8 +100,6 @@ const getTabIcon = (
   switch (tabId) {
     case 'home':
       return <Home size={14} />
-    case 'agents':
-      return <MousePointerClick size={14} />
     case 'store':
       return <Sparkle size={14} />
     case 'translate':
@@ -153,7 +150,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     if (startupRestoredRef.current) return
     startupRestoredRef.current = true
 
-    const nextTabs = ensureHomeTab(tabs)
+    const nextTabs = sanitizeRestoredTabs(tabs)
     if (nextTabs !== tabs) {
       dispatch(setTabs(nextTabs))
     }
@@ -329,6 +326,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
 
   const shouldCreateTab = (path: string) => {
     if (path === '/') return false
+    if (path === '/agents') return false
     if (path === '/settings') return false
     return !tabs.some((tab) => tab.id === getTabId(path))
   }
@@ -394,7 +392,10 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
     navigate(tab.path)
   }
 
-  const visibleTabs = useMemo(() => tabs.filter((tab) => !specialTabs.includes(tab.id)), [tabs])
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => !specialTabs.includes(tab.id) && !isRemovedAgentTab(tab)),
+    [tabs]
+  )
 
   const { onSortEnd } = useDndReorder<Tab>({
     originalList: tabs,
@@ -423,7 +424,7 @@ const TabsContainer: React.FC<TabsContainerProps> = ({ children }) => {
             onSortEnd={onSortEnd}
             className="tabs-sortable"
             renderItem={(tab) => {
-              const isClosable = tab.id !== 'home' && tab.id !== 'agents'
+              const isClosable = tab.id !== 'home'
               return (
                 <Tab
                   key={tab.id}

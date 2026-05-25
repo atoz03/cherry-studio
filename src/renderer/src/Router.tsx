@@ -2,7 +2,7 @@ import '@renderer/databases'
 
 import type { FC } from 'react'
 import { useMemo } from 'react'
-import { HashRouter, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import Sidebar from './components/app/Sidebar'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -11,7 +11,6 @@ import { TabDragProvider } from './context/TabDragContext'
 import NavigationHandler from './handler/NavigationHandler'
 import { useOnboardingState } from './hooks/useOnboardingState'
 import { useNavbarPosition } from './hooks/useSettings'
-import AgentPage from './pages/agents/AgentPage'
 import CodeToolsPage from './pages/code/CodeToolsPage'
 import FilesPage from './pages/files/FilesPage'
 import HomePage from './pages/home/HomePage'
@@ -35,7 +34,7 @@ const Router: FC = () => {
       <ErrorBoundary>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/agents" element={<AgentPage />} />
+          <Route path="/agents" element={<Navigate to="/" replace />} />
           <Route path="/chat/assistant/:assistantId" element={<HomePage />} />
           <Route path="/chat/topic/:topicId" element={<HomePage />} />
           <Route path="/store" element={<AssistantPresetsPage />} />

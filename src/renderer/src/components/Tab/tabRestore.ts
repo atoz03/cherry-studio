@@ -2,6 +2,19 @@ import type { Tab } from '@renderer/store/tabs'
 
 export const HOME_TAB_ID = 'home'
 export const HOME_TAB_PATH = '/'
+const REMOVED_AGENT_TAB_ID = 'agents'
+const REMOVED_AGENT_TAB_PATH = '/agents'
+
+export function isRemovedAgentTab(tab: Tab): boolean {
+  return tab.id === REMOVED_AGENT_TAB_ID || tab.path === REMOVED_AGENT_TAB_PATH
+}
+
+export function sanitizeRestoredTabs(tabs: Tab[]): Tab[] {
+  const filteredTabs = tabs.filter((tab) => !isRemovedAgentTab(tab))
+  const homeTabs = ensureHomeTab(filteredTabs)
+
+  return filteredTabs.length === tabs.length && homeTabs === filteredTabs ? tabs : homeTabs
+}
 
 /**
  * 确保标签列表里一定存在 Home 标签页。

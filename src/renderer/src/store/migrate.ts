@@ -3351,30 +3351,7 @@ const migrateConfig = {
   },
   '203': (state: RootState) => {
     try {
-      if (state.settings && state.settings.sidebarIcons) {
-        // Add 'agents' to visible icons if not already present
-        if (!state.settings.sidebarIcons.visible.includes('agents')) {
-          // Insert after 'assistants' if present, otherwise append
-          const assistantsIndex = state.settings.sidebarIcons.visible.indexOf('assistants')
-          if (assistantsIndex !== -1) {
-            state.settings.sidebarIcons.visible = [
-              ...state.settings.sidebarIcons.visible.slice(0, assistantsIndex + 1),
-              'agents',
-              ...state.settings.sidebarIcons.visible.slice(assistantsIndex + 1)
-            ]
-          } else {
-            state.settings.sidebarIcons.visible = [...state.settings.sidebarIcons.visible, 'agents']
-          }
-        }
-      }
-
-      // Add 'agents' tab if not already present
-      if (state.tabs && !state.tabs.tabs.some((tab: { id: string }) => tab.id === 'agents')) {
-        const homeIndex = state.tabs.tabs.findIndex((tab: { id: string }) => tab.id === 'home')
-        const insertIndex = homeIndex !== -1 ? homeIndex + 1 : state.tabs.tabs.length
-        state.tabs.tabs.splice(insertIndex, 0, { id: 'agents', path: '/agents' })
-      }
-
+      // 旧版迁移曾在这里加入智能体入口；该入口已移除，保留迁移编号但不再写入旧入口。
       logger.info('migrate 203 success')
       return state
     } catch (error) {
@@ -3498,6 +3475,34 @@ const migrateConfig = {
       return state
     } catch (error) {
       logger.error('migrate 209 error', error as Error)
+      return state
+    }
+  },
+  '210': (state: RootState) => {
+    try {
+      const removedAgentEntry = 'agents'
+      if (state.settings?.sidebarIcons) {
+        state.settings.sidebarIcons.visible = state.settings.sidebarIcons.visible.filter(
+          (icon) => String(icon) !== removedAgentEntry
+        )
+        state.settings.sidebarIcons.disabled = state.settings.sidebarIcons.disabled.filter(
+          (icon) => String(icon) !== removedAgentEntry
+        )
+      }
+
+      if (state.tabs?.tabs) {
+        state.tabs.tabs = state.tabs.tabs.filter(
+          (tab) => tab.id !== removedAgentEntry && tab.path !== `/${removedAgentEntry}`
+        )
+        if (state.tabs.activeTabId === removedAgentEntry) {
+          state.tabs.activeTabId = 'home'
+        }
+      }
+
+      logger.info('migrate 210 success')
+      return state
+    } catch (error) {
+      logger.error('migrate 210 error', error as Error)
       return state
     }
   }
