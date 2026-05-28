@@ -840,15 +840,15 @@ class OpenClawService {
 
   /**
    * Get OpenClaw Dashboard URL (for opening in minapp).
-   * The Control UI uses ?token= to auto-authenticate the WebSocket connection.
+   * The Control UI uses #token= to auto-authenticate the WebSocket connection.
    */
   public getDashboardUrl(): string {
     let url = `http://127.0.0.1:${this.gatewayPort}`
     const token = this.getDashboardAuthToken()
     if (token) {
-      // Use query string (not URL fragment) so dashboard app state can persist correctly.
-      // Fragment (#...) is often used by SPAs for transient client-side state.
-      url += `?token=${encodeURIComponent(token)}`
+      // Use the URL fragment (not a query string) so the token stays client-side:
+      // fragments are never sent to the server, keeping it out of gateway access logs.
+      url += `#token=${encodeURIComponent(token)}`
     }
     return url
   }
