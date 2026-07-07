@@ -33,6 +33,7 @@ import {
   isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenKimiModel,
+  isSupportedThinkingTokenLongCatModel,
   isSupportedThinkingTokenMiMoModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
@@ -361,6 +362,20 @@ describe('Claude & regional providers', () => {
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2-pro' }))).toBe(true)
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2.7' }))).toBe(true)
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2.7-highspeed' }))).toBe(true)
+  })
+
+  it('exposes controllable thinking options for LongCat-2.0 on any provider', () => {
+    const model = createModel({ id: 'LongCat-2.0', provider: 'longcat' })
+
+    expect(isSupportedThinkingTokenLongCatModel(model)).toBe(true)
+    expect(isSupportedThinkingTokenLongCatModel(createModel({ id: 'LongCat-2.0', provider: 'openrouter' }))).toBe(true)
+    expect(
+      isSupportedThinkingTokenLongCatModel(createModel({ id: 'LongCat-Flash-Thinking', provider: 'longcat' }))
+    ).toBe(false)
+    expect(getThinkModelType(model)).toBe('longcat')
+    expect(isSupportedThinkingTokenModel(model)).toBe(true)
+    expect(isFixedReasoningModel(model)).toBe(false)
+    expect(getModelSupportedReasoningEffortOptions(model)).toEqual(['default', 'none', 'auto'])
   })
 })
 

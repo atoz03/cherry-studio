@@ -88,6 +88,7 @@ export const MODEL_SUPPORTED_REASONING_EFFORT = {
   deepseek_v4: ['high', 'xhigh'] as const,
   kimi_k2_5: ['none', 'auto'] as const,
   kimi_always_think: ['auto'] as const,
+  longcat: ['auto'] as const,
   // Claude 3.7, 4.0, 4.5 reasoning models
   claude: ['low', 'medium', 'high'] as const,
   // Claude 4.6 supports low, medium, high, xhigh (xhigh is mapped to max in API)
@@ -132,6 +133,7 @@ export const MODEL_SUPPORTED_OPTIONS: ThinkingOptionConfig = {
   deepseek_v4: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.deepseek_v4] as const,
   kimi_k2_5: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.kimi_k2_5] as const,
   kimi_always_think: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.kimi_always_think] as const,
+  longcat: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.longcat] as const,
   claude: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.claude] as const,
   claude46: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.claude46] as const,
   mistral: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.mistral] as const
@@ -232,6 +234,8 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
     // kimi-k2.7-code is an always-think model: no 'none' option, only 'auto'.
     // See isKimiK27CodeModel for the full reasoning.
     thinkingModelType = isKimiK27CodeModel(model) ? 'kimi_always_think' : 'kimi_k2_5'
+  } else if (isSupportedThinkingTokenLongCatModel(model)) {
+    thinkingModelType = 'longcat'
   } else if (isMistralReasoningModel(model)) {
     thinkingModelType = 'mistral'
   }
@@ -323,6 +327,7 @@ function _isSupportedThinkingTokenModel(model: Model): boolean {
     isSupportedThinkingTokenZhipuModel(model) ||
     isSupportedThinkingTokenMiMoModel(model) ||
     isSupportedThinkingTokenKimiModel(model) ||
+    isSupportedThinkingTokenLongCatModel(model) ||
     isSupportedThinkingTokenDeepSeekModel(model)
   )
 }
@@ -726,6 +731,12 @@ export const isKimiK27CodeModel = (model?: Model): boolean => {
   return idResult || nameResult
 }
 
+export const isSupportedThinkingTokenLongCatModel = (model?: Model): boolean => {
+  if (!model) return false
+  const modelId = getLowerBaseModelName(model.id, '/')
+  return /^longcat-2\.0(?:-[\w-]+)?$/i.test(modelId)
+}
+
 /**
  * Matches DeepSeek V4+ models (e.g., deepseek-v4-flash, deepseek-v4-pro, deepseek-v5-xxx).
  * V4+ models default to thinking enabled and support reasoning_effort: "high" | "max".
@@ -868,6 +879,7 @@ export function isReasoningModel(model?: Model): boolean {
     isMiMoReasoningModel(model) ||
     isBaichuanReasoningModel(model) ||
     isKimiReasoningModel(model) ||
+    isSupportedThinkingTokenLongCatModel(model) ||
     modelId.includes('magistral') ||
     modelId.includes('mistral-small-2603') ||
     modelId.includes('pangu-pro-moe') ||
