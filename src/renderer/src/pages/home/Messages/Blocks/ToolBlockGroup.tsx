@@ -2,7 +2,7 @@ import { ErrorBoundary } from '@renderer/components/ErrorBoundary'
 import { useAppSelector } from '@renderer/store'
 import type { ToolPermissionEntry } from '@renderer/store/toolPermissions'
 import type { MCPToolResponseStatus } from '@renderer/types'
-import type { ToolMessageBlock } from '@renderer/types/newMessage'
+import { MessageBlockStatus, type ToolMessageBlock } from '@renderer/types/newMessage'
 import { isToolPending } from '@renderer/utils/userConfirmation'
 import { Collapse, type CollapseProps } from 'antd'
 import { Wrench } from 'lucide-react'
@@ -111,6 +111,17 @@ interface Props {
 
 function isCompletedStatus(status: MCPToolResponseStatus | undefined): boolean {
   return status === 'done' || status === 'error' || status === 'cancelled'
+}
+
+function isCompletedBlockStatus(status: MessageBlockStatus): boolean {
+  return (
+    status === MessageBlockStatus.SUCCESS || status === MessageBlockStatus.ERROR || status === MessageBlockStatus.PAUSED
+  )
+}
+
+function isCompletedToolBlock(block: ToolMessageBlock): boolean {
+  const responseStatus = block.metadata?.rawMcpToolResponse?.status
+  return responseStatus ? isCompletedStatus(responseStatus) : isCompletedBlockStatus(block.status)
 }
 
 // Calculate actual waiting state for a block (not depending on hooks)
@@ -247,10 +258,8 @@ interface ToolListContentProps {
 const ToolListContent = React.memo(({ blocks, scrollRef }: ToolListContentProps) => (
   <ScrollableToolList ref={scrollRef}>
     {blocks.map((block) => {
-      const status = block.metadata?.rawMcpToolResponse?.status
-      const isCompleted = isCompletedStatus(status)
       return (
-        <ToolItem key={block.id} data-block-id={block.id} $isCompleted={isCompleted}>
+        <ToolItem key={block.id} data-block-id={block.id} $isCompleted={isCompletedToolBlock(block)}>
           <ErrorBoundary fallbackComponent={BlockErrorFallback}>
             <MessageTools block={block} />
           </ErrorBoundary>
@@ -267,12 +276,10 @@ const ToolBlockGroup: React.FC<Props> = ({ blocks }) => {
   const [activeKey, setActiveKey] = useState<string[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const userExpandedRef = useRef(false)
+  const wasAllCompletedRef = useRef(false)
 
   const allCompleted = useMemo(() => {
-    return blocks.every((block) => {
-      const status = block.metadata?.rawMcpToolResponse?.status
-      return isCompletedStatus(status)
-    })
+    return blocks.length > 0 && blocks.every(isCompletedToolBlock)
   }, [blocks])
 
   // Auto-expand group when there are active tools (pending/waiting for approval, streaming)
@@ -283,18 +290,23 @@ const ToolBlockGroup: React.FC<Props> = ({ blocks }) => {
   }, [allCompleted])
 
   const currentRunningBlock = useMemo(() => {
-    return blocks.find((block) => {
-      const status = block.metadata?.rawMcpToolResponse?.status
-      return !isCompletedStatus(status)
-    })
+    return blocks.find((block) => !isCompletedToolBlock(block))
   }, [blocks])
 
   useEffect(() => {
     if (activeKey.includes('tool-group') && currentRunningBlock && scrollRef.current) {
       const element = scrollRef.current.querySelector(`[data-block-id="${currentRunningBlock.id}"]`)
-      element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      element?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
     }
   }, [activeKey, currentRunningBlock])
+
+  useEffect(() => {
+    if (allCompleted && !wasAllCompletedRef.current) {
+      setActiveKey([])
+    }
+
+    wasAllCompletedRef.current = allCompleted
+  }, [allCompleted])
 
   const handleChange = (keys: string | string[]) => {
     const keyArray = Array.isArray(keys) ? keys : [keys]

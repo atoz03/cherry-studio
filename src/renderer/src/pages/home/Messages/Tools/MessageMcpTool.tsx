@@ -60,6 +60,7 @@ const MessageMcpTool: FC<Props> = ({ block }) => {
   const isPending = status === 'pending'
   const isDone = status === 'done'
   const isError = status === 'error'
+  const isCancelled = status === 'cancelled'
   const isStreaming = status === 'streaming'
 
   useEffect(() => {
@@ -83,11 +84,11 @@ const MessageMcpTool: FC<Props> = ({ block }) => {
     if (isStreaming || isPending) {
       // Expand when streaming starts or waiting for approval
       setActiveKeys((prev) => (prev.includes(id) ? prev : [...prev, id]))
-    } else if (isDone || isError) {
+    } else if (isDone || isError || isCancelled) {
       // Collapse when streaming ends
       setActiveKeys((prev) => prev.filter((key) => key !== id))
     }
-  }, [isStreaming, isDone, isError, id, isPending])
+  }, [isStreaming, isDone, isError, isCancelled, id, isPending])
 
   if (!toolResponse) {
     return null

@@ -33,9 +33,10 @@ export const ToolApprovalActionsComponent: FC<ToolApprovalActionsProps> = ({
 }) => {
   const { t } = useTranslation()
 
-  // Stop event propagation to prevent collapse toggle
+  // Keep approval controls from activating the containing collapse header.
   const handleClick = (e: MouseEvent, handler: () => void) => {
     e.stopPropagation()
+    e.preventDefault()
     handler()
   }
 
@@ -46,7 +47,10 @@ export const ToolApprovalActionsComponent: FC<ToolApprovalActionsProps> = ({
   if (isExecuting) {
     if (showAbort && onAbort) {
       return (
-        <ActionsContainer $compact={compact} onClick={(e) => e.stopPropagation()}>
+        <ActionsContainer
+          $compact={compact}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}>
           <Button size="small" color="danger" variant="solid" onClick={(e) => handleClick(e, onAbort)}>
             {t('chat.input.pause')}
           </Button>
@@ -54,7 +58,10 @@ export const ToolApprovalActionsComponent: FC<ToolApprovalActionsProps> = ({
       )
     }
     return (
-      <ActionsContainer $compact={compact} onClick={(e) => e.stopPropagation()}>
+      <ActionsContainer
+        $compact={compact}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}>
         <LoadingIndicator>
           <LoadingIcon />
           {!compact && <span>{t('message.tools.invoking')}</span>}
@@ -65,7 +72,10 @@ export const ToolApprovalActionsComponent: FC<ToolApprovalActionsProps> = ({
 
   // Waiting state - show confirm/cancel buttons
   return (
-    <ActionsContainer $compact={compact} onClick={(e) => e.stopPropagation()}>
+    <ActionsContainer
+      $compact={compact}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}>
       <Button
         size="small"
         color="danger"
