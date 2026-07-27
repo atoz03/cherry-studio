@@ -143,40 +143,60 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.9.6 - Bug Fixes
+    Cherry Studio 1.9.13 - Compatibility and workflow fixes
+
+    ✨ New Features
+    - [StepFun] Added Anthropic-compatible provider support, including tool use and image input for step-3.7-flash
 
     🐛 Bug Fixes
-    - [AI] Fixed crash when chat model's stored provider no longer exists
-    - [AI] Fixed streaming requests aborted after 30 minutes during active data transfer (affected models with extended thinking)
-    - [Agents] Fixed agent session creation failures when provider settings change
-    - [Agents] Fixed deepseek-r1 models incorrectly showing function_calling label causing errors in Agent mode
-    - [Agents] Use task name instead of agent name for cron task sessions
-    - [MCP] Fixed approval card not auto-expanding to show Run/Cancel buttons
-    - [MCP] Clean up OAuth tokens when deleting servers
-    - [Code Tools] Fixed Codex CLI launch failure when using OpenAI or other reserved providers
-    - [Claude Code] Fixed launch failures caused by auth conflicts with provider environment variables
-    - [Image] Fixed gpt-image-2 multi-turn editing crash
-    - [Knowledge] Fixed HTTP/HTTPS/FTP URLs being stripped from Markdown documents
-    - [OpenMinerU] Fixed preprocessing ENOENT errors due to ZIP structure change
-    - [Qiniu] Fixed PDF upload regression for GPT-5.4 models
-    - [Settings] Minor alignment fix for provider model list actions
+    - [Privacy] Respect the data collection setting when reporting token usage
+    - [Files] Convert PDFs to a compatible format when Gemini models are used through non-Gemini providers
+    - [Web Search] Parse ExaMCP result fields returned by current server responses
+    - [Gemini] Improve Gemini 3 request compatibility and sampling controls
+    - [Mini Apps] Refresh cached app URLs before reopening keep-alive apps
+    - [Memory] Avoid failures when no embedding model is configured
+    - [AIHubMix] Restore reasoning-effort settings for compatible models
+    - [Models] Recognize Grok Build capabilities correctly
+    - [Models] Do not mark Qwen Max models as supporting image input
+    - [Agents] Mark task-list items completed when an agent task finishes
+    - [Artifacts] Open HTML artifacts reliably in the system browser
+    - [Downloads] Allow generated SVG images to download correctly
+    - [Files] Preserve file extensions when saving pasted and Base64 images
+    - [Mini Apps] Prevent oversized text in Gemini mini apps
+    - [Tools] Keep approval controls and tool-group status synchronized
+
+    💄 Improvements
+    - [Notes] Keep the editor toolbar visible while scrolling
+    - [Chat] Apply the conversation-title limit by words instead of characters
+    - [Web Search] Preserve full result URLs for citations and ExaMCP results
+    - [Tools] Prevent approval controls from unexpectedly collapsing tool groups
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.9.6 - 错误修复
+    Cherry Studio 1.9.13 - 兼容性与工作流修复
+
+    ✨ 新功能
+    - [StepFun] 新增 Anthropic 兼容提供商支持，step-3.7-flash 可正确使用工具和图像输入
 
     🐛 问题修复
-    - [AI] 修复聊天模型的存储提供商不存在时导致的崩溃
-    - [AI] 修复活跃数据传输期间流式请求在 30 分钟后被中断的问题（影响具有扩展思考的模型）
-    - [智能体] 修复提供商设置更改时智能体会话创建失败的问题
-    - [智能体] 修复 deepseek-r1 模型错误显示 function_calling 标签导致智能体模式出错
-    - [智能体] 定时任务会话现在使用任务名称而非智能体名称
-    - [MCP] 修复批准卡片未自动展开以显示运行/取消按钮的问题
-    - [MCP] 删除服务器时清理 OAuth 令牌
-    - [代码工具] 修复使用 OpenAI 或其他保留提供商时 Codex CLI 启动失败的问题
-    - [Claude Code] 修复提供商环境变量导致身份验证冲突从而无法启动的问题
-    - [图像] 修复 gpt-image-2 多轮编辑崩溃问题
-    - [知识库] 修复 Markdown 文档中的 HTTP/HTTPS/FTP URL 被移除的问题
-    - [OpenMinerU] 修复 ZIP 结构变更导致的预处理 ENOENT 错误
-    - [七牛云] 修复 GPT-5.4 模型的 PDF 上传回归问题
-    - [设置] 提供商模型列表操作的微小对齐修复
+    - [隐私] 关闭数据收集后不再上报 Token 用量
+    - [文件] 通过非 Gemini 提供商使用 Gemini 模型时正确转换 PDF
+    - [网络搜索] 兼容 ExaMCP 当前服务端返回的结果字段
+    - [Gemini] 改进 Gemini 3 请求兼容性和采样参数控制
+    - [小程序] 重新打开保活小程序时刷新缓存 URL
+    - [记忆] 未配置嵌入模型时不再出现失败
+    - [AIHubMix] 恢复兼容模型的思考强度设置
+    - [模型] 正确识别 Grok Build 的能力
+    - [模型] 不再将 Qwen Max 模型标记为支持图像输入
+    - [智能体] 智能体任务完成后正确勾选任务列表
+    - [产物预览] 可稳定在系统浏览器中打开 HTML 产物
+    - [下载] 正确下载生成的 SVG 图像
+    - [文件] 保存粘贴图片和 Base64 图片时保留文件扩展名
+    - [小程序] 修复 Gemini 小程序文字过大的问题
+    - [工具] 同步工具批准控件和工具组状态
+
+    💄 改进
+    - [笔记] 滚动时保持编辑器工具栏可见
+    - [聊天] 会话标题限制改为按单词计算
+    - [网络搜索] 在引用和 ExaMCP 结果中保留完整 URL
+    - [工具] 点击批准控件时不再意外折叠工具组
     <!--LANG:END-->
