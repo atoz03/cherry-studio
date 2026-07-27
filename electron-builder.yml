@@ -143,12 +143,13 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.9.13 - Compatibility and workflow fixes
+    Cherry Studio 1.9.14 - Compatibility, workflow, and release fixes
 
     ✨ New Features
     - [StepFun] Added Anthropic-compatible provider support, including tool use and image input for step-3.7-flash
 
     🐛 Bug Fixes
+    - [Build] Use Windows Server 2022 in GitHub Actions to restore Windows release builds
     - [Privacy] Respect the data collection setting when reporting token usage
     - [Files] Convert PDFs to a compatible format when Gemini models are used through non-Gemini providers
     - [Web Search] Parse ExaMCP result fields returned by current server responses
@@ -172,12 +173,13 @@ releaseInfo:
     - [Tools] Prevent approval controls from unexpectedly collapsing tool groups
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.9.13 - 兼容性与工作流修复
+    Cherry Studio 1.9.14 - 兼容性、工作流与发布修复
 
     ✨ 新功能
     - [StepFun] 新增 Anthropic 兼容提供商支持，step-3.7-flash 可正确使用工具和图像输入
 
     🐛 问题修复
+    - [构建] GitHub Actions 固定使用 Windows Server 2022，恢复 Windows 发布构建
     - [隐私] 关闭数据收集后不再上报 Token 用量
     - [文件] 通过非 Gemini 提供商使用 Gemini 模型时正确转换 PDF
     - [网络搜索] 兼容 ExaMCP 当前服务端返回的结果字段
