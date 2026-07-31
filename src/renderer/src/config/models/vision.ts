@@ -50,6 +50,8 @@ const visionAllowedModels = [
   'gemma-?[3-4](?:[-.\\w]+)?',
   'doubao-seed-1[.-][68](?:-[\\w-]+)?',
   'doubao-seed-2[.-]0(?:-[\\w-]+)?',
+  'doubao-seed-2[.-]1(?:-[\\w-]+)?',
+  'doubao-seed-evolving(?:-[\\w-]+)?',
   'doubao-seed-code(?:-[\\w-]+)?',
   'kimi-thinking-preview',
   `gemma3(?:[-:\\w]+)?`,
