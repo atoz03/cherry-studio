@@ -23,12 +23,12 @@ import {
 import {
   GEMINI_FLASH_MODEL_REGEX,
   isClaude46SeriesModel,
-  isClaude47SeriesModel,
   isGemini3FlashModel,
   isGemini3ProModel,
   isGemini31FlashLiteModel,
   isGemini31ProModel,
   isKimi25OrNewerModel,
+  isSupportAdaptiveThinkingClaudeModel,
   withModelIdAndNameAsId
 } from './utils'
 import { isTextToImageModel } from './vision'
@@ -87,6 +87,8 @@ export const MODEL_SUPPORTED_REASONING_EFFORT = {
   deepseek_hybrid: ['auto'] as const,
   deepseek_v4: ['high', 'xhigh'] as const,
   kimi_k2_5: ['none', 'auto'] as const,
+  kimi_always_think: ['auto'] as const,
+  longcat: ['auto'] as const,
   // Claude 3.7, 4.0, 4.5 reasoning models
   claude: ['low', 'medium', 'high'] as const,
   // Claude 4.6 supports low, medium, high, xhigh (xhigh is mapped to max in API)
@@ -130,6 +132,8 @@ export const MODEL_SUPPORTED_OPTIONS: ThinkingOptionConfig = {
   deepseek_hybrid: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.deepseek_hybrid] as const,
   deepseek_v4: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.deepseek_v4] as const,
   kimi_k2_5: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.kimi_k2_5] as const,
+  kimi_always_think: ['default', ...MODEL_SUPPORTED_REASONING_EFFORT.kimi_always_think] as const,
+  longcat: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.longcat] as const,
   claude: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.claude] as const,
   claude46: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.claude46] as const,
   mistral: ['default', 'none', ...MODEL_SUPPORTED_REASONING_EFFORT.mistral] as const
@@ -141,9 +145,9 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
   const modelId = getLowerBaseModelName(model.id)
   if (isClaudeReasoningModel(model)) {
     thinkingModelType = 'claude'
-    // 4.7 reuses the 4.6 effort list (low/medium/high/xhigh); provider-level
-    // mapping still distinguishes them (4.7 sends native 'xhigh', 4.6 sends 'max').
-    if (isClaude46SeriesModel(model) || isClaude47SeriesModel(model)) {
+    // Opus 4.7+ reuses the 4.6 effort list (low/medium/high/xhigh); provider-level
+    // mapping still distinguishes them (Opus 4.7+ sends native 'xhigh', 4.6 sends 'max').
+    if (isClaude46SeriesModel(model) || isSupportAdaptiveThinkingClaudeModel(model)) {
       thinkingModelType = 'claude46'
     }
   } else if (isOpenAIDeepResearchModel(model)) {
@@ -227,7 +231,11 @@ const _getThinkModelType = (model: Model): ThinkingModelType => {
   } else if (isSupportedThinkingTokenMiMoModel(model)) {
     thinkingModelType = 'mimo'
   } else if (isSupportedThinkingTokenKimiModel(model)) {
-    thinkingModelType = 'kimi_k2_5'
+    // kimi-k2.7-code is an always-think model: no 'none' option, only 'auto'.
+    // See isKimiK27CodeModel for the full reasoning.
+    thinkingModelType = isKimiK27CodeModel(model) ? 'kimi_always_think' : 'kimi_k2_5'
+  } else if (isSupportedThinkingTokenLongCatModel(model)) {
+    thinkingModelType = 'longcat'
   } else if (isMistralReasoningModel(model)) {
     thinkingModelType = 'mistral'
   }
@@ -319,6 +327,7 @@ function _isSupportedThinkingTokenModel(model: Model): boolean {
     isSupportedThinkingTokenZhipuModel(model) ||
     isSupportedThinkingTokenMiMoModel(model) ||
     isSupportedThinkingTokenKimiModel(model) ||
+    isSupportedThinkingTokenLongCatModel(model) ||
     isSupportedThinkingTokenDeepSeekModel(model)
   )
 }
@@ -558,7 +567,7 @@ export function isQwenAlwaysThinkModel(model?: Model): boolean {
 
 // Doubao 支持思考模式的模型正则
 export const DOUBAO_THINKING_MODEL_REGEX =
-  /doubao-(?:1[.-]5-thinking-vision-pro|1[.-]5-thinking-pro-m|seed-1[.-][68](?:-flash)?(?!-(?:thinking)(?:-|$))|seed-code(?:-preview)?(?:-\d+)?|seed-2[.-]0(?:-[\w-]+)?)(?:-[\w-]+)*/i
+  /doubao-(?:1[.-]5-thinking-vision-pro|1[.-]5-thinking-pro-m|seed-1[.-][68](?:-flash)?(?!-(?:thinking)(?:-|$))|seed-code(?:-preview)?(?:-\d+)?|seed-2[.-]0(?:-[\w-]+)?|seed-2[.-]1(?:-[\w-]+)?|seed-evolving)(?:-[\w-]+)*/i
 
 // 支持 auto 的 Doubao 模型 doubao-seed-1.6-xxx doubao-seed-1-6-xxx  doubao-1-5-thinking-pro-m-xxx
 // Auto thinking is no longer supported after version 251015, see https://console.volcengine.com/ark/region:ark+cn-beijing/model/detail?Id=doubao-seed-1-6
@@ -571,7 +580,7 @@ export function isDoubaoThinkingAutoModel(model: Model): boolean {
 }
 
 export function isDoubaoSeedAfter251015(model: Model): boolean {
-  const pattern = /doubao-seed-1-6-(?:lite-)?251015|doubao-seed-2[.-]0/i
+  const pattern = /doubao-seed-1-6-(?:lite-)?251015|doubao-seed-2[.-]0|doubao-seed-2[.-]1|doubao-seed-evolving/i
   return pattern.test(model.id) || pattern.test(model.name)
 }
 
@@ -616,7 +625,8 @@ export function isClaudeReasoningModel(model?: Model): boolean {
     modelId.includes('claude-3.7-sonnet') ||
     modelId.includes('claude-sonnet-4') ||
     modelId.includes('claude-opus-4') ||
-    modelId.includes('claude-haiku-4')
+    modelId.includes('claude-haiku-4') ||
+    modelId.includes('claude-fable')
   )
 }
 
@@ -692,6 +702,39 @@ const _isSupportedThinkingTokenKimiModel = (model: Model): boolean => {
 export const isSupportedThinkingTokenKimiModel = (model: Model): boolean => {
   const { idResult, nameResult } = withModelIdAndNameAsId(model, _isSupportedThinkingTokenKimiModel)
   return idResult || nameResult
+}
+
+/**
+ * Detects whether the model is the Kimi K2.7 Code variant.
+ *
+ * Per Moonshot's official docs, `kimi-k2.7-code` is an "always-think" model:
+ *   - Only accepts `{ type: 'enabled' }` for the `thinking` parameter
+ *   - Rejects `{ type: 'disabled' }` and any other value with an API error
+ *   - Does not accept `budget_tokens` (the default `{"type": "enabled"}` shape only)
+ *
+ * Use this helper to short-circuit thinking-control branches that would otherwise
+ * emit unsupported parameters for this model. Mirrors the `isMiniMaxM3Model` /
+ * `isQwenAlwaysThinkModel` pattern (always-think variants get their own predicate
+ * rather than ad-hoc string checks at every call site).
+ */
+const _isKimiK27CodeModel = (model: Model): boolean => {
+  const modelId = getLowerBaseModelName(model.id, '/')
+  // Anchored: matches `kimi-k2.7-code` with optional trailing `-<segment>`.
+  // Avoids accidentally matching future variants like `kimi-k2.7-coder` or
+  // model ids that embed `k2.7-code` as a substring (e.g. `k2.7-coder-preview`).
+  return /^kimi-k2\.7-code(?:-[\w-]+)?$/i.test(modelId)
+}
+
+export const isKimiK27CodeModel = (model?: Model): boolean => {
+  if (!model) return false
+  const { idResult, nameResult } = withModelIdAndNameAsId(model, _isKimiK27CodeModel)
+  return idResult || nameResult
+}
+
+export const isSupportedThinkingTokenLongCatModel = (model?: Model): boolean => {
+  if (!model) return false
+  const modelId = getLowerBaseModelName(model.id, '/')
+  return /^longcat-2\.0(?:-[\w-]+)?$/i.test(modelId)
 }
 
 /**
@@ -836,6 +879,7 @@ export function isReasoningModel(model?: Model): boolean {
     isMiMoReasoningModel(model) ||
     isBaichuanReasoningModel(model) ||
     isKimiReasoningModel(model) ||
+    isSupportedThinkingTokenLongCatModel(model) ||
     modelId.includes('magistral') ||
     modelId.includes('mistral-small-2603') ||
     modelId.includes('pangu-pro-moe') ||
@@ -876,9 +920,9 @@ const THINKING_TOKEN_MAP: Record<string, { min: number; max: number }> = {
   'qwen3-(?!max).*$': { min: 1024, max: 38_912 },
 
   // Claude models (supports AWS Bedrock 'anthropic.' prefix, GCP Vertex AI '@' separator, and '-v1:0' suffix)
-  // Opus 4.7 supports 128K output tokens. Uses adaptive thinking (no budgetTokens sent),
+  // Opus 4.7+ supports 128K output tokens. Uses adaptive thinking (no budgetTokens sent),
   // but the limit entry is still consulted for the Poe / openai-compatible fallback paths.
-  '(?:anthropic\\.)?claude-opus-4[.-]7(?:[@\\-:][\\w\\-:]+)?$': { min: 1024, max: 128_000 },
+  '(?:anthropic\\.)?claude-opus-4[.-](?:[7-9]|[1-9]\\d)(?:[@\\-:][\\w\\-:]+)?$': { min: 1024, max: 128_000 },
   // Opus 4.6 supports 128K output tokens
   '(?:anthropic\\.)?claude-opus-4[.-]6(?:[@\\-:][\\w\\-:]+)?$': { min: 1024, max: 128_000 },
   // Sonnet 4.6, and Haiku is assumed to be also 64k

@@ -1761,6 +1761,7 @@
     "detail": "Chi tiết lỗi",
     "details": "Chi tiết",
     "diagnosis": {
+      "abnormal_finish": "Phản hồi đã kết thúc bất thường, vui lòng thử lại hoặc đổi mô hình",
       "ai_button": "Chẩn đoán bằng AI",
       "ai_done": "Chẩn đoán",
       "ai_loading": "Chẩn đoán",
@@ -1776,6 +1777,7 @@
       "model_conflict": "Mô hình chẩn đoán giống với mô hình đang gặp lỗi",
       "network": "Không thể kết nối đến máy chủ, hãy kiểm tra cài đặt mạng hoặc proxy",
       "ocr": "Công cụ OCR chưa được khởi tạo, hãy kiểm tra cài đặt OCR",
+      "output_truncated": "Phản hồi đã đạt độ dài tối đa và bị cắt bớt",
       "parse": "AI đã trả về phản hồi không hợp lệ, vui lòng thử lại hoặc chuyển sang mô hình khác",
       "payload": "Nội dung yêu cầu quá lớn, vui lòng giảm kích thước tệp hoặc văn bản",
       "proxy": "Lỗi proxy hoặc chứng chỉ SSL, hãy kiểm tra cài đặt proxy và mạng",

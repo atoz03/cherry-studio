@@ -164,6 +164,10 @@ describe('isFunctionCallingModel', () => {
     expect(isFunctionCallingModel(createModel({ id: 'qwen3.5-397b-a17b', provider: 'dashscope' }))).toBe(true)
   })
 
+  it('supports LongCat-2.0 tool calling declared by LongCat model details', () => {
+    expect(isFunctionCallingModel(createModel({ id: 'LongCat-2.0', provider: 'longcat' }))).toBe(true)
+  })
+
   describe('MiniMax M2.x Models', () => {
     it('supports minimax-m2 base model', () => {
       expect(isFunctionCallingModel(createModel({ id: 'minimax-m2', provider: 'minimax' }))).toBe(true)
@@ -246,6 +250,38 @@ describe('isFunctionCallingModel', () => {
         name: 'doubao-seed-2.0-pro-260215',
         provider: 'doubao',
         group: 'Doubao-Seed-2.0'
+      }
+      expect(isFunctionCallingModel(model)).toBe(true)
+    })
+  })
+
+  describe('Doubao Seed 2.1 and Evolving Models', () => {
+    it('should identify doubao-seed-2-1-pro-260628 as function calling model', () => {
+      const model: Model = {
+        id: 'doubao-seed-2-1-pro-260628',
+        name: 'doubao-seed-2-1-pro',
+        provider: 'doubao',
+        group: 'Doubao-Seed-2.1'
+      }
+      expect(isFunctionCallingModel(model)).toBe(true)
+    })
+
+    it('should identify doubao-seed-2-1-turbo-260628 as function calling model', () => {
+      const model: Model = {
+        id: 'doubao-seed-2-1-turbo-260628',
+        name: 'doubao-seed-2-1-turbo',
+        provider: 'doubao',
+        group: 'Doubao-Seed-2.1'
+      }
+      expect(isFunctionCallingModel(model)).toBe(true)
+    })
+
+    it('should identify doubao-seed-evolving as function calling model', () => {
+      const model: Model = {
+        id: 'doubao-seed-evolving',
+        name: 'doubao-seed-evolving',
+        provider: 'doubao',
+        group: 'Doubao-Seed-Evolving'
       }
       expect(isFunctionCallingModel(model)).toBe(true)
     })

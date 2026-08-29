@@ -1814,6 +1814,7 @@
     "detail": "Détails de l'erreur",
     "details": "Informations détaillées",
     "diagnosis": {
+      "abnormal_finish": "La réponse s'est terminée anormalement, veuillez réessayer ou changer de modèle",
       "ai_button": "Diagnostic IA",
       "ai_done": "Diagnostiqué",
       "ai_loading": "Diagnostic en cours",
@@ -1829,6 +1830,7 @@
       "model_conflict": "Le modèle de diagnostic est identique au modèle en erreur",
       "network": "Impossible de se connecter au serveur, vérifiez les paramètres réseau ou proxy",
       "ocr": "Moteur OCR non initialisé, vérifiez les paramètres OCR",
+      "output_truncated": "La réponse a atteint la longueur maximale et a été tronquée",
       "parse": "L'IA a renvoyé une réponse invalide, veuillez réessayer ou changer de modèle",
       "payload": "Contenu de la requête trop volumineux, veuillez réduire la taille du fichier ou du texte",
       "proxy": "Erreur de proxy ou de certificat SSL, vérifiez les paramètres proxy et réseau",

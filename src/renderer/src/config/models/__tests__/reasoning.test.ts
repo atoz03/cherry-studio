@@ -19,6 +19,7 @@ import {
   isGrok4FastReasoningModel,
   isHunyuanReasoningModel,
   isInterleavedThinkingModel,
+  isKimiK27CodeModel,
   isKimiReasoningModel,
   isLingReasoningModel,
   isMiniMaxReasoningModel,
@@ -32,6 +33,7 @@ import {
   isSupportedThinkingTokenDoubaoModel,
   isSupportedThinkingTokenGeminiModel,
   isSupportedThinkingTokenKimiModel,
+  isSupportedThinkingTokenLongCatModel,
   isSupportedThinkingTokenMiMoModel,
   isSupportedThinkingTokenModel,
   isSupportedThinkingTokenQwenModel,
@@ -333,6 +335,14 @@ describe('Claude & regional providers', () => {
     expect(isClaudeReasoningModel(createModel({ id: 'claude-3-haiku' }))).toBe(false)
   })
 
+  it('treats the whole Claude Fable line as reasoning models', () => {
+    expect(isClaudeReasoningModel(createModel({ id: 'claude-fable-5' }))).toBe(true)
+    expect(isClaudeReasoningModel(createModel({ id: 'claude-fable-5.7' }))).toBe(true)
+    expect(isClaudeReasoningModel(createModel({ id: 'anthropic.claude-fable-5-v1:0' }))).toBe(true)
+    // Not pinned to major 5 — future Fable releases stay covered.
+    expect(isClaudeReasoningModel(createModel({ id: 'claude-fable-6' }))).toBe(true)
+  })
+
   it('covers hunyuan reasoning heuristics', () => {
     expect(isHunyuanReasoningModel(createModel({ id: 'hunyuan-a13b', provider: 'hunyuan' }))).toBe(true)
     expect(isHunyuanReasoningModel(createModel({ id: 'hunyuan-lite', provider: 'hunyuan' }))).toBe(false)
@@ -352,6 +362,20 @@ describe('Claude & regional providers', () => {
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2-pro' }))).toBe(true)
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2.7' }))).toBe(true)
     expect(isMiniMaxReasoningModel(createModel({ id: 'minimax-m2.7-highspeed' }))).toBe(true)
+  })
+
+  it('exposes controllable thinking options for LongCat-2.0 on any provider', () => {
+    const model = createModel({ id: 'LongCat-2.0', provider: 'longcat' })
+
+    expect(isSupportedThinkingTokenLongCatModel(model)).toBe(true)
+    expect(isSupportedThinkingTokenLongCatModel(createModel({ id: 'LongCat-2.0', provider: 'openrouter' }))).toBe(true)
+    expect(
+      isSupportedThinkingTokenLongCatModel(createModel({ id: 'LongCat-Flash-Thinking', provider: 'longcat' }))
+    ).toBe(false)
+    expect(getThinkModelType(model)).toBe('longcat')
+    expect(isSupportedThinkingTokenModel(model)).toBe(true)
+    expect(isFixedReasoningModel(model)).toBe(false)
+    expect(getModelSupportedReasoningEffortOptions(model)).toEqual(['default', 'none', 'auto'])
   })
 })
 
@@ -2712,6 +2736,23 @@ describe('Claude Models', () => {
       expect(getThinkModelType(createModel({ id: 'anthropic.claude-opus-4-6-v1' }))).toBe('claude46')
     })
 
+    it('should return claude46 for Claude Opus 4.7 and newer models', () => {
+      expect(getThinkModelType(createModel({ id: 'claude-opus-4-7' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-opus-4-8' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'anthropic.claude-opus-4-8-v1:0' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-opus-4-10' }))).toBe('claude46')
+    })
+
+    it('should return claude46 for the whole Claude Fable line (shares the 4.6 effort list)', () => {
+      expect(getThinkModelType(createModel({ id: 'claude-fable-5' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-fable-5-7' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-fable-5.7' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'anthropic.claude-fable-5-v1:0' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-fable-5-20260101' }))).toBe('claude46')
+      // Future Fable majors must keep working too (no hardcoded -5 anywhere in the chain).
+      expect(getThinkModelType(createModel({ id: 'claude-fable-6' }))).toBe('claude46')
+    })
+
     it('should return default for non-reasoning Claude models', () => {
       expect(getThinkModelType(createModel({ id: 'claude-3-opus' }))).toBe('default')
       expect(getThinkModelType(createModel({ id: 'claude-3-haiku' }))).toBe('default')
@@ -2779,17 +2820,22 @@ describe('Claude Models', () => {
     })
   })
 
-  describe('Claude 4.7 thinking model type and token limits', () => {
-    it('routes Opus 4.7 through the claude46 thinking type', () => {
+  describe('Claude Opus 4.7+ thinking model type and token limits', () => {
+    it('routes Opus 4.7+ through the claude46 thinking type', () => {
       expect(getThinkModelType(createModel({ id: 'claude-opus-4-7' }))).toBe('claude46')
       expect(getThinkModelType(createModel({ id: 'anthropic.claude-opus-4-7-v1' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-opus-4-8' }))).toBe('claude46')
+      expect(getThinkModelType(createModel({ id: 'claude-opus-4-10' }))).toBe('claude46')
     })
 
-    it('returns 128K max tokens for Opus 4.7 models', () => {
+    it('returns 128K max tokens for Opus 4.7+ models', () => {
       expect(findTokenLimit('claude-opus-4-7')).toEqual({ min: 1024, max: 128_000 })
       expect(findTokenLimit('claude-opus-4.7')).toEqual({ min: 1024, max: 128_000 })
       expect(findTokenLimit('anthropic.claude-opus-4-7-v1')).toEqual({ min: 1024, max: 128_000 })
       expect(findTokenLimit('claude-opus-4-7@20260401')).toEqual({ min: 1024, max: 128_000 })
+      expect(findTokenLimit('claude-opus-4-8')).toEqual({ min: 1024, max: 128_000 })
+      expect(findTokenLimit('anthropic.claude-opus-4-8-v1:0')).toEqual({ min: 1024, max: 128_000 })
+      expect(findTokenLimit('claude-opus-4-10')).toEqual({ min: 1024, max: 128_000 })
     })
   })
 })
@@ -2941,6 +2987,90 @@ describe('Kimi Models', () => {
       })
     })
   })
+
+  describe('isKimiK27CodeModel', () => {
+    describe('should return true for kimi-k2.7-code', () => {
+      it('should recognize bare kimi-k2.7-code id', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.7-code' }))).toBe(true)
+      })
+
+      it('should recognize moonshot/kimi-k2.7-code id with provider prefix', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'moonshot/kimi-k2.7-code' }))).toBe(true)
+      })
+
+      it('should recognize kimi-k2.7-code with trailing segment', () => {
+        // Some providers append a snapshot/qualifier suffix after the model id.
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.7-code-preview' }))).toBe(true)
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.7-code-2025-11-01' }))).toBe(true)
+      })
+
+      it('should handle case insensitivity', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'KIMI-K2.7-CODE' }))).toBe(true)
+        expect(isKimiK27CodeModel(createModel({ id: 'Kimi-K2.7-Code' }))).toBe(true)
+      })
+    })
+
+    describe('should return false for related but distinct models', () => {
+      it('should reject bare kimi-k2.7 (no -code suffix)', () => {
+        // k2.7 (hypothetical general-purpose variant) is a normal Kimi thinking
+        // model and supports 'none' reasoningEffort. The K2.7 Code-specific
+        // check must not classify it as always-think.
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.7' }))).toBe(false)
+      })
+
+      it('should reject kimi-k2.5 and kimi-k2.6 (they support disable)', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.5' }))).toBe(false)
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.6' }))).toBe(false)
+      })
+
+      it('should reject kimi-k2-thinking and kimi-k2-thinking-turbo', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2-thinking' }))).toBe(false)
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2-thinking-turbo' }))).toBe(false)
+      })
+
+      it('should reject ids that embed k2.7-code as a non-anchored substring', () => {
+        // The regex is anchored with `(?:-[\w-]+)?$`, so an id that contains
+        // 'k2.7-code' as a middle segment (e.g. a forked variant) must not match
+        // unless it follows the canonical `kimi-k2.7-code[-<segment>]` shape.
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.7-coder' }))).toBe(false)
+        expect(isKimiK27CodeModel(createModel({ id: 'k2.7-code-test' }))).toBe(false)
+      })
+
+      it('should reject models from other providers', () => {
+        expect(isKimiK27CodeModel(createModel({ id: 'gpt-4' }))).toBe(false)
+        expect(isKimiK27CodeModel(createModel({ id: 'claude-3-opus' }))).toBe(false)
+        expect(isKimiK27CodeModel(createModel({ id: 'kimi-k2.5-code' }))).toBe(false)
+      })
+    })
+
+    describe('edge cases', () => {
+      it('should return false for undefined', () => {
+        expect(isKimiK27CodeModel(undefined)).toBe(false)
+      })
+
+      it('should return false when both id and name are empty', () => {
+        expect(isKimiK27CodeModel(createModel({ id: '', name: '' }))).toBe(false)
+      })
+    })
+  })
+
+  describe('k2.7-code integration with thinking model type', () => {
+    it('should classify kimi-k2.7-code as kimi_always_think', () => {
+      expect(getThinkModelType(createModel({ id: 'kimi-k2.7-code' }))).toBe('kimi_always_think')
+    })
+
+    it('should fall back to kimi_k2_5 for non-code k2.x variants', () => {
+      expect(getThinkModelType(createModel({ id: 'kimi-k2.5' }))).toBe('kimi_k2_5')
+      expect(getThinkModelType(createModel({ id: 'kimi-k2.6' }))).toBe('kimi_k2_5')
+      expect(getThinkModelType(createModel({ id: 'kimi-k2.7' }))).toBe('kimi_k2_5')
+    })
+
+    it('should expose only [default, auto] for kimi_always_think (no none)', () => {
+      const options = getModelSupportedReasoningEffortOptions(createModel({ id: 'kimi-k2.7-code' }))
+      expect(options).toEqual(['default', 'auto'])
+      expect(options).not.toContain('none')
+    })
+  })
 })
 
 describe('isSupportedThinkingTokenZhipuModel', () => {
@@ -3064,6 +3194,77 @@ describe('Doubao Seed 2.0 Models', () => {
       group: 'Doubao-Seed-2.0'
     }
     expect(isDoubaoSeedAfter251015(model)).toBe(true)
+  })
+})
+
+describe('Doubao Seed 2.1 and Evolving Models', () => {
+  it('should identify doubao-seed-2-1-pro-260628 as thinking model', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-pro-260628',
+      name: 'doubao-seed-2-1-pro',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    expect(isSupportedThinkingTokenDoubaoModel(model)).toBe(true)
+    expect(isDoubaoSeedAfter251015(model)).toBe(true)
+    expect(getThinkModelType(model)).toBe('doubao_after_251015')
+  })
+
+  it('should identify doubao-seed-2-1-turbo-260628 as thinking model', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-turbo-260628',
+      name: 'doubao-seed-2-1-turbo',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    expect(isSupportedThinkingTokenDoubaoModel(model)).toBe(true)
+    expect(isDoubaoSeedAfter251015(model)).toBe(true)
+    expect(getThinkModelType(model)).toBe('doubao_after_251015')
+  })
+
+  it('should identify doubao-seed-evolving as thinking model', () => {
+    const model: Model = {
+      id: 'doubao-seed-evolving',
+      name: 'doubao-seed-evolving',
+      provider: 'doubao',
+      group: 'Doubao-Seed-Evolving'
+    }
+    expect(isSupportedThinkingTokenDoubaoModel(model)).toBe(true)
+    expect(isDoubaoSeedAfter251015(model)).toBe(true)
+    expect(getThinkModelType(model)).toBe('doubao_after_251015')
+  })
+
+  it('should support minimal, low, medium, high reasoning effort for doubao-seed-2-1-pro', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-pro-260628',
+      name: 'doubao-seed-2-1-pro',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    const options = getModelSupportedReasoningEffortOptions(model)
+    expect(options).toEqual(['default', 'minimal', 'low', 'medium', 'high'])
+  })
+
+  it('should support minimal, low, medium, high reasoning effort for doubao-seed-2-1-turbo', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-turbo-260628',
+      name: 'doubao-seed-2-1-turbo',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    const options = getModelSupportedReasoningEffortOptions(model)
+    expect(options).toEqual(['default', 'minimal', 'low', 'medium', 'high'])
+  })
+
+  it('should support minimal, low, medium, high reasoning effort for doubao-seed-evolving', () => {
+    const model: Model = {
+      id: 'doubao-seed-evolving',
+      name: 'doubao-seed-evolving',
+      provider: 'doubao',
+      group: 'Doubao-Seed-Evolving'
+    }
+    const options = getModelSupportedReasoningEffortOptions(model)
+    expect(options).toEqual(['default', 'minimal', 'low', 'medium', 'high'])
   })
 })
 

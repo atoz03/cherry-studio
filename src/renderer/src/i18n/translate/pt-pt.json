@@ -1814,6 +1814,7 @@
     "detail": "Detalhes do erro",
     "details": "Detalhes",
     "diagnosis": {
+      "abnormal_finish": "A resposta terminou de forma anómala, tente novamente ou mude de modelo",
       "ai_button": "Diagnóstico IA",
       "ai_done": "Diagnosticado",
       "ai_loading": "A diagnosticar",
@@ -1829,6 +1830,7 @@
       "model_conflict": "O modelo de diagnóstico é igual ao modelo com erro",
       "network": "Não é possível ligar ao servidor, verifique as definições de rede ou proxy",
       "ocr": "Motor OCR não inicializado, verifique as definições de OCR",
+      "output_truncated": "A resposta atingiu o comprimento máximo e foi truncada",
       "parse": "A IA retornou uma resposta inválida, tente novamente ou mude de modelo",
       "payload": "Conteúdo da solicitação muito grande, reduza o tamanho do arquivo ou do texto",
       "proxy": "Erro de proxy ou certificado SSL, verifique as configurações de proxy e de rede",

@@ -36,18 +36,6 @@ export const createCallbacks = (deps: CallbacksDependencies) => {
     reasoningEffort: reasoningEffortForThinkingBlock
   })
 
-  // 创建基础回调
-  const baseCallbacks = createBaseCallbacks({
-    blockManager,
-    dispatch,
-    getState,
-    topicId,
-    assistantMsgId,
-    saveUpdatesToDB,
-    assistant,
-    getCurrentThinkingInfo: thinkingCallbacks.getCurrentThinkingInfo
-  })
-
   const toolCallbacks = createToolCallbacks({
     blockManager,
     assistantMsgId,
@@ -84,6 +72,19 @@ export const createCallbacks = (deps: CallbacksDependencies) => {
     getCitationBlockId: citationCallbacks.getCitationBlockId,
     getCitationBlockIdFromTool: toolCallbacks.getCitationBlockId,
     handleCompactTextComplete: compactCallbacks.handleTextComplete
+  })
+
+  // 创建基础回调
+  const baseCallbacks = createBaseCallbacks({
+    blockManager,
+    dispatch,
+    getState,
+    topicId,
+    assistantMsgId,
+    saveUpdatesToDB,
+    assistant,
+    getCurrentThinkingInfo: thinkingCallbacks.getCurrentThinkingInfo,
+    flushPendingText: textCallbacks.flushPendingText
   })
 
   // 组合所有回调

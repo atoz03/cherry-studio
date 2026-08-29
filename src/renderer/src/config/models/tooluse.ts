@@ -31,6 +31,8 @@ export const FUNCTION_CALLING_MODELS = [
   'grok-4(?:-[\\w-]+)?',
   'doubao-seed-1[.-][68](?:-[\\w-]+)?',
   'doubao-seed-2[.-]0(?:-[\\w-]+)?',
+  'doubao-seed-2[.-]1(?:-[\\w-]+)?',
+  'doubao-seed-evolving(?:-[\\w-]+)?',
   'doubao-seed-code(?:-[\\w-]+)?',
   'kimi-k2(?:-[\\w-]+)?',
   'ling-\\w+(?:-[\\w-]+)?',
@@ -40,6 +42,7 @@ export const FUNCTION_CALLING_MODELS = [
   'mimo-v2-flash',
   'mimo-v2-pro',
   'mimo-v2-omni',
+  'longcat-2\\.0(?:-[\\w-]+)?',
   'glm-5v-turbo'
 ] as const
 

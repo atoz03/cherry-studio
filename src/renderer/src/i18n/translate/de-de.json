@@ -1814,6 +1814,7 @@
     "detail": "Fehlerdetails",
     "details": "Details",
     "diagnosis": {
+      "abnormal_finish": "Antwort wurde abnormal beendet, bitte erneut versuchen oder Modell wechseln",
       "ai_button": "KI-Diagnose",
       "ai_done": "Diagnostiziert",
       "ai_loading": "Wird diagnostiziert",
@@ -1829,6 +1830,7 @@
       "model_conflict": "Diagnosemodell ist identisch mit dem fehlerhaften Modell",
       "network": "Verbindung zum Server nicht möglich, Netzwerk- oder Proxy-Einstellungen prüfen",
       "ocr": "OCR-Engine nicht initialisiert, OCR-Einstellungen prüfen",
+      "output_truncated": "Antwort hat die maximale Länge erreicht und wurde abgeschnitten",
       "parse": "Die KI hat eine ungültige Antwort zurückgegeben, bitte versuchen Sie es erneut oder wechseln Sie das Modell.",
       "payload": "Anfrageinhalt zu groß, bitte verringern Sie die Datei- oder Textgröße",
       "proxy": "Proxy- oder SSL-Zertifikatsfehler, überprüfen Sie die Proxy- und Netzwerkeinstellungen",

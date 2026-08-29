@@ -345,6 +345,8 @@ describe('isVisionModel', () => {
       expect(isVisionModel(createModel({ id: 'moonshot/kimi-k2.5' }))).toBe(true)
       expect(isVisionModel(createModel({ id: 'kimi-k2.6' }))).toBe(true)
       expect(isVisionModel(createModel({ id: 'moonshot/kimi-k2.6' }))).toBe(true)
+      expect(isVisionModel(createModel({ id: 'kimi-k2.7-code' }))).toBe(true)
+      expect(isVisionModel(createModel({ id: 'moonshot/kimi-k2.7-code' }))).toBe(true)
     })
     it('should return false for kimi non-vision models', () => {
       expect(isVisionModel(createModel({ id: 'kimi-k2-thinking' }))).toBe(false)
@@ -367,6 +369,18 @@ describe('isVisionModel', () => {
       expect(isVisionModel(createModel({ id: 'qwen3.5-plus' }))).toBe(true)
       expect(isVisionModel(createModel({ id: 'qwen3.5-plus-2026-02-15' }))).toBe(true)
       expect(isVisionModel(createModel({ id: 'qwen3.5-397b-a17b' }))).toBe(true)
+    })
+
+    it('should return false for Qwen max series models (non-vision)', () => {
+      expect(isVisionModel(createModel({ id: 'qwen3.7-max' }))).toBe(false)
+      expect(isVisionModel(createModel({ id: 'qwen-max' }))).toBe(false)
+      expect(isVisionModel(createModel({ id: 'qwen3.5-max' }))).toBe(false)
+    })
+
+    it('should return true for Qwen VL series with max suffix', () => {
+      expect(isVisionModel(createModel({ id: 'qwen-vl-max' }))).toBe(true)
+      expect(isVisionModel(createModel({ id: 'qwen2-vl-max' }))).toBe(true)
+      expect(isVisionModel(createModel({ id: 'qwen3-vl-max' }))).toBe(true)
     })
   })
 })
@@ -418,6 +432,38 @@ describe('Doubao Seed 2.0 Models', () => {
       name: 'doubao-seed-2.0-pro-260215',
       provider: 'doubao',
       group: 'Doubao-Seed-2.0'
+    }
+    expect(isVisionModel(model)).toBe(true)
+  })
+})
+
+describe('Doubao Seed 2.1 and Evolving Models', () => {
+  it('should identify doubao-seed-2-1-pro-260628 as vision model', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-pro-260628',
+      name: 'doubao-seed-2-1-pro',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    expect(isVisionModel(model)).toBe(true)
+  })
+
+  it('should identify doubao-seed-2-1-turbo-260628 as vision model', () => {
+    const model: Model = {
+      id: 'doubao-seed-2-1-turbo-260628',
+      name: 'doubao-seed-2-1-turbo',
+      provider: 'doubao',
+      group: 'Doubao-Seed-2.1'
+    }
+    expect(isVisionModel(model)).toBe(true)
+  })
+
+  it('should identify doubao-seed-evolving as vision model', () => {
+    const model: Model = {
+      id: 'doubao-seed-evolving',
+      name: 'doubao-seed-evolving',
+      provider: 'doubao',
+      group: 'Doubao-Seed-Evolving'
     }
     expect(isVisionModel(model)).toBe(true)
   })

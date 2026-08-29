@@ -5,7 +5,7 @@ import { getLowerBaseModelName, isUserSelectedModelType } from '@renderer/utils'
 import { isEmbeddingModel, isRerankModel } from './embedding'
 import { isFunctionCallingModel } from './tooluse'
 
-// Vision models
+// Vision models, used as regex
 const visionAllowedModels = [
   'llava',
   'moondream',
@@ -20,13 +20,14 @@ const visionAllowedModels = [
   'claude-haiku-4',
   'claude-sonnet-4',
   'claude-opus-4',
+  'claude-fable',
   'vision',
   'glm-4(?:\\.\\d+)?v(?:-[\\w-]+)?',
   'qwen-vl',
   'qwen2-vl',
   'qwen2.5-vl',
   'qwen3-vl',
-  'qwen3\\.[5-9](?:-[\\w-]+)?',
+  'qwen3\\.[5-9](?!-max)(?:-[\\w-]+)?',
   'qwen2.5-omni',
   'qwen3-omni(?:-[\\w-]+)?',
   'qvq',
@@ -44,11 +45,13 @@ const visionAllowedModels = [
   'o3(?:-[\\w-]+)?',
   'o4(?:-[\\w-]+)?',
   'deepseek-vl(?:[\\w-]+)?',
-  'kimi-k2\\.[56](?:-[\\w-]+)?',
+  'kimi-k2\\.[5-9]\\d*(?:-[\\w-]+)?',
   'kimi-latest',
   'gemma-?[3-4](?:[-.\\w]+)?',
   'doubao-seed-1[.-][68](?:-[\\w-]+)?',
   'doubao-seed-2[.-]0(?:-[\\w-]+)?',
+  'doubao-seed-2[.-]1(?:-[\\w-]+)?',
+  'doubao-seed-evolving(?:-[\\w-]+)?',
   'doubao-seed-code(?:-[\\w-]+)?',
   'kimi-thinking-preview',
   `gemma3(?:[-:\\w]+)?`,
