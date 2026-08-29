@@ -3384,14 +3384,6 @@
     "zoom_in": "Phóng to",
     "zoom_out": "Zum Herauszoomen"
   },
-  "privacy_policy": {
-    "title": "Chính sách quyền riêng tư"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "Chúng tôi đã cập nhật chính sách quyền riêng tư. Vui lòng xem lại bản mới nhất ",
-    "policy": "Chính sách quyền riêng tư",
-    "title": "Chính sách quyền riêng tư đã được cập nhật"
-  },
   "prompts": {
     "explanation": "Giải thích khái niệm này cho tôi",
     "summarize": "Tóm tắt văn bản này",

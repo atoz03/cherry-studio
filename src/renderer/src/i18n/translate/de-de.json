@@ -3492,14 +3492,6 @@
     "zoom_in": "Vergrößern",
     "zoom_out": "Verkleinern"
   },
-  "privacy_policy": {
-    "title": "Datenschutzrichtlinie"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "Wir haben die Datenschutzrichtlinie aktualisiert. Bitte lesen Sie die neueste ",
-    "policy": "Datenschutzrichtlinie",
-    "title": "Datenschutzrichtlinie aktualisiert"
-  },
   "prompts": {
     "explanation": "Helfen Sie mir, dieses Konzept zu erklären",
     "summarize": "Helfen Sie mir, diesen Absatz zusammenzufassen",

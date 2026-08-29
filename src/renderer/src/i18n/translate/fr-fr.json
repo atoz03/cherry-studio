@@ -3492,14 +3492,6 @@
     "zoom_in": "agrandir",
     "zoom_out": "réduire"
   },
-  "privacy_policy": {
-    "title": "Politique de confidentialité"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "Nous avons mis à jour la politique de confidentialité. Veuillez consulter la dernière ",
-    "policy": "Politique de confidentialité",
-    "title": "Politique de confidentialité mise à jour"
-  },
   "prompts": {
     "explanation": "Aidez-moi à expliquer ce concept",
     "summarize": "Aidez-moi à résumer ce passage",

@@ -3492,14 +3492,6 @@
     "zoom_in": "Mărește",
     "zoom_out": "Micșorează"
   },
-  "privacy_policy": {
-    "title": "Politica de confidențialitate"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "Am actualizat politica de confidențialitate. Te rugăm să consulți cea mai recentă ",
-    "policy": "Politica de confidențialitate",
-    "title": "Politica de confidențialitate a fost actualizată"
-  },
   "prompts": {
     "explanation": "Explică-mi acest concept",
     "summarize": "Rezumatul acestui text",

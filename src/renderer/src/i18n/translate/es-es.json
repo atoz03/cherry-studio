@@ -3492,14 +3492,6 @@
     "zoom_in": "ampliar",
     "zoom_out": "reducir"
   },
-  "privacy_policy": {
-    "title": "Política de privacidad"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "Hemos actualizado la política de privacidad. Revisa la última ",
-    "policy": "Política de privacidad",
-    "title": "Política de privacidad actualizada"
-  },
   "prompts": {
     "explanation": "Ayúdame a explicar este concepto",
     "summarize": "Ayúdame a resumir este párrafo",

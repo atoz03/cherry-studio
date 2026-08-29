@@ -3492,14 +3492,6 @@
     "zoom_in": "拡大",
     "zoom_out": "縮小"
   },
-  "privacy_policy": {
-    "title": "プライバシーポリシー"
-  },
-  "privacy_policy_update": {
-    "description_before_link": "プライバシーポリシーを更新しました。最新の ",
-    "policy": "プライバシーポリシー",
-    "title": "プライバシーポリシーが更新されました"
-  },
   "prompts": {
     "explanation": "この概念を説明してください",
     "summarize": "このテキストを要約してください",
