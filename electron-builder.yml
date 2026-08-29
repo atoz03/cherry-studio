@@ -143,40 +143,66 @@ artifactBuildCompleted: scripts/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 1.9.6 - Bug Fixes
+    Cherry Studio 1.9.15 - New Models and Stability Fixes
+
+    ✨ New Features
+    - [Models] Added support for the Claude Fable series and Claude Opus 5
+    - [Models] Added support for Kimi K2.7 Code
+    - [Models] Added support for LongCat 2.0, with a thinking mode toggle
+    - [Models] Added support for doubao-seed-2-1 and doubao-seed-evolving
 
     🐛 Bug Fixes
-    - [AI] Fixed crash when chat model's stored provider no longer exists
-    - [AI] Fixed streaming requests aborted after 30 minutes during active data transfer (affected models with extended thinking)
-    - [Agents] Fixed agent session creation failures when provider settings change
-    - [Agents] Fixed deepseek-r1 models incorrectly showing function_calling label causing errors in Agent mode
-    - [Agents] Use task name instead of agent name for cron task sessions
-    - [MCP] Fixed approval card not auto-expanding to show Run/Cancel buttons
-    - [MCP] Clean up OAuth tokens when deleting servers
-    - [Code Tools] Fixed Codex CLI launch failure when using OpenAI or other reserved providers
-    - [Claude Code] Fixed launch failures caused by auth conflicts with provider environment variables
-    - [Image] Fixed gpt-image-2 multi-turn editing crash
-    - [Knowledge] Fixed HTTP/HTTPS/FTP URLs being stripped from Markdown documents
-    - [OpenMinerU] Fixed preprocessing ENOENT errors due to ZIP structure change
-    - [Qiniu] Fixed PDF upload regression for GPT-5.4 models
-    - [Settings] Minor alignment fix for provider model list actions
+    - [Chat] Fixed tool results not being included in the model's context
+    - [Chat] Fixed conversation compaction starting at the wrong point for the configured context window
+    - [Chat] Fixed older messages being unreachable when the first page did not fill the window
+    - [Chat] Fixed Mermaid flowchart errors when node labels contain Chinese, Japanese or Korean characters together with parentheses
+    - [Chat] Replies that end abnormally or reach the length limit now show a clear message instead of stopping silently
+    - [Models] Fixed deep thinking requests for Claude Opus 4.8
+    - [Models] Fixed DeepSeek V4+ reasoning effort being ignored on custom OpenAI-compatible providers
+    - [Models] The Anthropic "Fetch model list" button now returns the latest models instead of a fixed list
+    - [Models] Fixed Qwen max models being incorrectly detected as vision capable
+    - [Models] Fixed Gemini errors when continuing a conversation after an empty or interrupted reply
+    - [Agents] Fixed the Agents page failing to load when agent or session data was damaged
+    - [Agents] Agents now start even when one of the configured MCP servers cannot be reached
+    - [Agents] Deleting a session now also removes its stored messages
+    - [Knowledge] Fixed a crash when updating knowledge base content
+    - [Copilot] Fixed GitHub Copilot sign-in when custom request headers are configured
+    - [Search] Fixed search query rewriting
+    - [OpenClaw] The dashboard access token is no longer placed in the page URL query string
+
+    ⚡ Performance
+    - [Windows] Disk space checks no longer leave powershell.exe processes behind, which previously piled up over time and consumed large amounts of memory
+    - [Chat] Greatly reduced memory usage while streaming long code blocks, preventing out-of-memory crashes
 
     <!--LANG:zh-CN-->
-    Cherry Studio 1.9.6 - 错误修复
+    Cherry Studio 1.9.15 - 新模型支持与稳定性修复
+
+    ✨ 新功能
+    - [模型] 新增 Claude Fable 系列与 Claude Opus 5 支持
+    - [模型] 新增 Kimi K2.7 Code 支持
+    - [模型] 新增 LongCat 2.0 支持，可开关思考模式
+    - [模型] 新增 doubao-seed-2-1 与 doubao-seed-evolving 支持
 
     🐛 问题修复
-    - [AI] 修复聊天模型的存储提供商不存在时导致的崩溃
-    - [AI] 修复活跃数据传输期间流式请求在 30 分钟后被中断的问题（影响具有扩展思考的模型）
-    - [智能体] 修复提供商设置更改时智能体会话创建失败的问题
-    - [智能体] 修复 deepseek-r1 模型错误显示 function_calling 标签导致智能体模式出错
-    - [智能体] 定时任务会话现在使用任务名称而非智能体名称
-    - [MCP] 修复批准卡片未自动展开以显示运行/取消按钮的问题
-    - [MCP] 删除服务器时清理 OAuth 令牌
-    - [代码工具] 修复使用 OpenAI 或其他保留提供商时 Codex CLI 启动失败的问题
-    - [Claude Code] 修复提供商环境变量导致身份验证冲突从而无法启动的问题
-    - [图像] 修复 gpt-image-2 多轮编辑崩溃问题
-    - [知识库] 修复 Markdown 文档中的 HTTP/HTTPS/FTP URL 被移除的问题
-    - [OpenMinerU] 修复 ZIP 结构变更导致的预处理 ENOENT 错误
-    - [七牛云] 修复 GPT-5.4 模型的 PDF 上传回归问题
-    - [设置] 提供商模型列表操作的微小对齐修复
+    - [对话] 修复工具调用结果未包含在模型上下文中的问题
+    - [对话] 修复上下文压缩的触发时机与所配置上下文长度不一致的问题
+    - [对话] 修复首屏消息未填满窗口时无法加载更早历史记录的问题
+    - [对话] 修复 Mermaid 流程图节点标签同时包含中日韩字符与括号时的渲染错误
+    - [对话] 回复异常结束或达到长度上限时，现在会给出明确提示而非静默中断
+    - [模型] 修复 Claude Opus 4.8 深度思考请求异常的问题
+    - [模型] 修复自定义 OpenAI 兼容提供商下 DeepSeek V4+ 推理强度失效的问题
+    - [模型] Anthropic「获取模型列表」现在返回最新模型，不再使用固定列表
+    - [模型] 修复 Qwen max 系列被误判为支持视觉的问题
+    - [模型] 修复 Gemini 在空回复或中断回复后继续对话时报错的问题
+    - [智能体] 修复智能体或会话数据损坏时智能体页面无法加载的问题
+    - [智能体] 单个 MCP 服务器无法连接时，智能体现在仍可正常启动
+    - [智能体] 删除会话时会一并清理其存储的消息
+    - [知识库] 修复更新知识库内容时的崩溃问题
+    - [Copilot] 修复配置自定义请求头时 GitHub Copilot 登录失败的问题
+    - [搜索] 修复搜索查询改写失效的问题
+    - [OpenClaw] 仪表盘访问令牌不再出现在页面 URL 查询参数中
+
+    ⚡ 性能优化
+    - [Windows] 磁盘空间检查不再残留 powershell.exe 进程，此前这些进程会持续累积并占用大量内存
+    - [对话] 大幅降低流式输出长代码块时的内存占用，避免内存耗尽崩溃
     <!--LANG:END-->
