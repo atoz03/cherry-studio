@@ -183,7 +183,9 @@ jobs:
         run: pnpm test:renderer
 
   skills-check-windows:
-    runs-on: windows-latest
+    # Pinned: the windows-latest image ships Visual Studio 18, which node-gyp
+    # cannot detect, breaking native module builds during install.
+    runs-on: windows-2022
     env:
       CI: true
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
