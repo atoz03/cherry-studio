@@ -2,7 +2,6 @@ import * as crypto from 'crypto'
 import * as fs from 'fs'
 import * as path from 'path'
 
-import matter from 'gray-matter'
 import { parse } from 'yaml'
 
 import { loggerService } from '@logger'
@@ -183,6 +182,7 @@ export async function parsePluginMetadata(
   const stats = await fs.promises.stat(filePath)
 
   // Parse frontmatter safely with FAILSAFE_SCHEMA to prevent deserialization attacks
+  const { default: matter } = await import('gray-matter')
   let data: Record<string, unknown> = {}
   try {
     const parsed = matter(content, {
@@ -342,6 +342,7 @@ export async function parseSkillMetadata(
   }
 
   // Parse frontmatter safely with FAILSAFE_SCHEMA to prevent deserialization attacks
+  const { default: matter } = await import('gray-matter')
   let data: Record<string, unknown> = {}
   try {
     const parsed = matter(content, {
