@@ -11,6 +11,7 @@ import { loggerService } from '@logger'
 import { FindBar, type FindBarRef, type FindBarState, INITIAL_FIND_BAR_STATE } from '@renderer/components/FindBar'
 import { findRangesInScope, supportsCustomHighlights } from '@renderer/utils/contentSearch'
 import { scrollElementIntoView } from '@renderer/utils/dom'
+import { scrollRangeIntoView, sortRangesByVisualPosition } from '@renderer/utils/searchRangePosition'
 
 import Scrollbar from '../Scrollbar'
 import {
@@ -242,14 +243,17 @@ const RichEditor = ({
       return []
     }
 
-    return findRangesInScope(
-      target,
-      deferredContentSearchQuery,
-      {
-        caseSensitive: contentSearchState.caseSensitive,
-        wholeWord: contentSearchState.wholeWord
-      },
-      contentSearchFilter
+    // Next/previous follow the order matches are drawn in, not DOM order.
+    return sortRangesByVisualPosition(
+      findRangesInScope(
+        target,
+        deferredContentSearchQuery,
+        {
+          caseSensitive: contentSearchState.caseSensitive,
+          wholeWord: contentSearchState.wholeWord
+        },
+        contentSearchFilter
+      )
     )
   }, [
     contentSearchFilter,
@@ -289,6 +293,8 @@ const RichEditor = ({
 
     CSS.highlights.set(CURRENT_MATCH_HIGHLIGHT, new Highlight(currentRange))
     const target = scrollContainerRef.current
+    // Center the matched line itself; scrolling to its paragraph misses matches deep in a long block.
+    if (scrollRangeIntoView(currentRange, target)) return
     const parentElement = currentRange.startContainer.parentElement
     if (target && parentElement) {
       scrollElementIntoView(parentElement, target)
