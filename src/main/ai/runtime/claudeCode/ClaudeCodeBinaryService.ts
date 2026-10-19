@@ -26,6 +26,7 @@ export function claudeBinaryTarget(platform: string, arch: string, glibc?: strin
   return `${platform}-${arch}${platform === 'linux' && !glibc ? '-musl' : ''}`
 }
 
+/** Installs the Claude Code runtime on first need (agent composer or first session), never at boot. */
 @Injectable('ClaudeCodeBinaryService')
 @ServicePhase(Phase.WhenReady)
 export class ClaudeCodeBinaryService extends BaseService {
@@ -243,10 +244,6 @@ export class ClaudeCodeBinaryService extends BaseService {
     } finally {
       clearTimeout(timer)
     }
-  }
-
-  protected onAllReady(): void {
-    this.ensure()
   }
 
   protected async onStop(): Promise<void> {
