@@ -1445,9 +1445,9 @@ export class OpenClawService extends BaseService {
       config.gateway = config.gateway || {}
       config.gateway.mode = 'local'
       config.gateway.port = this.gatewayPort
-      // Auto-generate auth token if not already set. Publish it in memory only after
-      // the candidate is valid and the formal config write succeeds.
-      const token = this.gatewayAuthToken || this.generateAuthToken()
+      // Reuse the saved token (the in-memory one is empty after a restart); generate only
+      // when none exists. Publish it in memory only after the formal config write succeeds.
+      const token = config.gateway.auth?.token || this.gatewayAuthToken || this.generateAuthToken()
       config.gateway.auth = { token }
 
       // Silence OpenClaw's update banner. Its "Update now" button swaps the binary
