@@ -11,7 +11,6 @@ import type {
   ToolDefinition
 } from '@earendil-works/pi-coding-agent'
 import { type Span, SpanKind, SpanStatusCode } from '@opentelemetry/api'
-import { fetch as nodeFetch } from 'undici'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
@@ -1012,6 +1011,12 @@ interface PiProviderSpanObserver {
   error(error: unknown): void
 }
 
+// undici loads on the first authenticated-proxy request instead of at startup.
+const nodeFetch: typeof globalThis.fetch = async (input, init) => {
+  const { fetch } = await import('undici')
+  return fetch(input as never, init as never) as unknown as Response
+}
+
 function withPiRequestEnvironment(
   streamSimple: NonNullable<ProviderConfig['streamSimple']>,
   providerEnvironment: Record<string, string> | undefined
@@ -1024,7 +1029,7 @@ function withPiRequestEnvironment(
     return streamSimple(model, context, {
       ...options,
       env: { ...options?.env, ...proxyEnvironment, ...providerEnvironment },
-      fetch: usesAuthenticatedNodeProxy ? (nodeFetch as unknown as typeof globalThis.fetch) : customFetch
+      fetch: usesAuthenticatedNodeProxy ? nodeFetch : customFetch
     })
   }
 }
