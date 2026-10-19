@@ -71,6 +71,7 @@ Scalar columns are **coerced**, not passed through: legacy records are unvalidat
 - **Duplicate `id`**: Second occurrence is skipped, first is kept
 - **Missing `isActive`**: Defaults to `false`
 - **`undefined`/`null` optional fields**: Stored as `null` in SQLite
+- **Stale `@cherry/mcp-auto-install` package arg** (v1 persist step 209 never ran): on the server named `@cherry/mcp-auto-install`, that exact arg becomes `@mcpmarket/mcp-auto-install`; command and other args are kept (`mappings/legacyPersistRepairs.ts`)
 
 ## Legacy Value Coercion and Row-Level Recovery
 

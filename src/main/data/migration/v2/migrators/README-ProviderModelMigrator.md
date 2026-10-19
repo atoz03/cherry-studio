@@ -138,6 +138,7 @@ providers always take routing families from the current registry.
 | Duplicate model ID within a provider | Keep the first and warn |
 | Retired provider | Skip and warn |
 | Missing final-v1 preset baseline | Preserve mapped provider values and warn |
+| CherryIN still on the retired `https://open.cherryin.cc` host (v1 persist step 208 never ran, e.g. fork v1.9.15 at persist 206) | Rewrite exactly that host to `https://open.cherryin.net` before projection (`mappings/legacyPersistRepairs.ts`) |
 | Invalid pinned model reference | Drop it |
 | Missing optional logo | Keep the provider without a logo |
 
@@ -150,6 +151,8 @@ sequence, after the seeded CherryAI row.
 - `ProviderModelMigrator.ts` — preparation, projection, transaction, pins, and
   validation
 - `mappings/ProviderModelMappings.ts` — legacy-to-v2 field transforms
+- `mappings/legacyPersistRepairs.ts` — final-v1 persist-step repairs for
+  profiles that stopped short of them
 - `mappings/v1-provider-model-baseline.json` — pinned final-v1 ownership
   baseline
 - `__tests__/ProviderModelMigrator.test.ts` — migration and provenance
