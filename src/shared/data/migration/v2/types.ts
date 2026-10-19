@@ -148,6 +148,27 @@ export interface PreparedMigrationExportPaths extends StartMigrationPayload {
 /** localStorage keys that are still consumed by the v1 -> v2 migration. */
 export const MIGRATION_LOCAL_STORAGE_KEYS = ['onboarding-completed'] as const
 
+/** Redux Persist slices the renderer exports for the v1 -> v2 migration; anything unlisted reads as missing. */
+export const MIGRATION_REDUX_SLICES = [
+  'settings', // App settings and preferences
+  'assistants', // Assistant configurations
+  'knowledge', // Knowledge base metadata
+  'llm', // LLM provider and model configurations
+  'mcp', // MCP server configurations
+  'minapps', // Mini app configurations (enabled/disabled/pinned)
+  'note', // Note-related settings
+  'selectionStore', // Selection assistant settings
+  'preprocess', // File preprocess provider configurations
+  'ocr', // OCR provider configurations
+  'websearch', // Web search configurations
+  'codeTools', // Code tools settings (CLI tool, models, terminal)
+  'paintings', // Painting history per provider/mode (consumed by PaintingMigrator)
+  'shortcuts', // Keyboard shortcuts (ShortcutMappings)
+  'nutstore', // Nutstore backup settings
+  'translate', // Translate page settings
+  'openclaw' // OpenClaw gateway port and model
+] as const
+
 export type MigrationDiagnosticSaveResult =
   | { status: 'saved'; logs: 'included' | 'not_included' }
   | { status: 'canceled' }

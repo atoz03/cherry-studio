@@ -3,28 +3,13 @@
  * Extracts selected persisted Redux slices from localStorage into bounded files.
  */
 
-import { MigrationIpcChannels } from '@shared/data/migration/v2/types'
+import { MIGRATION_REDUX_SLICES, MigrationIpcChannels } from '@shared/data/migration/v2/types'
 import { clampSurrogateBoundary } from '@shared/utils/text'
 
 const PERSIST_KEY = 'persist:cherry-studio'
 const EXPORT_CHUNK_CHAR_LIMIT = 1024 * 1024
 
-// Redux slices that need to be migrated
-const SLICES_TO_EXPORT = [
-  'settings', // App settings and preferences
-  'assistants', // Assistant configurations
-  'knowledge', // Knowledge base metadata
-  'llm', // LLM provider and model configurations
-  'mcp', // MCP server configurations
-  'minapps', // Mini app configurations (enabled/disabled/pinned)
-  'note', // Note-related settings
-  'selectionStore', // Selection assistant settings
-  'preprocess', // File preprocess provider configurations
-  'ocr', // OCR provider configurations
-  'websearch', // Web search configurations
-  'codeTools', // Code tools settings (CLI tool, models, terminal)
-  'paintings' // Painting history per provider/mode (consumed by PaintingMigrator)
-]
+const SLICES_TO_EXPORT: readonly string[] = MIGRATION_REDUX_SLICES
 
 export interface ReduxExportResult {
   exportPath: string
