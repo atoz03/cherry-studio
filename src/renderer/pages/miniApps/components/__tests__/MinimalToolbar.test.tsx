@@ -105,6 +105,27 @@ describe('MinimalToolbar', () => {
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 
+  it('offers the conversation export for the built-in ChatGPT site only', () => {
+    const chatgpt = {
+      appId: 'openai',
+      kind: 'site',
+      presetMiniAppId: 'openai',
+      name: 'ChatGPT',
+      url: 'https://chatgpt.com/'
+    } as unknown as MiniAppType
+    const customChatgpt = { ...chatgpt, appId: 'my-chatgpt', presetMiniAppId: null } as unknown as MiniAppType
+    const exportButton = { name: /export conversations|导出对话/i }
+
+    renderToolbar(chatgpt)
+    expect(screen.getByRole('button', exportButton)).toBeInTheDocument()
+
+    for (const app of [customChatgpt, site, localApp]) {
+      cleanup()
+      renderToolbar(app)
+      expect(screen.queryByRole('button', exportButton)).toBeNull()
+    }
+  })
+
   it('shows DevTools for local apps and sites alike', () => {
     renderToolbar(localApp)
     expect(screen.getByRole('button', { name: /developer tools|开发者工具/i })).toBeInTheDocument()
