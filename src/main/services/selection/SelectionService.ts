@@ -15,6 +15,7 @@ import { loggerService } from '@logger'
 import { createLatestReconciler, type LatestReconciler } from '@main/core/concurrency/latestReconciler'
 import { type Activatable, BaseService, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isDev, isLinux, isMac, isWin } from '@main/core/platform'
+import { revealWhenPainted } from '@main/core/window/firstPaint'
 import { WindowType } from '@main/core/window/types'
 import { getApplicationId } from '@main/utils/appEdition'
 import type { SelectionActionItem } from '@shared/data/preference/preferenceTypes'
@@ -102,6 +103,14 @@ export class SelectionService extends BaseService implements Activatable {
   // querying WindowManager at each call site. Kept in sync via onWindowCreated/Destroyed.
   private toolbarWindow: BrowserWindow | null = null
   private toolbarWindowId: string | null = null
+  /**
+   * The toolbar window is created on the first selection, not at activation. Until its renderer
+   * has mounted (signalled by its first size report, see determineToolbarSize) and painted, the
+   * latest show request waits in `pendingToolbarShow` and is replayed then.
+   */
+  private isToolbarContentReady = false
+  private pendingToolbarShow: (() => void) | null = null
+  private cancelToolbarReveal: (() => void) | null = null
 
   private isHideByMouseKeyListenerActive: boolean = false
   private isCtrlkeyListenerActive: boolean = false
@@ -210,17 +219,14 @@ export class SelectionService extends BaseService implements Activatable {
     }
 
     try {
-      const wm = application.get('WindowManager')
+      // Resume the action pool in case a prior deactivate/activate cycle suspended it. The pool
+      // has no standby, so this creates nothing: action windows are built on the first action and
+      // recycled from then on.
+      application.get('WindowManager').resumePool(WindowType.SelectionAction)
 
-      // Resume the action pool in case a prior deactivate/activate cycle suspended it.
-      // With registry warmup: 'eager', the pool auto-creates idle windows at app start,
-      // so the first user-triggered action recycles instantly instead of going through
-      // the fresh-path (create + load HTML + wait for React to mount).
-      wm.resumePool(WindowType.SelectionAction)
-
-      // Open the toolbar (singleton) — registry's show: false ensures no auto-show here,
-      // showToolbarAtPosition controls positioning and visibility.
-      this.toolbarWindowId = wm.open(WindowType.SelectionToolbar)
+      // The toolbar is NOT opened here: a hidden always-on-top panel resident from activation
+      // costs a renderer process and shows up in macOS window switchers (AltTab). presentToolbar()
+      // creates it on the first text selection instead.
 
       this.selectionHook!.on('error', (error: { message: string }) => {
         this.logError('Error in SelectionHook:', error as Error)
@@ -265,6 +271,7 @@ export class SelectionService extends BaseService implements Activatable {
         // Cache the BrowserWindow reference for the ~20 downstream call sites
         // (showToolbarAtPosition, hideToolbar, processTextSelection, etc.)
         this.toolbarWindow = window
+        this.isToolbarContentReady = false
         this.setupToolbarBehavior(window)
       })
     )
@@ -310,6 +317,7 @@ export class SelectionService extends BaseService implements Activatable {
         if (id === this.toolbarWindowId) {
           this.toolbarWindow = null
           this.toolbarWindowId = null
+          this.dropPendingToolbarShow()
         }
       })
     )
@@ -330,8 +338,8 @@ export class SelectionService extends BaseService implements Activatable {
       })
     })
 
-    // The pool is warmup:'eager' — suspend before allReady so the warmup skips it while the
-    // feature is off; onActivate()'s resumePool() re-enables it.
+    // Keep the pool suspended while the feature is off (no recycling of stray action windows);
+    // onActivate()'s resumePool() re-enables it.
     if (!preferenceService.get('feature.selection.enabled')) {
       wm.suspendPool(WindowType.SelectionAction)
     }
@@ -345,8 +353,8 @@ export class SelectionService extends BaseService implements Activatable {
     }
 
     // Warm up off the boot critical path: onActivate() synchronously loads the native
-    // addon and builds the toolbar + action windows (~120ms). setImmediate defers it
-    // past the WhenReady phase so the main window paints first.
+    // addon and starts the selection hook (no windows: those are built on first use).
+    // setImmediate defers it past the WhenReady phase so the main window paints first.
     //
     // Drive the warm-up through the reconciler so a disable landing in the deferred gap is not
     // clobbered: the old setImmediate activated unconditionally even if the user had just turned the
@@ -601,26 +609,54 @@ export class SelectionService extends BaseService implements Activatable {
   }
 
   /**
+   * Show the toolbar for a selection and hand the selection to the toolbar renderer.
+   *
+   * The toolbar window is created here on the first selection (and re-created if it was
+   * destroyed). Its first show waits until the renderer has mounted — its first size report
+   * (determineToolbarSize) — and painted: before that the toolbar size is unknown and the
+   * renderer's `selection.text_selected` listener may not exist yet, so the selection would be
+   * lost. While waiting, a newer selection replaces the pending one. This costs a one-time
+   * delay on the first selection instead of a permanently resident hidden toolbar.
+   */
+  private presentToolbar(point: Point, orientation: RelativeOrientation, selectionData: TextSelectionData): void {
+    if (!this.isToolbarAlive()) {
+      // onWindowCreatedByType caches toolbarWindow and resets isToolbarContentReady.
+      this.toolbarWindowId = application.get('WindowManager').open(WindowType.SelectionToolbar)
+    }
+
+    this.pendingToolbarShow = () => {
+      this.showToolbarAtPosition(point, orientation, selectionData.programName)
+      if (this.toolbarWindowId) {
+        application.get('IpcApiService').send(this.toolbarWindowId, 'selection.text_selected', selectionData)
+      }
+    }
+    if (this.isToolbarContentReady) this.revealPendingToolbar()
+  }
+
+  /** Run the pending toolbar show once the toolbar has painted (immediately if it already has). */
+  private revealPendingToolbar(): void {
+    if (!this.pendingToolbarShow || this.cancelToolbarReveal || !this.isToolbarAlive()) return
+    this.cancelToolbarReveal = revealWhenPainted(this.toolbarWindow!, () => {
+      this.cancelToolbarReveal = null
+      const show = this.pendingToolbarShow
+      this.pendingToolbarShow = null
+      show?.()
+    })
+  }
+
+  private dropPendingToolbarShow(): void {
+    this.pendingToolbarShow = null
+    this.cancelToolbarReveal?.()
+    this.cancelToolbarReveal = null
+  }
+
+  /**
    * Show toolbar at specified position with given orientation
    * @param point Reference point for positioning, logical coordinates
    * @param orientation Preferred position relative to reference point
    */
   private showToolbarAtPosition(point: Point, orientation: RelativeOrientation, programName: string): void {
-    if (!this.isToolbarAlive()) {
-      // Toolbar was destroyed (e.g., crash recovery). Re-open via WindowManager — the
-      // onWindowCreated handler will call setupToolbarBehavior() and update toolbarWindow.
-      // After ready-to-show, retry positioning. If the caller is in a tight loop, the
-      // recursive retry will converge as soon as the renderer finishes loading.
-      const wm = application.get('WindowManager')
-      this.toolbarWindowId = wm.open(WindowType.SelectionToolbar)
-      const newToolbar = wm.getWindow(this.toolbarWindowId)
-      if (newToolbar) {
-        newToolbar.once('ready-to-show', () => {
-          this.showToolbarAtPosition(point, orientation, programName)
-        })
-      }
-      return
-    }
+    if (!this.isToolbarAlive()) return
 
     const { x: posX, y: posY } = this.calculateToolbarPosition(point, orientation)
 
@@ -695,6 +731,8 @@ export class SelectionService extends BaseService implements Activatable {
    * Hide the toolbar window and cleanup listeners
    */
   public hideToolbar(): void {
+    // A selection dismissed before the new toolbar was ready must not pop it up afterwards.
+    this.dropPendingToolbarShow()
     if (!this.isToolbarAlive()) return
 
     // Mouse-key hook stop is driven by window.on('hide') in setupToolbarBehavior,
@@ -727,6 +765,13 @@ export class SelectionService extends BaseService implements Activatable {
     // only update toolbar width if it's changed
     if (toolbarWidth > 0 && toolbarWidth !== this.TOOLBAR_WIDTH && height > 0) {
       this.TOOLBAR_WIDTH = toolbarWidth
+    }
+
+    // The renderer reports its size from a mount effect, after its IPC listeners are registered:
+    // from now on the toolbar can be shown at its real size without losing the selection.
+    if (!this.isToolbarContentReady) {
+      this.isToolbarContentReady = true
+      this.revealPendingToolbar()
     }
   }
 
@@ -1037,10 +1082,7 @@ export class SelectionService extends BaseService implements Activatable {
     }
 
     // [macOS] isFullscreen is only available on macOS
-    this.showToolbarAtPosition(refPoint, refOrientation, selectionData.programName)
-    if (this.toolbarWindowId) {
-      application.get('IpcApiService').send(this.toolbarWindowId, 'selection.text_selected', selectionData)
-    }
+    this.presentToolbar(refPoint, refOrientation, selectionData)
   }
 
   /**
@@ -1269,6 +1311,7 @@ export class SelectionService extends BaseService implements Activatable {
     this.isCtrlkeyListenerActive = false
     this.isHideByMouseKeyListenerActive = false
     this.lastCtrlkeyDownTime = 0
+    this.dropPendingToolbarShow()
 
     const wm = application.get('WindowManager')
 
@@ -1278,7 +1321,7 @@ export class SelectionService extends BaseService implements Activatable {
       // toolbarWindow / toolbarWindowId are cleared by the onWindowDestroyed handler in onInit().
     }
 
-    // Suspend the action pool — destroys idle windows and disables further warmup until
+    // Suspend the action pool — destroys idle (recycled) windows and stops recycling until
     // resumePool() is called on next activate. In-use windows are NOT destroyed here,
     // preserving user-visible results.
     wm.suspendPool(WindowType.SelectionAction)
@@ -1295,11 +1338,10 @@ export class SelectionService extends BaseService implements Activatable {
     // open({ initData }) atomically stores the action payload and, for the
     // pool-recycle path, emits window.reused with the same payload so
     // the renderer can update in-place. For recycled windows the renderer has
-    // been mounted and its listener registered since warmup, so the DOM is
-    // ready on the next tick. For fresh windows the renderer mounts,
-    // `useWindowInitData` pulls the payload via `getInitData`, and React
-    // paints before the user notices. This mirrors the behavior of the
-    // pre-WindowManager SelectionService: push data, then show immediately.
+    // been mounted and its listener registered since its first use, so the DOM is
+    // ready on the next tick. For fresh windows (the pool keeps no pre-warmed
+    // standby) the renderer mounts, `useWindowInitData` pulls the payload via
+    // `getInitData`, and the window is shown once it has painted.
     const windowId = wm.open(WindowType.SelectionAction, {
       initData: { ...actionItem, sessionId: randomUUID() } satisfies SelectionActionSession,
       options: {
@@ -1314,7 +1356,9 @@ export class SelectionService extends BaseService implements Activatable {
       return
     }
 
-    this.showActionWindow(actionWindow, isFullScreen)
+    // A recycled window shows right away; a fresh one only after its first paint, so the
+    // transparent panel never appears as an empty frame (bare traffic lights on macOS).
+    revealWhenPainted(actionWindow, () => this.showActionWindow(actionWindow, isFullScreen))
   }
 
   /**

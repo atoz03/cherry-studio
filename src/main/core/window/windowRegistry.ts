@@ -330,7 +330,8 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
   },
 
   // Floating toolbar that appears near user text selections.
-  // Managed by SelectionService: onActivate opens it (hidden), showToolbarAtPosition positions + shows.
+  // Managed by SelectionService: created on the first selection (presentToolbar), then kept
+  // hidden between selections; showToolbarAtPosition positions + shows.
   [WindowType.SelectionToolbar]: {
     type: WindowType.SelectionToolbar,
     lifecycle: 'singleton',
@@ -430,7 +431,7 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
     }
   },
 
-  // Action result window — pooled for instant reuse.
+  // Action result window — pooled for reuse within a session.
   // Managed by SelectionService: processAction uses wm.open({ initData }) to hand each action to a renderer.
   [WindowType.SelectionAction]: {
     type: WindowType.SelectionAction,
@@ -482,22 +483,19 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       macRestoreFocusOnHide: true
     },
     poolConfig: {
-      // Producer axis: always keep one pre-warmed idle window. On every open(),
-      // an async setImmediate replacement is scheduled so the next action recycles
-      // instantly — the action window is user-facing and must not block on create.
-      standbySize: 1,
-      // Consumer axis: allow a small burst of concurrent action windows to be
-      // recycled for reuse (triggered when a second action fires while the first
-      // is still open). Beyond 3, close destroys.
+      // Producer axis: no pre-warmed standby. A resident hidden panel costs a renderer
+      // process (and lists in macOS window switchers) whether or not the user ever runs an
+      // action; the first action instead creates its window and SelectionService.processAction
+      // reveals it once painted (revealWhenPainted), a one-time delay.
+      standbySize: 0,
+      // Consumer axis: closed action windows are recycled for reuse (also covers a second
+      // action fired while the first is still open). Beyond 3, close destroys.
       recycleMaxSize: 3,
-      // Burst cleanup: after the pool grew above standbySize due to bursts,
-      // shed one extra idle window per minute back down toward standbySize.
+      // Idle cleanup: after a minute without actions, shed one recycled window per minute.
       decayInterval: 60,
-      // Full idle release: after 5 minutes of no action, trim the recycle
-      // buffer down to the standby window. standbySize is preserved as a
-      // permanent availability commitment.
+      // Full idle release: after 5 minutes of no action, destroy every recycled window.
       inactivityTimeout: 300,
-      warmup: 'eager'
+      warmup: 'lazy'
     }
   },
 

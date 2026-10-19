@@ -1,9 +1,13 @@
-import { screen } from 'electron'
+import { EventEmitter } from 'node:events'
+
+import type { BrowserWindow } from 'electron'
+import { screen, systemPreferences } from 'electron'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // @application, electron, and @logger are globally mocked in tests/main.setup.ts.
 import { application } from '@application'
 import { BaseService } from '@main/core/lifecycle/BaseService'
+import { trackFirstPaint } from '@main/core/window/firstPaint'
 import { WindowType } from '@main/core/window/types'
 
 const { getApplicationIdMock } = vi.hoisted(() => ({
@@ -335,5 +339,187 @@ describe('SelectionService macOS action window', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('SelectionService — windows created on first use', () => {
+  type Wm = {
+    open: (type: WindowType, args?: unknown) => string
+    getWindow: (id: string) => unknown
+    destroy: (id: string) => boolean
+    onWindowCreatedByType: ReturnType<typeof vi.fn<(...args: any[]) => any>>
+  }
+  type FakeWindow = EventEmitter & Record<string, ReturnType<typeof vi.fn<(...args: any[]) => any>>>
+  type Internals = {
+    nativePanel: { moveToActiveSpace: (handle: Buffer) => void; configurePanel: (handle: Buffer) => void }
+    selectionHook: unknown
+    initStatus: boolean
+    presentToolbar(point: { x: number; y: number }, orientation: string, selectionData: { text: string }): void
+  }
+
+  const wm = application.get('WindowManager') as unknown as Wm
+  const send = vi.mocked(application.get('IpcApiService').send)
+  let windows: Map<string, FakeWindow>
+  let svc: InstanceType<typeof SelectionService>
+  let internals: Internals
+
+  /** Stand-in for a freshly constructed (not yet painted) BrowserWindow. */
+  const createFakeWindow = (): FakeWindow => {
+    const win = new EventEmitter() as FakeWindow
+    let visible = false
+    const reveal = vi.fn(() => {
+      visible = true
+      win.emit('show')
+    })
+    Object.assign(win, {
+      isDestroyed: vi.fn(() => false),
+      isVisible: vi.fn(() => visible),
+      setPosition: vi.fn(),
+      setBounds: vi.fn(),
+      setFocusable: vi.fn(),
+      setAlwaysOnTop: vi.fn(),
+      setVisibleOnAllWorkspaces: vi.fn(),
+      getNativeWindowHandle: vi.fn(() => Buffer.alloc(8)),
+      getBounds: vi.fn(() => ({ x: 0, y: 0, width: 300, height: 43 })),
+      focus: vi.fn(),
+      show: reveal,
+      showInactive: reveal,
+      hide: vi.fn(() => {
+        visible = false
+        win.emit('hide')
+      })
+    })
+    return win
+  }
+
+  /** The onWindowCreatedByType listener SelectionService registered for `type`. */
+  const createdListener = (type: WindowType) =>
+    wm.onWindowCreatedByType.mock.calls.find(([t]) => t === type)![1] as (managed: unknown) => void
+
+  const openCalls = (type: WindowType) => vi.mocked(wm.open).mock.calls.filter(([t]) => t === type)
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    BaseService.resetInstances()
+    Object.assign(screen, {
+      getDisplayNearestPoint: vi.fn(() => ({ workArea: { x: 0, y: 0, width: 1440, height: 900 } })),
+      getCursorScreenPoint: vi.fn(() => ({ x: 500, y: 400 }))
+    })
+    windows = new Map()
+    let created = 0
+    // WindowManager.open(): construct, notify onWindowCreatedByType subscribers, track first paint.
+    vi.spyOn(wm, 'open').mockImplementation((type) => {
+      const id = `${type}-${++created}`
+      const window = createFakeWindow()
+      windows.set(id, window)
+      createdListener(type)({ id, type, window })
+      trackFirstPaint(window as unknown as BrowserWindow)
+      return id
+    })
+    vi.spyOn(wm, 'getWindow').mockImplementation((id) => windows.get(id))
+
+    svc = new SelectionService()
+    internals = svc as unknown as Internals
+    internals.nativePanel = { moveToActiveSpace: vi.fn(), configurePanel: vi.fn() }
+    await svc._doInit()
+  })
+
+  afterEach(async () => {
+    await svc._doDestroy()
+    BaseService.resetInstances()
+    vi.restoreAllMocks()
+  })
+
+  const toolbar = () => windows.get('selectionToolbar-1')!
+  const textSelectedCalls = () => send.mock.calls.filter(([, event]) => event === 'selection.text_selected')
+
+  it('opens no window when the feature is activated', () => {
+    internals.initStatus = true
+    internals.selectionHook = { on: vi.fn(), start: vi.fn(() => true), stop: vi.fn(), removeAllListeners: vi.fn() }
+    // macOS (mocked platform) checks the Accessibility permission before starting.
+    Object.assign(systemPreferences, { isTrustedAccessibilityClient: vi.fn(() => true) })
+    const access = svc as unknown as { initConfig(): void; processTriggerMode(): void; onActivate(): void }
+    vi.spyOn(access, 'initConfig').mockImplementation(() => {})
+    vi.spyOn(access, 'processTriggerMode').mockImplementation(() => {})
+
+    access.onActivate()
+
+    expect(wm.open).not.toHaveBeenCalled()
+  })
+
+  it('shows the first toolbar only once its renderer has mounted and painted, with the latest selection', () => {
+    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'first' })
+    internals.presentToolbar({ x: 30, y: 40 }, 'bottomLeft', { text: 'second' })
+
+    expect(openCalls(WindowType.SelectionToolbar)).toHaveLength(1)
+
+    // Mounted (size reported) but not painted yet → still hidden.
+    svc.determineToolbarSize(280, 43)
+    expect(toolbar().showInactive).not.toHaveBeenCalled()
+    expect(textSelectedCalls()).toHaveLength(0)
+
+    toolbar().emit('ready-to-show')
+
+    expect(toolbar().showInactive).toHaveBeenCalledTimes(1)
+    // Shown at the size the renderer reported, not the 350px default.
+    expect(toolbar().setBounds).toHaveBeenCalledWith(expect.objectContaining({ width: 280 }))
+    expect(textSelectedCalls()).toEqual([['selectionToolbar-1', 'selection.text_selected', { text: 'second' }]])
+  })
+
+  it('waits for the renderer size report even when the toolbar has already painted', () => {
+    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'hello' })
+    toolbar().emit('ready-to-show')
+    expect(toolbar().showInactive).not.toHaveBeenCalled()
+
+    svc.determineToolbarSize(300, 43)
+
+    expect(toolbar().showInactive).toHaveBeenCalledTimes(1)
+    expect(textSelectedCalls()).toHaveLength(1)
+  })
+
+  it('reuses the ready toolbar and shows it immediately for later selections', () => {
+    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'one' })
+    svc.determineToolbarSize(300, 43)
+    toolbar().emit('ready-to-show')
+    svc.hideToolbar()
+
+    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'two' })
+
+    expect(openCalls(WindowType.SelectionToolbar)).toHaveLength(1)
+    expect(toolbar().showInactive).toHaveBeenCalledTimes(2)
+    expect(textSelectedCalls().at(-1)?.[2]).toEqual({ text: 'two' })
+  })
+
+  it('does not pop up a toolbar whose selection was dismissed while it was loading', () => {
+    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'gone' })
+
+    svc.hideToolbar()
+    svc.determineToolbarSize(300, 43)
+    toolbar().emit('ready-to-show')
+
+    expect(toolbar().showInactive).not.toHaveBeenCalled()
+    expect(textSelectedCalls()).toHaveLength(0)
+  })
+
+  it('creates the first action window on demand and shows it only after its first paint', () => {
+    svc.processAction({ id: 'translate', name: 'Translate', enabled: true, isBuiltIn: true })
+
+    expect(openCalls(WindowType.SelectionAction)).toHaveLength(1)
+    const actionWindow = windows.get('selectionAction-1')!
+    expect(actionWindow.show).not.toHaveBeenCalled()
+
+    actionWindow.emit('ready-to-show')
+
+    expect(actionWindow.show).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows a recycled (already painted) action window immediately', () => {
+    const recycled = createFakeWindow()
+    vi.spyOn(wm, 'open').mockReturnValue('recycled-action')
+    windows.set('recycled-action', recycled)
+
+    svc.processAction({ id: 'translate', name: 'Translate', enabled: true, isBuiltIn: true })
+
+    expect(recycled.show).toHaveBeenCalledTimes(1)
   })
 })

@@ -36,6 +36,10 @@ vi.mock('electron', async () => {
     loadURL = vi.fn(() => Promise.resolve())
     isVisible = vi.fn(() => false)
     isFullScreen = vi.fn(() => false)
+    isMaximized = vi.fn(() => false)
+    isMinimized = vi.fn(() => false)
+    setBounds = vi.fn()
+    setContentBounds = vi.fn()
     isDestroyed = vi.fn(() => this.destroyed)
     destroy = vi.fn(() => {
       if (this.destroyed) return
@@ -84,11 +88,11 @@ describe('WindowManager with the shipped window registry', () => {
     BaseService.resetInstances()
   })
 
-  it('does not pre-create a detached-tab SubWindow at boot', async () => {
+  it('creates no window at boot: every pooled or singleton type is built on first use', async () => {
     ;(wm as unknown as { onAllReady(): void }).onAllReady()
     await flushImmediate()
 
-    expect(wm.getWindowsByType(WindowType.SubWindow)).toHaveLength(0)
+    expect(createdWindows).toHaveLength(0)
   })
 
   it('creates a fresh SubWindow per open, destroys it on close, and keeps no spare', async () => {
@@ -117,5 +121,21 @@ describe('WindowManager with the shipped window registry', () => {
     window.emit('ready-to-show')
 
     expect(window.show).not.toHaveBeenCalled()
+  })
+
+  it('builds the first SelectionAction on demand and recycles it instead of keeping a standby', async () => {
+    const firstId = wm.open(WindowType.SelectionAction)
+    const first = wm.getWindow(firstId) as BrowserWindow
+    await flushImmediate()
+    expect(createdWindows).toHaveLength(1)
+
+    wm.close(firstId)
+    expect(first.destroy).not.toHaveBeenCalled()
+    expect(first.hide).toHaveBeenCalled()
+
+    // The next action reuses the painted window instead of building a new renderer.
+    expect(wm.open(WindowType.SelectionAction)).toBe(firstId)
+    await flushImmediate()
+    expect(createdWindows).toHaveLength(1)
   })
 })
