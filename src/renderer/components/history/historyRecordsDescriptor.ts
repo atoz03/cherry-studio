@@ -91,6 +91,8 @@ export interface HistoryRecordDescriptor<T> {
   bulkMoveTargets?: readonly HistoryBulkMoveTarget[]
   /** Assistant mode only: move `ids` to `targetId`; resolves to the ids actually moved (for selection pruning). */
   onBulkMove?: (targetId: string, ids: string[]) => Promise<readonly string[] | undefined>
+  /** Assistant mode only: export `ids` as one ChatGPT `conversations.json`. */
+  onBulkExport?: (ids: string[]) => Promise<void>
 
   // --- rename dialog + strings ---
   onRename: (id: string, name: string) => void | Promise<void>

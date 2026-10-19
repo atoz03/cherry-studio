@@ -81,6 +81,7 @@ export function HistoryRecordsContent<T>({
         bulkMoveTargets={descriptor.bulkMoveTargets}
         onBulkDelete={controller.handleBulkDelete}
         onBulkMove={descriptor.onBulkMove ? controller.handleBulkMove : undefined}
+        onBulkExport={descriptor.onBulkExport ? controller.handleBulkExport : undefined}
       />
 
       <HistoryRecordList

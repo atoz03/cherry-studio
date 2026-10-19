@@ -1,4 +1,4 @@
-import { Archive, FolderInput, X } from 'lucide-react'
+import { Archive, FileJson, FolderInput, X } from 'lucide-react'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -43,6 +43,7 @@ interface HistoryTopBarProps {
   bulkMoveTargets?: readonly HistoryBulkMoveTarget[]
   onBulkDelete?: () => void | Promise<void>
   onBulkMove?: (targetId: string) => void | Promise<void>
+  onBulkExport?: () => Promise<void>
 }
 
 const HistoryTopBar = ({
@@ -63,10 +64,12 @@ const HistoryTopBar = ({
   bulkDeleteCount,
   bulkMoveTargets = [],
   onBulkDelete,
-  onBulkMove
+  onBulkMove,
+  onBulkExport
 }: HistoryTopBarProps) => {
   const { t } = useTranslation()
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [moveTargetId, setMoveTargetId] = useState('')
   const moveTargets = useMemo(() => Array.from(bulkMoveTargets), [bulkMoveTargets])
   const selectedMoveTarget = useMemo(
@@ -166,6 +169,25 @@ const HistoryTopBar = ({
             <FolderInput className="size-3.5" />
             <span>
               {t('history.records.bulkMove')}
+              {selectedCount > 0 ? ` (${selectedCount})` : ''}
+            </span>
+          </Button>
+        )}
+        {onBulkExport && (
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8 gap-1.5 rounded-md px-2.5 text-xs shadow-none"
+            disabled={selectedCount === 0}
+            loading={exporting}
+            loadingIconClassName="size-3.5"
+            onClick={() => {
+              setExporting(true)
+              void onBulkExport().finally(() => setExporting(false))
+            }}>
+            {!exporting && <FileJson className="size-3.5" />}
+            <span>
+              {t('history.records.bulkExport')}
               {selectedCount > 0 ? ` (${selectedCount})` : ''}
             </span>
           </Button>

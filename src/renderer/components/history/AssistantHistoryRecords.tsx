@@ -35,6 +35,8 @@ import {
 import { toast } from '@renderer/services/toast'
 import type { Topic as RendererTopic } from '@renderer/types/topic'
 import { fetchMessagesSummary } from '@renderer/utils/aiGeneration'
+import { getActiveBranchMessages } from '@renderer/utils/chat/activeBranchMessages'
+import { type ChatgptExportConversation, topicToChatgptConversation } from '@renderer/utils/chat/chatgptExport'
 import { sortTopicsForDisplayGroups } from '@renderer/utils/chat/topicsHelpers'
 import { getErrorMessage } from '@renderer/utils/error'
 import { matchesSearchText } from '@renderer/utils/pinyin'
@@ -332,6 +334,26 @@ const AssistantHistoryRecords = ({
     [batchUpdateTopics, t]
   )
 
+  const handleBulkExportTopics = useCallback(
+    async (ids: string[]) => {
+      const idSet = new Set(ids)
+      try {
+        const conversations: ChatgptExportConversation[] = []
+        for (const topic of timeSortedTopics) {
+          if (!idSet.has(topic.id)) continue
+          const messages = await getActiveBranchMessages(topic.id)
+          conversations.push(topicToChatgptConversation(topic, messages, t('chat.default.topic.name')))
+        }
+        const savedPath = await window.api.file.save('conversations.json', JSON.stringify(conversations, null, 2))
+        if (savedPath) toast.success(t('history.records.bulkExportTopics.success', { count: conversations.length }))
+      } catch (error) {
+        logger.error('Failed to export topics as ChatGPT JSON from history records', { ids, error })
+        toast.error(t('history.records.bulkExportTopics.error'))
+      }
+    },
+    [t, timeSortedTopics]
+  )
+
   const handleClearMessages = useCallback((topic: RendererTopic) => clearTopicMessages(topic.id), [clearTopicMessages])
 
   const handleAutoRename = useCallback(
@@ -543,6 +565,7 @@ const AssistantHistoryRecords = ({
     },
     bulkMoveTargets,
     onBulkMove: handleBulkMoveTopics,
+    onBulkExport: handleBulkExportTopics,
     onRename: handleRenameTopic,
     strings: {
       sourceLabel: t('common.assistant'),

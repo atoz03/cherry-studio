@@ -328,6 +328,8 @@ vi.mock('react-i18next', () => ({
         'history.records.bulkArchive': 'Batch Archive',
         'history.records.bulkDeleteTopics.description': 'Delete {{count}} selected conversation(s)?',
         'history.records.bulkDeleteTopics.title': 'Delete selected conversations',
+        'history.records.bulkExport': 'Export JSON',
+        'history.records.bulkExportTopics.success': 'Exported {{count}} conversation(s) as ChatGPT JSON',
         'history.records.bulkMove': 'Batch Move',
         'history.records.bulkMoveTopics.confirm': 'Move',
         'history.records.bulkMoveTopics.description':
@@ -1096,6 +1098,64 @@ describe('HistoryRecordsView assistant mode', () => {
     expect(toast.success).toHaveBeenCalledWith('Moved 2 conversation(s)')
     expect(onRecordSelect).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('exports the selected topics as one ChatGPT conversations.json', async () => {
+    const branch = (topicId: string, text: string) => ({
+      items: [
+        {
+          message: {
+            id: `${topicId}-message`,
+            topicId,
+            parentId: null,
+            role: 'user',
+            data: { parts: [{ type: 'text', text }] },
+            searchableText: text,
+            status: 'success',
+            siblingsGroupId: 0,
+            createdAt: '2026-05-14T08:00:00.000Z',
+            updatedAt: '2026-05-14T08:00:00.000Z'
+          }
+        }
+      ],
+      activeNodeId: `${topicId}-message`,
+      rootId: null,
+      assistantId: 'assistant-alpha'
+    })
+    const getBranch = vi
+      .spyOn(dataApiService, 'get')
+      .mockImplementation(async (path: string) =>
+        path.includes('topic-alpha') ? branch('topic-alpha', 'alpha question') : branch('topic-beta', 'beta question')
+      )
+    const save = vi.fn().mockResolvedValue('/tmp/conversations.json')
+    vi.stubGlobal('api', { ...window.api, file: { ...window.api.file, save } })
+
+    setupAssistantHistory({
+      topics: [
+        createTopic(),
+        createTopic({ id: 'topic-beta', name: 'Beta topic', orderKey: 'b' }),
+        createTopic({ id: 'topic-gamma', name: 'Gamma topic', orderKey: 'c' })
+      ]
+    })
+
+    fireEvent.click(
+      within(screen.getByText('Alpha topic').closest('[role="row"]') as HTMLElement).getByRole('checkbox')
+    )
+    fireEvent.click(within(screen.getByText('Beta topic').closest('[role="row"]') as HTMLElement).getByRole('checkbox'))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Export JSON/ }))
+    })
+
+    expect(save).toHaveBeenCalledTimes(1)
+    const [fileName, content] = save.mock.calls[0]
+    expect(fileName).toBe('conversations.json')
+    const exported = JSON.parse(content) as Array<{ title: string; mapping: Record<string, { message: unknown }> }>
+    expect(exported.map((conversation) => conversation.title).sort()).toEqual(['Alpha topic', 'Beta topic'])
+    expect(JSON.stringify(exported)).toContain('alpha question')
+    expect(JSON.stringify(exported)).toContain('beta question')
+    expect(toast.success).toHaveBeenCalledWith('Exported 2 conversation(s) as ChatGPT JSON')
+
+    getBranch.mockRestore()
   })
 
   it('drops already-moved topics from the selection when a bulk move partially fails', async () => {
