@@ -231,3 +231,16 @@ The v2 refactor has landed. v1 data reaches v2 only through the migrators in `sr
 ## Local Instructions
 
 If `CLAUDE.local.md` exists in the repository root (gitignored, may be absent), read it in full before acting on anything in this file — it holds the developer's private instructions and **OVERRIDES this file wherever they conflict**. Tools that auto-load it (e.g. Claude Code) need not re-read it.
+
+## Fork Rules (atoz03/cherry-studio)
+
+This repository is a fork of `CherryHQ/cherry-studio`. The rules below **override** the sections above wherever they conflict.
+
+- **Base and sync**: the fork tracks upstream **release tags** (`v2.x.y`) and syncs only through the [`sync-upstream`](.agents/skills/sync-upstream/SKILL.md) skill (`git merge v2.x.y` on a short-lived branch, then fast-forward `main`). Never cherry-pick or rebase upstream commits one by one. Pre-v2 fork history is reachable from tag `v1-final`.
+- **Commits**: `git commit --signoff` (DCO). Cryptographic signing (`-S`) and the Agent Note/Spec requirement do not apply to fork-only work.
+- **Workflows**: keep only `ci.yml` (without the `basic-checks` and `notify` jobs), `ci-rerun-on-base-change.yml`, `e2e-regression-test.yml`, `system-speech-windows.yml`, and the fork's own `release.yml`. When a sync re-adds or modifies any other workflow, delete it again; when it modifies `release.yml`, keep the fork's version.
+- **Footprint first**: the fork exists to keep upstream's features with less idle cost. New or synced code must not add boot-time windows, downloads, network calls, child processes, or sub-second timers. Load heavy modules with dynamic `import()` at first use, arm timers only while there is work, and prefer `Activatable` / on-demand creation over eager warmup.
+- **Disabled features**: upstream features the fork ships without are switched off in [`src/shared/utils/forkFeatures.ts`](src/shared/utils/forkFeatures.ts) — gate on those constants and exclude the dependencies in `electron-builder.yml`; never delete the upstream code. Keep each gating edit inside an upstream file to a line or two so syncs stay cheap.
+- **Fork-owned code**: prefer new files over editing upstream files; when an upstream file must change, keep the edit minimal.
+- **No fork database migrations**: never add Drizzle migrations or SQLite schema changes — a fork migration would fork upstream's append-only chain. Store fork data in Preferences (new keys in `scripts/data-classify/data/target-key-definitions.json`, then `pnpm data:generate`), BootConfig, Cache, or existing JSON columns. On sync conflicts in generated files, merge the source JSON and regenerate.
+- **No phone-home**: no Sentry DSN, analytics, upstream update feed, or upload endpoints — auto-update points at this fork's GitHub Releases.

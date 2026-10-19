@@ -14,5 +14,6 @@
 !gh-pr-review
 !gh-stack
 !prepare-release
+!sync-upstream
 !translate-docs
 !vercel-react-best-practices
