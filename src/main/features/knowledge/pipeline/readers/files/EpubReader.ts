@@ -1,6 +1,5 @@
 import { Document, FileReader, type Metadata } from '@vectorstores/core'
 import { HTMLReader } from '@vectorstores/readers/html'
-import EPub from 'epub'
 
 import { loggerService } from '@logger'
 
@@ -14,6 +13,7 @@ export class EpubReader extends FileReader<Document<Metadata>> {
   private readonly htmlReader = new HTMLReader()
 
   async loadDataAsContent(fileContent: Uint8Array, filename?: string): Promise<Document<Metadata>[]> {
+    const { default: EPub } = await import('epub')
     const epub = new EPub(Buffer.from(fileContent))
     await epub.parse()
 
