@@ -358,6 +358,7 @@ vi.mock('../windowRegistry', () => {
 // ─── Import after mocks ────────────────────────────────────
 
 const { WindowManager } = await import('../WindowManager')
+const { isAwaitingFirstPaint } = await import('../firstPaint')
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -413,6 +414,17 @@ describe('WindowManager', () => {
       wm.close(id)
 
       expect(win.destroy).toHaveBeenCalled()
+    })
+
+    it('marks a fresh window as awaiting its first paint until ready-to-show', () => {
+      const id = wm.open('default' as never)
+      const win = wm.getWindow(id)!
+
+      expect(isAwaitingFirstPaint(win)).toBe(true)
+
+      createdWindows[0].emit('ready-to-show')
+
+      expect(isAwaitingFirstPaint(win)).toBe(false)
     })
   })
 
