@@ -105,6 +105,14 @@ describe('transformShortcuts', () => {
     expect(result).not.toHaveProperty('shortcut.general.toggle_right_sidebar')
   })
 
+  it('carries the fork-v1 close_tab binding into the tab close shortcut', () => {
+    const result = transformShortcuts({
+      shortcuts: [{ key: 'close_tab', shortcut: ['CommandOrControl', 'Shift', 'Q'], enabled: false }]
+    })
+
+    expect(result['shortcut.tab.close']).toEqual({ binding: ['CommandOrControl', 'Shift', 'Q'], enabled: false })
+  })
+
   it('skips malformed bindings instead of silently clearing them', () => {
     const result = transformShortcuts({
       shortcuts: [
