@@ -1,8 +1,7 @@
 import { createHmac } from 'node:crypto'
 
-import { uuid } from 'systeminformation'
-
 export async function getMachineCode(): Promise<string> {
+  const { uuid } = await import('systeminformation')
   const identity = await uuid()
   const machineID = identity.os.trim().toLowerCase()
   if (
