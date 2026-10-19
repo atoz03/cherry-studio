@@ -8,7 +8,6 @@
  */
 
 import type { CallToolResult, McpServer } from '@modelcontextprotocol/server'
-import QRCode from 'qrcode'
 import * as z from 'zod'
 
 import { application } from '@application'
@@ -915,6 +914,7 @@ async function configAddChannel(ctx: AutonomyToolsContext, args: ConfigInput): P
         },
         30_000
       )
+      const { default: QRCode } = await import('qrcode')
       const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 300, margin: 2 })
       // Extract base64 from data URI: "data:image/png;base64,..."
       const base64 = qrDataUrl.split(',')[1]
@@ -1031,6 +1031,7 @@ async function configReconnectChannel(
 
   try {
     const qrUrl = preparedQrUrl ?? (await reconnectAgentChannelWithQr(ctx.agentId, channel.id, 30_000))
+    const { default: QRCode } = await import('qrcode')
     const qrDataUrl = await QRCode.toDataURL(qrUrl, { width: 300, margin: 2 })
     const base64 = qrDataUrl.split(',')[1]
 
