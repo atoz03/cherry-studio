@@ -28,6 +28,7 @@ import type {
 } from '@shared/data/types/message'
 import type { Model } from '@shared/data/types/model'
 import type { TranslateLanguage } from '@shared/data/types/translate'
+import type { ReasoningEffortOption } from '@shared/types/aiSdk'
 import type { FileUrlString } from '@shared/types/file'
 
 import type { ActionAvailabilityInput } from '../actions/actionTypes'
@@ -232,6 +233,8 @@ export interface MessageListItem {
   }>
   /** Derived from the message's hidden `data-clear` part. */
   isContextBoundary?: boolean
+  /** Reasoning effort frozen on the assistant turn (`turnOptions.reasoningEffort`). */
+  reasoningEffort?: ReasoningEffortOption
 }
 
 /**

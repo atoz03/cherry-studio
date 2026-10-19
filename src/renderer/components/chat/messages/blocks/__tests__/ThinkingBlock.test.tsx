@@ -241,6 +241,29 @@ describe('ThinkingBlock', () => {
       expect(activeTimeText).toHaveTextContent('Thinking')
       expect(activeTimeText).not.toHaveTextContent('1.0s')
     })
+
+    it('names the turn effort and measured duration in the title', () => {
+      mockUseTranslation.mockReturnValue({
+        t: (key: string, params?: Record<string, string>) =>
+          key === 'message.thinking.done_with_effort'
+            ? `Thought with ${params?.effort} effort (${params?.seconds}s)`
+            : key === 'message.thinking.effort.high'
+              ? 'high'
+              : key
+      })
+      const block = createThinkingBlock({ status: 'success' })
+      render(
+        <ThinkingBlock
+          id={block.id}
+          content={block.content}
+          isStreaming={false}
+          thinkingMs={3500}
+          reasoningEffort="high"
+        />
+      )
+
+      expect(getThinkingTimeText()).toHaveTextContent('Thought with high effort (3.5s)')
+    })
   })
 
   describe('collapse behavior', () => {
