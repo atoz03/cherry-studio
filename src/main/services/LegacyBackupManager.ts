@@ -20,7 +20,6 @@ import { pipeline } from 'node:stream/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import * as path from 'path'
 
-import { ZipArchive } from 'archiver'
 import { Mutex, tryAcquire } from 'async-mutex'
 import Database from 'better-sqlite3'
 import dayjs from 'dayjs'
@@ -55,8 +54,8 @@ import {
 } from '@shared/types/backup'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 
-import S3Storage from './S3Storage'
-import WebDav from './WebDav'
+import type S3Storage from './S3Storage'
+import type WebDav from './WebDav'
 
 const logger = loggerService.withContext('BackupManager')
 const DIRECT_BACKUP_VERSION = 7
@@ -461,6 +460,7 @@ class BackupManager {
       onProgress({ stage: 'compressing', progress: 80, total: 100 })
       signal?.throwIfAborted()
 
+      const { ZipArchive } = await import('archiver')
       const atomicOutput = createAtomicWriteStream(AbsoluteFilePathSchema.parse(backupedFilePath), {
         mode: BACKUP_ARCHIVE_FILE_MODE
       })
@@ -576,7 +576,7 @@ class BackupManager {
         webdavConfig.skipBackupFile ?? false,
         operationSignal
       )
-      const webdavClient = this.getWebDavInstance(webdavConfig)
+      const webdavClient = await this.getWebDavInstance(webdavConfig)
       const idleTimeout = new IdleTimeoutController(REMOTE_UPLOAD_IDLE_TIMEOUT_MS)
       const uploadSignal = operationSignal ? AbortSignal.any([operationSignal, idleTimeout.signal]) : idleTimeout.signal
       let result: boolean
@@ -648,7 +648,7 @@ class BackupManager {
         s3Config.skipBackupFile ?? false,
         operationSignal
       )
-      const s3Client = this.getS3Storage(s3Config)
+      const s3Client = await this.getS3Storage(s3Config)
       let result: unknown
       try {
         operationSignal?.throwIfAborted()
@@ -1293,7 +1293,7 @@ class BackupManager {
   async restoreFromWebdav(_: Electron.IpcMainInvokeEvent, webdavConfig: WebDavConfig) {
     return this.runBackupWorkflow(async () => {
       const filename = webdavConfig.fileName || 'cherry-studio.backup.zip'
-      const webdavClient = this.getWebDavInstance(webdavConfig)
+      const webdavClient = await this.getWebDavInstance(webdavConfig)
       const downloadDir = await this.createOperationDir('webdav-download')
       const backupedFilePath = path.join(downloadDir, path.basename(filename))
       try {
@@ -1323,7 +1323,7 @@ class BackupManager {
 
       logger.debug(`Starting restore from S3: ${filename}`)
 
-      const s3Client = this.getS3Storage(s3Config)
+      const s3Client = await this.getS3Storage(s3Config)
       const downloadDir = await this.createOperationDir('s3-download')
       const backupedFilePath = path.join(downloadDir, path.basename(filename))
       try {
@@ -1599,12 +1599,13 @@ class BackupManager {
    * @param config - WebDAV configuration
    * @returns WebDav instance
    */
-  private getWebDavInstance(config: WebDavConfig): WebDav {
+  private async getWebDavInstance(config: WebDavConfig): Promise<WebDav> {
+    const { default: WebDavClient } = await import('./WebDav')
     // Check if core connection config has changed
     const configChanged = !this.isWebDavConfigEqual(this.cachedWebdavConnectionConfig, config)
 
     if (configChanged || !this.webdavInstance) {
-      this.webdavInstance = new WebDav(config)
+      this.webdavInstance = new WebDavClient(config)
       // Only cache connection-related config fields
       this.cachedWebdavConnectionConfig = {
         webdavHost: config.webdavHost,
@@ -1632,7 +1633,7 @@ class BackupManager {
    */
   listWebdavFiles = async (_: BackupInvocationEvent, config: WebDavConfig, signal?: AbortSignal) => {
     try {
-      const client = this.getWebDavInstance(config)
+      const client = await this.getWebDavInstance(config)
       const files = await client.getDirectoryContents(signal)
 
       return files
@@ -1819,7 +1820,7 @@ class BackupManager {
    * @returns True if connection is successful
    */
   async checkConnection(_: Electron.IpcMainInvokeEvent, webdavConfig: WebDavConfig) {
-    const webdavClient = this.getWebDavInstance(webdavConfig)
+    const webdavClient = await this.getWebDavInstance(webdavConfig)
     return await webdavClient.checkConnection()
   }
 
@@ -1837,7 +1838,7 @@ class BackupManager {
     path: string,
     options?: CreateDirectoryOptions
   ) {
-    const webdavClient = this.getWebDavInstance(webdavConfig)
+    const webdavClient = await this.getWebDavInstance(webdavConfig)
     return await webdavClient.createDirectory(path, options)
   }
 
@@ -1850,7 +1851,7 @@ class BackupManager {
    */
   async deleteWebdavFile(_: BackupInvocationEvent, fileName: string, webdavConfig: WebDavConfig, signal?: AbortSignal) {
     try {
-      const webdavClient = this.getWebDavInstance(webdavConfig)
+      const webdavClient = await this.getWebDavInstance(webdavConfig)
       return await webdavClient.deleteFile(fileName, signal)
     } catch (error: any) {
       logger.error('Failed to delete WebDAV file:', error)
@@ -1935,12 +1936,13 @@ class BackupManager {
    * @param config - S3 configuration
    * @returns S3Storage instance
    */
-  private getS3Storage(config: S3Config): S3Storage {
+  private async getS3Storage(config: S3Config): Promise<S3Storage> {
+    const { default: S3StorageClient } = await import('./S3Storage')
     // Check if core connection config has changed
     const configChanged = !this.isS3ConfigEqual(this.cachedS3ConnectionConfig, config)
 
     if (configChanged || !this.s3Storage) {
-      this.s3Storage = new S3Storage(config)
+      this.s3Storage = new S3StorageClient(config)
       // Only cache connection-related config fields
       this.cachedS3ConnectionConfig = {
         endpoint: config.endpoint,
@@ -1985,7 +1987,7 @@ class BackupManager {
    * @returns True if connection is successful
    */
   async checkS3Connection(_: Electron.IpcMainInvokeEvent, s3Config: S3Config) {
-    const s3Client = this.getS3Storage(s3Config)
+    const s3Client = await this.getS3Storage(s3Config)
     return await s3Client.checkConnection()
   }
 
@@ -1997,7 +1999,7 @@ class BackupManager {
    */
   listS3Files = async (_: BackupInvocationEvent, s3Config: S3Config, signal?: AbortSignal) => {
     try {
-      const s3Client = this.getS3Storage(s3Config)
+      const s3Client = await this.getS3Storage(s3Config)
 
       const objects = await s3Client.listFiles('', signal)
       const files = objects
@@ -2025,7 +2027,7 @@ class BackupManager {
    */
   async deleteS3File(_: BackupInvocationEvent, fileName: string, s3Config: S3Config, signal?: AbortSignal) {
     try {
-      const s3Client = this.getS3Storage(s3Config)
+      const s3Client = await this.getS3Storage(s3Config)
       return await s3Client.deleteFile(fileName, signal)
     } catch (error: any) {
       logger.error('Failed to delete S3 file:', error)
