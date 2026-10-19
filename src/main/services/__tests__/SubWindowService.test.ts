@@ -103,6 +103,7 @@ vi.mock('@main/core/lifecycle', async () => {
 import { BrowserWindow, ipcMain } from 'electron'
 
 // Import after mocks
+import { FIRST_PAINT_REVEAL_TIMEOUT_MS, trackFirstPaint } from '@main/core/window/firstPaint'
 import { WindowType } from '@main/core/window/types'
 
 import { SubWindowService } from '../SubWindowService'
@@ -138,9 +139,15 @@ function createMockWindow(overrides: Partial<MockBrowserWindow> = {}): MockBrows
   win.getContentBounds = vi.fn(() => ({ x: 100, y: 100, width: 800, height: 600 }))
   win.setAlwaysOnTop = vi.fn()
   win.setTitleBarOverlay = vi.fn()
-  // Fresh (still-loading) window by default; reused-pool tests override isLoadingMainFrame → false.
   win.webContents = { isLoadingMainFrame: vi.fn(() => true), setZoomFactor: vi.fn() }
   Object.assign(win, overrides)
+  return win
+}
+
+/** A window as WindowManager returns it from open(): freshly constructed, not painted yet. */
+function createFreshWindow(): MockBrowserWindow {
+  const win = createMockWindow({ isVisible: vi.fn(() => false) })
+  trackFirstPaint(win as unknown as BrowserWindow)
   return win
 }
 
@@ -318,7 +325,7 @@ describe('SubWindowService', () => {
   })
 
   describe('zoom factor', () => {
-    it('injects the persisted app.zoom_factor via options.webPreferences and applies it to the window', () => {
+    it('constructs the window with the persisted app.zoom_factor', () => {
       const win = createMockWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
@@ -326,16 +333,13 @@ describe('SubWindowService', () => {
 
       const { args } = lastOpenCall()
       expect(args.options).toMatchObject({ webPreferences: { zoomFactor: 1.3 } })
-      // Covers the pooled-standby path: a popped standby was constructed at warmup time
-      // with the default zoom, so options.webPreferences alone would not reach it.
-      expect(win.webContents.setZoomFactor).toHaveBeenCalledWith(1.3)
     })
 
     it('subscribes zoom tracking for SubWindow instances via onWindowCreatedByType', () => {
       expect(windowManagerMock.onWindowCreatedByType).toHaveBeenCalledWith('subWindow', expect.any(Function))
     })
 
-    it('re-applies app.zoom_factor on will-resize/restore so a standby does not snap back to 100%', () => {
+    it('re-applies app.zoom_factor on will-resize/restore so a window does not snap back to 100%', () => {
       const win = createMockWindow()
       getOnWindowCreatedListener()({ window: win })
 
@@ -367,54 +371,54 @@ describe('SubWindowService', () => {
     })
   })
 
-  describe('createWindow - tabId → windowId mapping + cleanup', () => {
-    it('shows immediately (no ready-to-show wait) when no initial position was provided', () => {
-      const win = createMockWindow()
+  describe('createWindow - first show', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('keeps a fresh window hidden until its renderer has painted, then shows it', () => {
+      const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
-      svc.createWindow({ id: 'tab-noxy', url: 'u' })
+      svc.createWindow({ id: 'tab-fresh', url: 'u' })
+      expect(win.show).not.toHaveBeenCalled()
 
-      // Unconditional + immediate show (mirrors SelectionService.showActionWindow): the window is
-      // shown synchronously inside createWindow, not deferred to a ready-to-show listener.
+      win.emit('ready-to-show')
       expect(win.show).toHaveBeenCalledTimes(1)
     })
 
-    it('does not show here when an initial position was provided (Tab_MoveWindow shows it)', () => {
-      const win = createMockWindow()
+    it('reveals a drag-detached window after its first paint as well', () => {
+      const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
-      svc.createWindow({ id: 'tab-xy', url: 'u', x: 10, y: 10 })
+      svc.detachTab({ id: 'tab-drag', url: 'u', x: 10, y: 10 })
+      expect(win.show).not.toHaveBeenCalled()
+
+      win.emit('ready-to-show')
+      expect(win.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('still shows the window when its renderer never paints, so the detached tab is not lost', () => {
+      vi.useFakeTimers()
+      const win = createFreshWindow()
+      windowManagerMock.getWindow.mockReturnValue(win)
+
+      svc.detachTab({ id: 'tab-stuck', url: 'u' })
+      vi.advanceTimersByTime(FIRST_PAINT_REVEAL_TIMEOUT_MS)
+
+      expect(win.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('never shows a window that was closed before it painted', () => {
+      const win = createFreshWindow()
+      windowManagerMock.getWindow.mockReturnValue(win)
+
+      svc.createWindow({ id: 'tab-closed', url: 'u' })
+      win.isDestroyed = vi.fn(() => true)
+      win.emit('closed')
+      win.emit('ready-to-show')
 
       expect(win.show).not.toHaveBeenCalled()
-    })
-
-    it('shows a reused (already-loaded) standby immediately — no dependence on isLoadingMainFrame', () => {
-      // Negative control for the old stuck-hidden bug: a reused standby's ready-to-show already
-      // fired during pre-warm and never fires again. isLoadingMainFrame() returns false here, yet
-      // the window must still be shown synchronously (the old conditional would have skipped or
-      // hung on a ready-to-show wait).
-      const win = createMockWindow()
-      win.webContents.isLoadingMainFrame.mockReturnValue(false)
-      windowManagerMock.getWindow.mockReturnValue(win)
-
-      svc.createWindow({ id: 'tab-reused', url: 'u' })
-
-      expect(win.show).toHaveBeenCalledTimes(1)
-    })
-
-    it('does not stay hidden when the load never completes (no ready-to-show fallback needed)', () => {
-      // Regression for the stuck-hidden failure mode: previously a still-loading window
-      // (isLoadingMainFrame === true) waited on ready-to-show, which on a failed load never fires,
-      // leaving the window hidden forever. Unconditional show removes that dependency entirely:
-      // even with a still-loading window and no ready-to-show emission, show() is called.
-      const win = createMockWindow()
-      win.webContents.isLoadingMainFrame.mockReturnValue(true)
-      windowManagerMock.getWindow.mockReturnValue(win)
-
-      svc.createWindow({ id: 'tab-stuck', url: 'u' })
-
-      // No ready-to-show emitted, yet the window is already shown.
-      expect(win.show).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -514,6 +518,32 @@ describe('SubWindowService', () => {
       handler({ sender: {} } as any, { tabId: 'unknown-tab', x: 10, y: 20 })
 
       expect(senderWin.setPosition).toHaveBeenCalledWith(10, 20)
+    })
+
+    it('moves a just-detached window without showing it before its first paint', () => {
+      const win = createFreshWindow()
+      windowManagerMock.getWindow.mockReturnValue(win)
+      svc.detachTab({ id: 'tab-dragging', url: 'u', x: 10, y: 10 })
+
+      const handler = getNativeOnHandler('tab:move-window')
+      handler({ sender: {} } as any, { tabId: 'tab-dragging', x: 40, y: 50 })
+
+      expect(win.setPosition).toHaveBeenCalledWith(40, 50)
+      expect(win.show).not.toHaveBeenCalled()
+
+      win.emit('ready-to-show')
+      expect(win.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows a hidden window that has already painted', () => {
+      const win = createMockWindow({ isVisible: vi.fn(() => false) })
+      windowManagerMock.getWindow.mockReturnValue(win)
+      ;(svc as any).tabIdToWindowId.set('tab-hidden', 'wid-hidden')
+
+      const handler = getNativeOnHandler('tab:move-window')
+      handler({ sender: {} } as any, { tabId: 'tab-hidden', x: 5, y: 5 })
+
+      expect(win.show).toHaveBeenCalledTimes(1)
     })
 
     it('sets opacity 0.85 when sub window is moving its own tab (object-identity sender==target)', () => {
