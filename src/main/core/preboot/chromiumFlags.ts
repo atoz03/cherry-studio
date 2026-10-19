@@ -41,13 +41,6 @@ export function configureChromiumFlags(): void {
     app.commandLine.appendSwitch('wm-window-animations-disabled')
   }
 
-  // Linux Wayland: enable the xdg-desktop-portal global-shortcut backend so
-  // globalShortcut.register() actually works under Wayland compositors.
-  // https://www.electronjs.org/docs/latest/api/global-shortcut
-  if (isLinuxWayland) {
-    app.commandLine.appendSwitch('enable-features', 'GlobalShortcutsPortal')
-  }
-
   // Linux (X11 and Wayland): set the window class/name so window managers
   // identify the app correctly in alt-tab switchers, docks, etc.
   if (isLinux) {
@@ -71,8 +64,25 @@ export function configureChromiumFlags(): void {
   // - PageAllocatorRetryOnCommitFailure: retry memory page commits under
   //   transient commit pressure instead of failing immediately.
   // https://github.com/microsoft/vscode/pull/241640/files
-  app.commandLine.appendSwitch(
-    'enable-features',
-    'DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PageAllocatorRetryOnCommitFailure'
-  )
+  const enabledFeatures = [
+    'DocumentPolicyIncludeJSCallStacksInCrashReports',
+    'EarlyEstablishGpuChannel',
+    'EstablishGpuChannelAsync',
+    'PageAllocatorRetryOnCommitFailure'
+  ]
+
+  // Linux Wayland: enable the xdg-desktop-portal global-shortcut backend so
+  // globalShortcut.register() actually works under Wayland compositors.
+  // https://www.electronjs.org/docs/latest/api/global-shortcut
+  if (isLinuxWayland) {
+    enabledFeatures.push('GlobalShortcutsPortal')
+  }
+
+  // Chromium keeps only the last value of a repeated switch, so every feature —
+  // including any the user passed on the command line — must go in one call.
+  const userFeatures = app.commandLine.getSwitchValue('enable-features')
+  if (userFeatures) {
+    enabledFeatures.unshift(userFeatures)
+  }
+  app.commandLine.appendSwitch('enable-features', enabledFeatures.join(','))
 }
