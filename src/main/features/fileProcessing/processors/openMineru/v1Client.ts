@@ -4,7 +4,6 @@ import { net } from 'electron'
 import type * as z from 'zod'
 
 import { t } from '@main/i18n'
-import { createPinnedDispatcher } from '@main/services/proxy/pinnedDispatcher'
 import { resolveRemoteFetchUrl, sanitizeRemoteUrl } from '@main/utils/remoteUrlSafety'
 import type { FileInfo } from '@shared/types/file'
 
@@ -159,6 +158,7 @@ async function withTransferResponse<T>(
     signal: init.signal,
     configuredApiHost: connection.apiHost
   })
+  const { createPinnedDispatcher } = await import('@main/services/proxy/pinnedDispatcher')
   const dispatcher = createPinnedDispatcher(target)
   let response: Response | undefined
   try {
