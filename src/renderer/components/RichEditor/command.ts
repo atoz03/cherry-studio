@@ -22,6 +22,7 @@ import {
   Omega,
   Quote,
   Redo,
+  SquareSplitVertical,
   Strikethrough,
   Table,
   Type,
@@ -329,6 +330,17 @@ const DEFAULT_COMMANDS: Command[] = [
     keywords: ['divider', 'hr', 'line', 'separator'],
     handler: (editor: Editor) => {
       editor.chain().focus().setHorizontalRule().run()
+    }
+  },
+  {
+    id: 'compareBlock',
+    title: 'Compare Block',
+    description: 'Insert a collapsible area for reference text',
+    category: CommandCategory.STRUCTURE,
+    icon: SquareSplitVertical,
+    keywords: ['compare', 'memo', 'reference', 'draft', 'ai', '对照', '留白'],
+    handler: (editor: Editor) => {
+      editor.chain().focus().insertCompareBlock().run()
     }
   },
   {

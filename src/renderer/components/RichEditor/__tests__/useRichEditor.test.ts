@@ -7,6 +7,7 @@ vi.mock('@renderer/hooks/useCodeStyle', () => ({
   useCodeStyle: () => ({ activeShikiTheme: 'one-light' })
 }))
 
+import { COMPARE_BLOCK_EDIT_META } from '../helpers/compareBlockCodec'
 import { useRichEditor } from '../useRichEditor'
 
 const CONTENT = 'hello world'
@@ -452,5 +453,50 @@ describe('useRichEditor image drag and drop', () => {
     })
 
     expect(countImageNodes(result.current.editor)).toBe(1)
+  })
+})
+
+describe('useRichEditor change reporting', () => {
+  const COMPARE_NOTE = 'intro\n\n--- <!-- cs-compare-block:cb_test0001 collapsed=1 -->'
+
+  const findCompareBlockPos = (editor: Editor): number => {
+    let found = -1
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'compareBlock') found = pos
+      return found === -1
+    })
+    return found
+  }
+
+  // The compare block is edited from its own nested editor, so the note editor is unfocused.
+  it('reports compare-block edits made while the editor is unfocused', async () => {
+    const onChange = vi.fn()
+    const { result } = renderHook(() => useRichEditor({ initialContent: COMPARE_NOTE, autoFocus: false, onChange }))
+    const editor = result.current.editor
+    expect(editor.isFocused).toBe(false)
+
+    act(() => {
+      editor.view.dispatch(
+        editor.state.tr
+          .setNodeAttribute(findCompareBlockPos(editor), 'content', 'reference text')
+          .setMeta(COMPARE_BLOCK_EDIT_META, true)
+      )
+    })
+
+    const saved = onChange.mock.lastCall?.[0] as string
+    expect(saved).toContain('--- <!-- cs-compare-block:cb_test0001 collapsed=1 -->')
+    expect(saved).toMatch(/<cs-compare-meta data-v="1" data-json="[^"]+"><\/cs-compare-meta>\n$/)
+  })
+
+  it('ignores programmatic changes made while the editor is unfocused', async () => {
+    const onChange = vi.fn()
+    const { result } = renderHook(() => useRichEditor({ initialContent: COMPARE_NOTE, autoFocus: false, onChange }))
+    const editor = result.current.editor
+
+    act(() => {
+      editor.view.dispatch(editor.state.tr.setNodeAttribute(findCompareBlockPos(editor), 'content', 'reference text'))
+    })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 })
