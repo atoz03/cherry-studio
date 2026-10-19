@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // Plain closure, not vi.fn() — the real Agent is a module-level singleton
-// constructed exactly once at import time, before any test's `afterEach`
-// (which clears vi.fn() mock-call history) has a chance to run.
+// constructed once on first use, possibly in an earlier test whose `afterEach`
+// clears vi.fn() mock-call history.
 const { MockAgent, getConstructedOptions } = vi.hoisted(() => {
   let constructedOptions: unknown
   class MockAgent {
@@ -106,17 +106,17 @@ describe('OllamaTransport', () => {
   })
 
   it('constructs an Agent dispatcher with a timeout well past undici defaults, so a cold model load does not trip "fetch failed"', async () => {
-    const options = getConstructedOptions() as { headersTimeout: number; bodyTimeout: number }
-    // undici default is 300_000ms; cold-loading a multi-GB model routinely exceeds it.
-    expect(options.headersTimeout).toBeGreaterThan(300_000)
-    expect(options.bodyTimeout).toBeGreaterThan(300_000)
-
     const transport = createOllamaTransport({ baseURL: 'http://localhost:11434/api' })
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(JSON.stringify({ image: 'QUJD' }), { status: 200 }))
 
     await transport.submit({ ...baseInput, prompt: 'a cat' })
+
+    const options = getConstructedOptions() as { headersTimeout: number; bodyTimeout: number }
+    // undici default is 300_000ms; cold-loading a multi-GB model routinely exceeds it.
+    expect(options.headersTimeout).toBeGreaterThan(300_000)
+    expect(options.bodyTimeout).toBeGreaterThan(300_000)
 
     const init = fetchMock.mock.calls[0][1] as RequestInit & { dispatcher: unknown }
     expect(init.dispatcher).toBeInstanceOf(MockAgent)
@@ -146,6 +146,19 @@ describe('OllamaTransport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const init = fetchMock.mock.calls[0][1] as RequestInit & { dispatcher?: unknown }
     expect(init.dispatcher).toBeInstanceOf(MockAgent)
+  })
+
+  it('shares one dispatcher across requests and transports so the connection pool is reused', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => new Response(JSON.stringify({ image: 'QUJD' }), { status: 200 }))
+
+    await createOllamaTransport({ baseURL: 'http://localhost:11434/api' }).submit({ ...baseInput, prompt: 'a' })
+    await createOllamaTransport({ baseURL: 'http://localhost:11434/api' }).submit({ ...baseInput, prompt: 'b' })
+
+    const [first, second] = fetchMock.mock.calls.map(([, init]) => (init as { dispatcher?: unknown }).dispatcher)
+    expect(first).toBeInstanceOf(MockAgent)
+    expect(second).toBe(first)
   })
 
   it('merges custom headers with Content-Type', async () => {
@@ -196,11 +209,15 @@ describe('OllamaTransport', () => {
     const controller = new AbortController()
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((_url, init) => {
       return new Promise((_resolve, reject) => {
-        ;(init?.signal as AbortSignal)?.addEventListener('abort', () => {
+        const signal = init?.signal as AbortSignal
+        const abort = () => {
           const e = new Error('aborted')
           e.name = 'AbortError'
           reject(e)
-        })
+        }
+        // Like real fetch, an already-aborted signal rejects immediately.
+        if (signal?.aborted) abort()
+        signal?.addEventListener('abort', abort)
       })
     })
 
