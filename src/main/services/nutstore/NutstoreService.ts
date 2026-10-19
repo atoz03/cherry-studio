@@ -2,7 +2,6 @@ import path from 'node:path'
 
 import { net } from 'electron'
 import { isNil, partial } from 'es-toolkit/compat'
-import { XMLParser } from 'fast-xml-parser'
 import { type FileStat } from 'webdav'
 
 import { loggerService } from '@logger'
@@ -85,7 +84,7 @@ export async function getDirectoryContents(token: string, target: string): Promi
 
     const text = await response.text()
 
-    const result = parseXml<WebDAVResponse>(text)
+    const result = await parseXml<WebDAVResponse>(text)
     const items = Array.isArray(result.multistatus.response)
       ? result.multistatus.response
       : [result.multistatus.response]
@@ -131,7 +130,8 @@ function convertToFileStat(serverBase: string, item: WebDAVResponse['multistatus
   }
 }
 
-function parseXml<T>(xml: string) {
+async function parseXml<T>(xml: string) {
+  const { XMLParser } = await import('fast-xml-parser')
   const parser = new XMLParser({
     attributeNamePrefix: '',
     removeNSPrefix: true
