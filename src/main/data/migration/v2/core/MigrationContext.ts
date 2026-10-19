@@ -4,8 +4,6 @@
 
 import fs from 'fs/promises'
 
-import Store from 'electron-store'
-
 import type { DbType } from '@data/db/types'
 import { type LoggerService, loggerService } from '@logger'
 import type { LocalStorageRecord } from '@shared/data/migration/v2/types'
@@ -65,6 +63,7 @@ export async function createMigrationContext(
   localStorageExportPath?: string
 ): Promise<MigrationContext> {
   const logger = loggerService.withContext('Migration')
+  const { default: Store } = await import('electron-store')
   const electronStore = new Store({ cwd: paths.userData })
   const dexieFileReader = new DexieFileReader(dexieExportPath)
 
