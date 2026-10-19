@@ -106,6 +106,27 @@ describe('checkUpgradePathCompatibility', () => {
     const result = check({ previousVersion: '1.9.13', versionLogExists: true, currentAppVersion: '2.0.0' })
     expect(result).toStrictEqual({ outcome: 'pass' })
   })
+
+  // atoz03 fork: v1 releases 1.9.14/1.9.15 never existed upstream, and v2 builds carry a
+  // semver prerelease suffix that sorts *below* the upstream release it is based on.
+  it.each(['2.1.8-atoz.1', '2.1.8-atoz.12', '2.9.0-atoz.3'])(
+    'lets fork v1.9.15 migrate to fork build %s',
+    (current) => {
+      expect(check({ previousVersion: '1.9.15', versionLogExists: true, currentAppVersion: current })).toStrictEqual({
+        outcome: 'pass'
+      })
+    }
+  )
+
+  it('treats a previous fork v2 build as past the gateway', () => {
+    const result = check({ previousVersion: '2.1.8-atoz.1', versionLogExists: true, currentAppVersion: '3.0.0' })
+    expect(result).toStrictEqual({ outcome: 'pass' })
+  })
+
+  it('still blocks a fork v1 profile from skipping straight to a fork v3 build', () => {
+    const result = check({ previousVersion: '1.9.15', versionLogExists: true, currentAppVersion: '3.0.0-atoz.1' })
+    expect(result).toMatchObject({ outcome: 'block', reason: 'v2_gateway_skipped' })
+  })
 })
 
 // ── readPreviousVersion ────────────────────────────────────────────
@@ -207,6 +228,23 @@ describe('evaluateCandidateVersion', () => {
     expect(result.check).toStrictEqual({ outcome: 'pass' })
     expect(result.previousVersion).toBe('1.9.12')
     expect(result.versionLogExists).toBe(true)
+  })
+
+  it('passes a fork profile whose version.log ends in fork-only v1 releases, on a fork prerelease build', () => {
+    mockedExistsSync.mockReturnValue(true)
+    mockedReadFileSync.mockReturnValue(
+      [
+        '1.9.12|linux|production|true|install|2026-07-03T00:00:00.000Z',
+        '1.9.14|linux|production|true|install|2026-07-26T00:00:00.000Z',
+        '1.9.15|linux|production|true|install|2026-08-29T00:00:00.000Z',
+        '2.1.8-atoz.1|linux|production|true|install|2026-10-19T00:00:00.000Z'
+      ].join('\n')
+    )
+
+    const result = evaluateCandidateVersion('/data/dir', '2.1.8-atoz.1')
+
+    expect(result.previousVersion).toBe('1.9.15')
+    expect(result.check).toStrictEqual({ outcome: 'pass' })
   })
 
   it('blocks with v1_too_old when the recorded previous version is below the required v1', () => {
