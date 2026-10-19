@@ -8,7 +8,6 @@ import type { ReadableStream as NodeWebReadableStream } from 'node:stream/web'
 
 import { net } from 'electron'
 import { valid as semverValid } from 'semver'
-import { extract } from 'tar'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
@@ -165,6 +164,7 @@ export class ClaudeCodeBinaryService extends BaseService {
       const unpacked = path.join(staging, 'unpacked')
       await mkdir(unpacked)
       const filename = process.platform === 'win32' ? 'claude.exe' : 'claude'
+      const { extract } = await import('tar')
       await extract({
         file: tarball,
         cwd: unpacked,

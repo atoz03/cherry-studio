@@ -3,7 +3,6 @@ import { createReadStream } from 'node:fs'
 import { lstat, mkdir, open, readFile, readdir, rename, rm, rmdir } from 'node:fs/promises'
 import path from 'node:path'
 
-import { create, extract, list } from 'tar'
 import * as z from 'zod'
 
 import { isPathInside, shouldSilenceFsyncDirError } from '@main/utils/file'
@@ -130,6 +129,7 @@ export async function validateWorkspaceContents(directory: string): Promise<void
 
 export async function validateWorkspaceArchive(file: string): Promise<void> {
   let invalid: string | undefined
+  const { list } = await import('tar')
   await list({
     file,
     strict: true,
@@ -159,6 +159,7 @@ export async function assertWorkspaceArchiveHash(file: string, expected: string)
 
 export async function packWorkspaceDirectory(directory: string, file: string): Promise<string> {
   await validateWorkspaceContents(directory)
+  const { create } = await import('tar')
   await create({ cwd: directory, file, gzip: true, strict: true, portable: true }, ['.'])
   await validateWorkspaceArchive(file)
   const handle = await open(file, 'r+')
@@ -172,6 +173,7 @@ export async function packWorkspaceDirectory(directory: string, file: string): P
 
 export async function unpackWorkspaceArchive(file: string, directory: string): Promise<void> {
   await validateWorkspaceArchive(file)
+  const { extract } = await import('tar')
   await extract({ cwd: directory, file, strict: true, preservePaths: false })
   await validateWorkspaceContents(directory)
 }
