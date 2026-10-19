@@ -1,6 +1,6 @@
 import type { NetworkInterfaceInfo } from 'node:os'
 
-import { networkInterfaces, type Systeminformation } from 'systeminformation'
+import type { Systeminformation } from 'systeminformation'
 
 type InterfaceMetadata = Pick<
   Systeminformation.NetworkInterfacesData,
@@ -11,7 +11,7 @@ export async function getInterfaceMetadata(): Promise<InterfaceMetadata[]> {
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     return await Promise.race([
-      networkInterfaces().catch(() => []),
+      import('systeminformation').then(({ networkInterfaces }) => networkInterfaces()).catch(() => []),
       new Promise<InterfaceMetadata[]>((resolve) => {
         timer = setTimeout(() => resolve([]), 1000)
       })
