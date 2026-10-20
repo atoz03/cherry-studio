@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { Components } from 'streamdown'
 import type { Pluggable } from 'unified'
 
-import { defaultMarkdownPlugins, Markdown, StreamingMarkdown, withMath } from '@cherrystudio/ui'
+import { Markdown, StreamingMarkdown, withCjk, withMath } from '@cherrystudio/ui'
 import { removeSvgEmptyLines } from '@renderer/utils/formats'
 import { remarkLatexMath } from '@renderer/utils/remarkLatexMath'
 
@@ -55,8 +55,9 @@ function MarkdownContent({
   if (isStreaming && !hasStreamed) setHasStreamed(true)
 
   const parseMarkdownBlocks = useMemo(createLatexMarkdownBlockParser, [])
+  // No Streamdown `code` plugin: MarkdownCodeRenderer replaces its code blocks, so it would only bundle Shiki.
   const plugins = useMemo(
-    () => ({ ...defaultMarkdownPlugins, math: withMath({ singleDollar: singleDollarMath }) }),
+    () => ({ cjk: withCjk(), math: withMath({ singleDollar: singleDollarMath }) }),
     [singleDollarMath]
   )
   const content = useMemo(
