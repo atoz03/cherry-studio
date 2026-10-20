@@ -6,7 +6,6 @@ sources:
   - src/main/services/PdfTranslationService.ts
   - src/renderer/hooks/useApiGateway.ts
   - src/renderer/pages/settings/ToolSettings/ApiGatewaySettings
-  - src/renderer/pages/settings/DeviceConnectionsSettings
 ---
 
 # API Gateway Reference
@@ -41,7 +40,6 @@ to enable it. It is disabled by default.
 | Another local app uses Cherry Studio's models | Start it and give the app the gateway URL and API key. The gateway translates supported API protocols for the configured provider. |
 | An Agent needs a model bridge | Cherry Studio shows **Enable the API Gateway?** when the selected runtime/model route requires it. Choose **Enable** to use that route, or leave it disabled and choose a route that can connect directly. |
 | PDF translation | Cherry Studio starts the gateway temporarily for the translation task and releases it afterward. You do not need to enable it manually. |
-| A paired device connects to Cherry Studio | Start it, then allow network access in **Settings → Device Connections** and approve pairing. See [LAN exposure](#lan-exposure-is-confined-to-the-remote-access-upgrade) for the access boundary. |
 
 ### Start the gateway for a client
 
@@ -59,13 +57,10 @@ to enable it. It is disabled by default.
    such as `anthropic:claude-sonnet-4-6`; see the [HTTP surface](#http-surface) for
    each protocol's endpoints and authentication.
 
-Local API clients do not need **Allow network access**. That control is for paired
-remote devices; it does not expose the ordinary HTTP APIs to the LAN.
-
 ### Stop the gateway and automatic startup
 
 Open **Settings → API Gateway** and click **Stop**. This clears the saved
-startup setting, disables network access, and closes remote-device sessions.
+startup setting.
 Gateway-dependent clients and Agent routes need the gateway again before they can
 be used. Ordinary chats can continue without it.
 
@@ -101,7 +96,6 @@ src/main/features/apiGateway/        ← the HTTP server (Elysia + @elysia/node)
 ├── proxyStream.ts                   ← `processMessage()` — the core request → stream → response engine
 ├── reasoningCache.ts                ← google / openrouter reasoning-signature caches
 ├── openrouter.ts                    ← OpenRouter `reasoning_details` type contract (used by reasoningCache)
-├── providerExport.ts                ← provider/model export payload served to paired devices over remote access
 ├── middleware/
 │   └── auth.ts                      ← desktop API-key auth
 ├── routes/
@@ -123,12 +117,10 @@ src/main/features/apiGateway/        ← the HTTP server (Elysia + @elysia/node)
     ├── formatters/                  ← output event → SSE wire string
     └── factory/                     ← `MessageConverterFactory`, `StreamAdapterFactory`
 
-src/shared/ipc/schemas/apiGateway.ts      ← lifecycle commands, remote invitation/claim decisions, and event contracts
+src/shared/ipc/schemas/apiGateway.ts      ← lifecycle commands
 src/main/ipc/handlers/apiGateway.ts       ← thin lifecycle-service adapters
-src/main/data/services/ApiGatewayPairedDeviceService.ts ← paired-device persistence + remote authorization grants
 src/renderer/hooks/useApiGateway.ts       ← renderer state (config + running + loading) and actions
 src/renderer/pages/settings/ToolSettings/ApiGatewaySettings/   ← API client settings UI
-src/renderer/pages/settings/DeviceConnectionsSettings/         ← remote pairing approval and paired-device access UI
 ```
 
 ## HTTP surface
@@ -145,10 +137,6 @@ and its latency logged on completion.
 | `GET /health` | Health check (`{ status, timestamp, version }`) |
 | `GET /openapi` | Scalar API docs UI (front-end assets load from a CDN — see note) |
 | `GET /openapi/json` | OpenAPI JSON spec (fully local) |
-
-Remote devices do not use HTTP routes: the LAN listener upgrades
-`GET /v1/remote/connect` to the encrypted WebSocket owned by
-`src/main/services/remoteAccess/` (pairing, configuration export, Agent access).
 
 > **Offline note.** `renderDocsPage` points Scalar at a pinned jsDelivr bundle,
 > so `GET /openapi` (the human docs UI) needs network. `GET /openapi/json` — the
@@ -201,30 +189,13 @@ already be configured through the desktop. Legacy callers continue through the
 v1 bridge; scalar and array structured results also receive a JSON text
 projection so legacy clients can consume them.
 
-### LAN exposure is confined to the remote-access upgrade
+### Loopback only
 
-The gateway listens on `127.0.0.1` and `::1` by default at its configured port (default
-`23333`). Allowing network access rebinds to all IPv4 / IPv6 interfaces (`0.0.0.0` and `::`).
-Two explicit listeners share that port and the MCP session store; the IPv6 socket uses `ipv6Only: true`.
-If IPv6 is unavailable, IPv4 remains usable and only its addresses are advertised.
-A port conflict fails startup and releases both listeners. Local HTTP and remote WebSocket clients share the port. Rebinding only
-releases the listening handles; existing local streams and MCP sessions continue.
-The settings card explains network exposure and pairing requirements in plain language.
-Actual bound addresses appear only in the collapsed connection details, including while access is disabled.
-
-The root `onRequest` guard (`lanGuard.ts`) runs before CORS and screens each
-request by its socket peer. Ordinary HTTP routes remain loopback-only. The only
-LAN route allowed is the `/v1/remote/connect` WebSocket upgrade, and it requires
-both the gateway and LAN preferences to be enabled. The remote route is also
-blocked on loopback when LAN access is disabled. Desktop consumers continue to
-use `127.0.0.1` through `gatewayClientOrigin`.
-
-Disabling LAN first restores `feature.api_gateway.host` to `127.0.0.1`, then
-closes remote sessions and clears pending invitations, then rebinds to loopback.
-The guard rejects remote requests during the transition; afterward the network
-interfaces no longer accept new TCP connections. If opening access fails, the
-service restores loopback intent and attempts to rebind locally. If narrowing
-the listener fails, it remains unbound and the command reports an error.
+The gateway listens on `127.0.0.1` and `::1` at its configured port (default `23333`).
+Two explicit listeners share that port and the MCP session store; the IPv6 socket uses
+`ipv6Only: true`. If IPv6 is unavailable, IPv4 remains usable. A port conflict fails
+startup and releases both listeners. A `feature.api_gateway.host` of `0.0.0.0` left by an
+upstream build is ignored; desktop consumers use `127.0.0.1` through `gatewayClientOrigin`.
 
 ### Internal listener for Cherry consumers
 
@@ -358,16 +329,16 @@ Adapters consume the AI SDK **`UIMessageChunk`** stream (not `fullStream`):
 
 A `BaseService` — `@Injectable('ApiGatewayService')`,
 `@ServicePhase(Phase.WhenReady)`, implements **`Activatable`** — registered one
-line in `src/main/core/application/serviceRegistry.ts`. It owns the local and
-LAN `ApiGateway` HTTP listeners (`src/main/features/apiGateway`) and is the
+line in `src/main/core/application/serviceRegistry.ts`. It owns the local
+`ApiGateway` HTTP listeners (`src/main/features/apiGateway`) and is the
 single authority for their running state.
 
 | Hook | Responsibility |
 |---|---|
 | `onInit` | Subscribe to `feature.api_gateway.enabled`; IpcApi handlers live in `src/main/ipc/handlers/apiGateway.ts`. |
 | `onReady` | Read the persisted desired state and flush the reconciler. |
-| `onActivate` | Start on `127.0.0.1` / `::1`, or `0.0.0.0` / `::` when network access and the gateway are enabled; the guard enforces route access. |
-| `onDeactivate` | Close remote sessions and stop the shared listener; publish both running states as `false`. |
+| `onActivate` | Start on `127.0.0.1` / `::1` at the configured port. |
+| `onDeactivate` | Stop the listeners and publish the running state as `false`. |
 
 `ensureValidApiKey()` generates a `cs-sk-<uuid>` key into
 `feature.api_gateway.api_key` the first time it is missing.
@@ -375,24 +346,18 @@ single authority for their running state.
 All activation/deactivation flows through a self-held
 [`createLatestReconciler`](../../../src/main/core/concurrency/README.md), the
 sole caller of `activate`/`deactivate`. It is driven by `onReady`, Preference
-changes and IpcApi actions, converging actual state to `desiredEnabled` and the
-requested listening scope. Start/stop persist user intent before convergence.
+changes and IpcApi actions, converging actual state to `desiredEnabled`.
+Start/stop persist user intent before convergence.
 Cherry's own consumers never keep this listener up; they use the internal
 listener described below.
 
-LAN commands are serialized with remote-session cleanup. Enabling LAN requires
-an enabled, running gateway and persists `host = 0.0.0.0`. Disabling LAN persists
-`host = 127.0.0.1`, closes remote sessions and rebinds the listener without interrupting local requests.
-
-An explicit gateway stop atomically persists `enabled = false` and disables LAN,
-then closes remote sessions and stops the listener. An explicit restart retains LAN intent and reuses the
-configured gateway port; a fresh QR is only needed if the endpoint changes.
+An explicit gateway stop persists `enabled = false`, then stops the listener.
+An explicit restart reuses the configured gateway port.
 
 ### Running state — Shared Cache, not IPC
 
 `publishRunningState()` writes `feature.api_gateway.running` (boolean) into the
-**Shared Cache** via `CacheService.setShared(...)`. It also publishes
-`feature.api_gateway.lan_running` for remote-access availability. **Main is authoritative**;
+**Shared Cache** via `CacheService.setShared(...)`. **Main is authoritative**;
 the renderer reads it reactively with `useSharedCacheValue('feature.api_gateway.running')`.
 There is deliberately **no status/config pull IPC** — pulling running state or
 config over IPC would be an anti-pattern, since running lives in the shared
@@ -405,20 +370,14 @@ cache and config lives in the Preference subsystem.
 | `api_gateway.start` | `{ success } \| { success:false, error }` | `ApiGatewayService.start()` |
 | `api_gateway.stop` | success includes `outcome: 'stopped'` | `ApiGatewayService.stop()` |
 | `api_gateway.restart` | `{ success } \| { success:false, error }` | `ApiGatewayService.restart()` |
-| `api_gateway.lan.set_enabled` | `void`; failures use the standard IpcApi error channel | `ApiGatewayService.setLanEnabled(enabled)` |
-| `api_gateway.remote.create_invitation` | active LAN endpoint + one-time invitation and desktop identity; failures use the standard IpcApi error channel | `ApiGatewayService.createRemoteInvitation()` |
-| `api_gateway.remote.list_claims` / `api_gateway.remote.decide_pairing` | pending pairing claims and the local approve/reject decision with granted capabilities | `RemoteAccessService` |
-
-`api_gateway.remote.pairing_changed` is a payload-free signal that refreshes
-pending claims in every settings window.
 
 ### Preferences (`feature.api_gateway.*`)
 
 | Key | Type | Default | Notes |
 |---|---|---|---|
 | `feature.api_gateway.enabled` | `boolean` | `false` | Auto-start on launch / toggled from settings |
-| `feature.api_gateway.host` | `string` | `'127.0.0.1'` | `0.0.0.0` enables remote access on the shared listener; other values disable it |
-| `feature.api_gateway.port` | `number` | `23333` | TCP port shared by local and LAN listeners; UI accepts 1000–65535 |
+| `feature.api_gateway.host` | `string` | `'127.0.0.1'` | Read for the displayed URL; the listener always binds loopback |
+| `feature.api_gateway.port` | `number` | `23333` | TCP port for the IPv4 and IPv6 loopback listeners; UI accepts 1000–65535 |
 | `feature.api_gateway.api_key` | `string \| null` | `null` | Auto-generated `cs-sk-<uuid>` on first activate |
 
 Migrated from v1 `redux/settings/apiServer.{enabled,host,port,apiKey}` via the
@@ -434,52 +393,6 @@ the three IpcApi actions plus `setApiGatewayConfig`. Main owns writes to the
 `ApiGatewaySettings` page renders the status indicator, start/stop/restart
 controls, port input, server URL, the (copy/regenerate) API key, an
 `Authorization` header example, and a link to `…/openapi`.
-
-The separate `DeviceConnectionsSettings` page owns LAN exposure, remote pairing,
-and access revocation. It only sends LAN enable/disable commands. When the local
-gateway is disabled or not running, it offers a link to API Gateway settings.
-The pairing section uses the same gateway-required guidance. If LAN intent is
-enabled but its listener is down, the page offers Retry alongside Disable LAN
-access so recovery does not require toggling the preference off first.
-Its pairing section asks Main for one invitation, renders the QR, shows each
-pending claim with its verification code and requested capabilities for approval,
-and uses DataApi to list or revoke paired devices. Readiness requires both enabled LAN intent and the live LAN
-running state. Its strings live under the `deviceConnections` i18n namespace.
-
-Paired-device records are SQLite-backed business data in
-`api_gateway_paired_device`, keyed by the device's proven identity with one
-grant id per approved capability. Renderer-facing DataApi returns
-device metadata only (`GET /api-gateway/paired-devices`) and exposes revocation
-as `DELETE /api-gateway/paired-devices/:id`.
-The owning data service validates device metadata before persisting a claim.
-
-### Mobile pairing protocol
-
-The QR code contains JSON, not a URL:
-
-```json
-{"v":2,"t":"cherry-studio-pair","name":"Desktop","port":34444,"ips":["192.168.1.8"],"invitationId":"…","invitationSecret":"…","desktopIdentity":"12D3Koo…","protocolVersions":[1]}
-```
-
-`v` is the QR format version; `t` identifies a Cherry Studio pairing payload.
-`name` is the desktop hostname. `ips` contains its non-loopback IPv4 addresses;
-the mobile client must choose an address reachable on its network and open
-`ws://<ip>:<port>/v1/remote/connect`. `port` is the active gateway port, shared with local API clients. It stays
-the same across LAN toggles and restarts unless the configured port changes. `desktopIdentity` pins the desktop's Ed25519 key for the
-Noise handshake; the invitation is single-use, expires after two minutes, and is
-discarded when LAN is disabled or the gateway stops.
-
-Over the encrypted channel the phone sends `connection.hello`, then
-`pairing.claim` with the invitation, its device metadata and the capabilities it
-requests (`configuration`, `agent`). The desktop shows the claim with a
-verification code; the user approves a subset of the requested capabilities or
-rejects it. The phone polls `pairing.get` and, once approved, receives its device
-id, authorization grants and a short-lived access token, all inside the
-encrypted channel. Configuration export (`configuration.export.*`) and Agent
-access (`agent.*`) are then authorized by those grants; revoking the device
-closes its connections. Wire schemas live in `packages/remote-protocol`, the
-transport in `packages/remote-transport`, and the desktop owner in
-`src/main/services/remoteAccess/`.
 
 ## Authentication
 
@@ -497,11 +410,6 @@ The `/v1beta` guard passes Gemini's `x-goog-api-key` / `?key=` token as a third
 candidate to the same timing-safe comparison and shapes guard failures in the
 Google error envelope.
 
-Paired-device authentication is deliberately separate. A `cs-dt-…` Bearer
-token is hashed and looked up only by the local guard on
-`GET /v1/export/providers`; it does not grant access to the existing `/v1` or
-`/v1beta` routes. Future mobile-only endpoints opt into this guard explicitly.
-
 ## Error handling
 
 One root `onError` (`gatewayErrorHandler`) selects the response envelope by
@@ -517,8 +425,8 @@ request **path**, so every endpoint speaks its caller's dialect:
 `DataApiError`s (from the data-layer services backing models/knowledge) carry
 their own `status`/`code` and are mapped straight into the selected envelope.
 Built-in Elysia `VALIDATION` / `NOT_FOUND` / `PARSE` codes map to 400/404/400
-(422 for REST validation). Explicit HTTP responses thrown by custom parsers,
-such as the pairing body's `413`, are preserved through Elysia's `ParseError` wrapper.
+(422 for REST validation). Explicit HTTP responses thrown by custom parsers
+are preserved through Elysia's `ParseError` wrapper.
 Unknown provider/runtime errors are shaped by
 `transformAnthropicError` / `transformOpenAiError` — **status-driven**: they read
 `statusCode` off the AI-SDK `SerializedError`, so a provider 401/429/… keeps its
@@ -546,25 +454,14 @@ streaming `buildStreamErrorFrame`.
   so a generation client gets back the protocol it spoke.
 - **Auth key is the persisted preference.** `feature.api_gateway.api_key`, compared
   timing-safe; auto-generated on first activation.
-- **Remote grants are domain-scoped.** Configuration export and Agent access use
-  the encrypted remote connection and independent grants. Remote credentials
-  never become fallback credentials for ordinary gateway HTTP routes.
 
 ## Related references
 
-- [Remote Connectivity Design](./remote-connectivity.md) — proposed identity-based
-  discovery, address-change recovery, VPN endpoints, and future relay ownership;
-  includes the current implementation baseline and device acceptance plan.
-- [Remote Agent Access](./remote-agent-access.md) — **design proposal** extending
-  this gateway to reach a running agent session from a mobile client (WS agent
-  surface, explicit device authorization, incremental delivery, reverse-tunnel relay).
-  The [API design](../ai/remote-agent-access.md) specifies the target JSON-RPC contract;
-  the connectivity design records the current Noise/JSON-RPC baseline separately.
 - [AI Reference](../ai/README.md) — `AiStreamManager`, `streamPrompt`,
   `UIMessageChunk`, `buildAgentParams` / `CallOverrides`, the listener model
   (`SseListener`, `WebContentsListener`).
 - [Service Lifecycle](../lifecycle/README.md) — `BaseService`, `Activatable`,
   `@ServicePhase`, `serviceRegistry.ts`.
 - [Data Layer](../data/README.md) — Preference (`feature.api_gateway.*`), Cache
-  (`feature.api_gateway.running`), paired-device DataApi records, and the
+  (`feature.api_gateway.running`) and the
   `ProviderService` / `KnowledgeBaseService` owners.

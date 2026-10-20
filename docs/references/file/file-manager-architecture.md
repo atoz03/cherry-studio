@@ -299,7 +299,7 @@ Three related passes have distinct jobs:
 | File sweep | Removes old UUID-named blobs without a DB row and old `*.tmp-<uuid>` residue |
 
 The file sweep ignores non-files and candidates newer than five minutes. It plans before deleting
-and rechecks database ownership and intake protection before unlinking each file. Default sweeps
+and rechecks database ownership before unlinking each file. Default sweeps
 abort plans involving at least 20 files or 10 MiB when the planned count or bytes exceed half of
 the candidate population. A pending staged restore makes all passes stand aside.
 
