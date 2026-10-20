@@ -40,7 +40,9 @@ import { AbsoluteFilePathSchema } from '@shared/types/file'
 import { createFilePathHandle, type DirectoryTreeOptions, type TreeMutationEvent } from '@shared/utils/file'
 
 import HeaderNavbar from './HeaderNavbar'
+import { useNotesGitAutoCommit } from './hooks/useNotesGitAutoCommit'
 import NotesEditor, { NotesEditorLoading } from './NotesEditor'
+import NotesHistory from './NotesHistory'
 import NotesSidebar from './NotesSidebar'
 
 const logger = loggerService.withContext('NotesPage')
@@ -121,8 +123,10 @@ const NotesPage: FC = () => {
   // projected tree, which would re-project on every keystroke save. The unlink →
   // clear-active-file path is implicit: when the file leaves the tree, the
   // `shouldClearPath` guard below clears `activeFilePath`.
+  const { markChanged: markNotesChanged } = useNotesGitAutoCommit(notesPath)
   const handleTreeMutation = useCallback(
     (event: TreeMutationEvent) => {
+      markNotesChanged()
       if (event.type !== 'updated') return
       const activePath = activeFilePathRef.current
       if (!activePath) return
@@ -130,7 +134,7 @@ const NotesPage: FC = () => {
       // The event mtime lets the session dismiss our own autosave echo without IPC.
       notifyExternalChange(event.stats.mtime)
     },
-    [notifyExternalChange]
+    [markNotesChanged, notifyExternalChange]
   )
 
   // `useDirectoryTree` owns the FS scan + chokidar watcher behind a single
@@ -1089,6 +1093,11 @@ const NotesPage: FC = () => {
             onToggleStar={handleToggleStar}
             onExpandPath={handleExpandPath}
             onRenameNode={handleRenameNode}
+            actions={
+              activeNode?.type === 'file' && activeFilePath ? (
+                <NotesHistory filePath={activeFilePath} flushDraft={flushFileDraft} reloadDraft={reloadFileDraft} />
+              ) : undefined
+            }
           />
           {fileSession.saveError && (
             <div

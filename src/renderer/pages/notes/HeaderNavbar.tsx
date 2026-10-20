@@ -1,6 +1,6 @@
 import { t } from 'i18next'
 import { Check, ChevronRight, MoreHorizontal, PanelLeftClose, PanelRightClose, Star } from 'lucide-react'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   Breadcrumb,
@@ -44,6 +44,8 @@ interface HeaderNavbarProps {
   onToggleStar?: (nodeId: string) => void
   onExpandPath?: (treePath: string) => void
   onRenameNode?: (nodeId: string, newName: string) => void
+  /** Extra buttons shown first on the right side. */
+  actions?: ReactNode
 }
 
 const HeaderNavbar = ({
@@ -52,7 +54,8 @@ const HeaderNavbar = ({
   getCurrentNoteContent,
   onToggleStar,
   onExpandPath,
-  onRenameNode
+  onRenameNode,
+  actions
 }: HeaderNavbarProps) => {
   const { showWorkspace, toggleShowWorkspace } = useShowWorkspace()
   const { activeNode } = useActiveNode(notesTree, activeFilePath)
@@ -371,6 +374,7 @@ const HeaderNavbar = ({
         </div>
       </NavbarCenter>
       <NavbarRight className="pr-0">
+        {actions}
         {canShowStarButton && (
           <Tooltip title={activeNode.isStarred ? t('notes.unstar') : t('notes.star')} delay={800}>
             <BaseNavbarIcon
