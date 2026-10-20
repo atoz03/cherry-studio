@@ -10,6 +10,7 @@ import { loggerService } from '@logger'
 import { skillService } from '@main/ai/skills/SkillService'
 import { BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isMac, isWin } from '@main/core/platform'
+import { ensureGitAvailable } from '@main/services/binaryManager'
 import { toAsarUnpackedPath } from '@main/utils/asar'
 import { dedupePathSegments, mergeBinaryExecutionEnv } from '@main/utils/binaryEnv'
 import { getBundledGitDir } from '@main/utils/bundledGit'
@@ -576,6 +577,8 @@ export class CodeCliService extends BaseService {
 
     const executablePath = availability.path
     const usesCherryExecutionEnv = availability.source !== 'system'
+    // Fork: without a system git, the MinGit tail below is downloaded on first launch.
+    if (isWin) await ensureGitAvailable().catch((error) => logger.warn('Launching without a git fallback', { error }))
 
     // Cherry's MISE_* variables are needed for currently available mise shims
     // and bundled binaries. A system CLI receives no Cherry environment: adding
