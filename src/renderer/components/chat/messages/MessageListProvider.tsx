@@ -50,7 +50,6 @@ type MessageListDataValue = Pick<
   MessageListState,
   | 'topic'
   | 'beforeList'
-  | 'afterMessages'
   | 'messageTail'
   | 'activeTurnStatus'
   | 'isInitialLoading'
@@ -125,7 +124,6 @@ export const MessageListProvider = ({ value, children }: { value: MessageListPro
     () => ({
       topic: state.topic,
       beforeList: state.beforeList,
-      afterMessages: state.afterMessages,
       messageTail: state.messageTail,
       activeTurnStatus: state.activeTurnStatus,
       isInitialLoading: state.isInitialLoading,
@@ -142,7 +140,6 @@ export const MessageListProvider = ({ value, children }: { value: MessageListPro
     [
       state.topic,
       state.beforeList,
-      state.afterMessages,
       state.messageTail,
       state.activeTurnStatus,
       state.isInitialLoading,
