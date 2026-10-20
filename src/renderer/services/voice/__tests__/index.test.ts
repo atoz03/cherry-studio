@@ -21,8 +21,6 @@ describe('voice service public boundary', () => {
     expect(voice.speechPlaybackService).toBeDefined()
     expect(voice.autoReadService).toBeDefined()
     expect(voice.readMessageAloud).toBeTypeOf('function')
-    expect(voice.planReadableText).toBeTypeOf('function')
-    expect(voice.chunkReadableText).toBeTypeOf('function')
     expect('VoiceService' in voice).toBe(false)
     expect('VoiceTargetManager' in voice).toBe(false)
     expect('DictationService' in voice).toBe(false)

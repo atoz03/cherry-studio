@@ -4,7 +4,6 @@ import { getTextFromParts } from '@renderer/utils/message/partsHelpers'
 import type { CherryUIMessage } from '@shared/data/types/message'
 import type { VoiceErrorReason } from '@shared/ipc/errors/voice'
 
-import { normalizeReadableText } from './readableText'
 import { speechPlaybackService } from './SpeechPlaybackService'
 import { VoiceDomainError } from './VoiceService'
 
@@ -85,6 +84,7 @@ export class AutoReadService {
 
     const text = getTextFromParts(input.message.parts ?? [])
     try {
+      const { normalizeReadableText } = await import('./readableText')
       if (!normalizeReadableText(text)) return { status: 'skipped', key, reason: 'empty' }
 
       const result = await this.#playback.start({

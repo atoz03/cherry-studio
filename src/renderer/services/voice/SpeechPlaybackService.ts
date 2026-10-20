@@ -4,12 +4,7 @@ import type { VoicePlaybackState } from '@shared/ipc/schemas/voice'
 import type { InputFor } from '@shared/ipc/types'
 
 import { createAudioSpectrum, type AudioSpectrum } from './audioSpectrum'
-import {
-  planReadableText,
-  type ReadableTextMode,
-  type ReadableTextPlan,
-  type ReadableTextTrigger
-} from './readableText'
+import type { planReadableText, ReadableTextMode, ReadableTextPlan, ReadableTextTrigger } from './readableText'
 import {
   VoiceDomainError,
   type SpeechPreferenceInput,
@@ -68,9 +63,11 @@ type PlaybackVoiceService = Pick<
   | 'discardSession'
 >
 
+type PlanText = (...args: Parameters<typeof planReadableText>) => ReadableTextPlan | Promise<ReadableTextPlan>
+
 interface SpeechPlaybackServiceOptions {
   voice?: PlaybackVoiceService
-  planText?: typeof planReadableText
+  planText?: PlanText
   ownerWindow?: Window
   createAudio?: (source: string) => HTMLAudioElement
 }
@@ -130,7 +127,7 @@ function planningResult(plan: Exclude<ReadableTextPlan, { status: 'ready' }>): S
 
 export class SpeechPlaybackService {
   private readonly voice: PlaybackVoiceService
-  private readonly planText: typeof planReadableText
+  private readonly planText: PlanText
   private readonly ownerWindow: Window
   private readonly createAudio: (source: string) => HTMLAudioElement
   private readonly listeners = new Set<() => void>()
@@ -149,7 +146,8 @@ export class SpeechPlaybackService {
 
   constructor(options: SpeechPlaybackServiceOptions = {}) {
     this.voice = options.voice ?? voiceService
-    this.planText = options.planText ?? planReadableText
+    // The Markdown/HTML text pipeline is loaded on first playback, not with every window that hosts the service.
+    this.planText = options.planText ?? (async (...args) => (await import('./readableText')).planReadableText(...args))
     this.ownerWindow = options.ownerWindow ?? window
     this.createAudio =
       options.createAudio ??
@@ -199,7 +197,10 @@ export class SpeechPlaybackService {
 
   async start(input: SpeechPlaybackStartInput): Promise<SpeechPlaybackStartResult> {
     if (input.signal?.aborted) throw new VoiceDomainError('aborted')
-    const plan = this.planText(input.text, {
+    const generation = this.lifecycleGeneration
+    const interruptionGeneration = this.interruptionGeneration
+    const autoReadGeneration = this.autoReadGeneration
+    const plan = await this.planText(input.text, {
       trigger: input.trigger,
       mode: input.mode,
       confirmed: input.confirmed
@@ -215,9 +216,6 @@ export class SpeechPlaybackService {
       throw new VoiceDomainError('invalid_request')
     }
 
-    const generation = this.lifecycleGeneration
-    const interruptionGeneration = this.interruptionGeneration
-    const autoReadGeneration = this.autoReadGeneration
     let startedRun: PlaybackRun | undefined = undefined
     const abort = (): void => {
       if (startedRun) void this.terminate(startedRun, true).catch(() => undefined)
