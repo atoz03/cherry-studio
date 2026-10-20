@@ -27,7 +27,21 @@ interface PlatformFlags {
 const disableHardwareAccelerationMock = vi.fn()
 const appendSwitchMock = vi.fn()
 const hasSwitchMock = vi.fn()
+const getSwitchValueMock = vi.fn()
 const bootConfigGetMock = vi.fn()
+
+const UNCONDITIONAL_FEATURES = [
+  'DocumentPolicyIncludeJSCallStacksInCrashReports',
+  'EarlyEstablishGpuChannel',
+  'EstablishGpuChannelAsync',
+  'PageAllocatorRetryOnCommitFailure'
+]
+
+/** Chromium keeps only the last value of a repeated switch — that is what takes effect. */
+function effectiveEnabledFeatures(): string[] {
+  const calls = appendSwitchMock.mock.calls.filter(([name]) => name === 'enable-features')
+  return calls.at(-1)?.[1]?.split(',') ?? []
+}
 
 function stubElectron() {
   vi.doMock('electron', () => ({
@@ -36,7 +50,8 @@ function stubElectron() {
       disableHardwareAcceleration: disableHardwareAccelerationMock,
       commandLine: {
         appendSwitch: appendSwitchMock,
-        hasSwitch: hasSwitchMock
+        hasSwitch: hasSwitchMock,
+        getSwitchValue: getSwitchValueMock
       }
     }
   }))
@@ -76,6 +91,7 @@ beforeEach(() => {
   disableHardwareAccelerationMock.mockReset()
   appendSwitchMock.mockReset()
   hasSwitchMock.mockReset().mockReturnValue(false)
+  getSwitchValueMock.mockReset().mockReturnValue('')
   bootConfigGetMock.mockReset()
 })
 
@@ -134,7 +150,7 @@ describe('configureChromiumFlags', () => {
       expect(appendSwitchMock).toHaveBeenCalledWith('wm-window-animations-disabled')
       expect(appendSwitchMock).not.toHaveBeenCalledWith('class', 'CherryStudio')
       expect(appendSwitchMock).not.toHaveBeenCalledWith('name', 'CherryStudio')
-      expect(appendSwitchMock).not.toHaveBeenCalledWith('enable-features', 'GlobalShortcutsPortal')
+      expect(effectiveEnabledFeatures()).not.toContain('GlobalShortcutsPortal')
     })
 
     it('Linux X11: appends class/name but NOT GlobalShortcutsPortal', async () => {
@@ -148,7 +164,7 @@ describe('configureChromiumFlags', () => {
 
       expect(appendSwitchMock).toHaveBeenCalledWith('class', 'CherryStudio')
       expect(appendSwitchMock).toHaveBeenCalledWith('name', 'CherryStudio')
-      expect(appendSwitchMock).not.toHaveBeenCalledWith('enable-features', 'GlobalShortcutsPortal')
+      expect(effectiveEnabledFeatures()).not.toContain('GlobalShortcutsPortal')
       expect(appendSwitchMock).not.toHaveBeenCalledWith('wm-window-animations-disabled')
     })
 
@@ -161,7 +177,7 @@ describe('configureChromiumFlags', () => {
       const { configureChromiumFlags } = await loadModule()
       configureChromiumFlags()
 
-      expect(appendSwitchMock).toHaveBeenCalledWith('enable-features', 'GlobalShortcutsPortal')
+      expect(effectiveEnabledFeatures()).toContain('GlobalShortcutsPortal')
       expect(appendSwitchMock).toHaveBeenCalledWith('class', 'CherryStudio')
       expect(appendSwitchMock).toHaveBeenCalledWith('name', 'CherryStudio')
     })
@@ -177,7 +193,7 @@ describe('configureChromiumFlags', () => {
       expect(appendSwitchMock).not.toHaveBeenCalledWith('wm-window-animations-disabled')
       expect(appendSwitchMock).not.toHaveBeenCalledWith('class', 'CherryStudio')
       expect(appendSwitchMock).not.toHaveBeenCalledWith('name', 'CherryStudio')
-      expect(appendSwitchMock).not.toHaveBeenCalledWith('enable-features', 'GlobalShortcutsPortal')
+      expect(effectiveEnabledFeatures()).not.toContain('GlobalShortcutsPortal')
     })
   })
 
@@ -234,9 +250,6 @@ describe('configureChromiumFlags', () => {
   })
 
   describe('unconditional feature flags', () => {
-    const UNCONDITIONAL_FEATURES =
-      'DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PageAllocatorRetryOnCommitFailure'
-
     it('always appends the unconditional enable-features flag on macOS', async () => {
       stubConstants({ isLinux: false, isWin: false })
       stubElectron()
@@ -245,7 +258,7 @@ describe('configureChromiumFlags', () => {
       const { configureChromiumFlags } = await loadModule()
       configureChromiumFlags()
 
-      expect(appendSwitchMock).toHaveBeenCalledWith('enable-features', UNCONDITIONAL_FEATURES)
+      expect(effectiveEnabledFeatures()).toEqual(UNCONDITIONAL_FEATURES)
     })
 
     it('always appends the unconditional enable-features flag on Windows', async () => {
@@ -256,10 +269,10 @@ describe('configureChromiumFlags', () => {
       const { configureChromiumFlags } = await loadModule()
       configureChromiumFlags()
 
-      expect(appendSwitchMock).toHaveBeenCalledWith('enable-features', UNCONDITIONAL_FEATURES)
+      expect(effectiveEnabledFeatures()).toEqual(UNCONDITIONAL_FEATURES)
     })
 
-    it('always appends the unconditional enable-features flag on Linux Wayland', async () => {
+    it('keeps the unconditional features alongside GlobalShortcutsPortal on Linux Wayland', async () => {
       vi.stubEnv('XDG_SESSION_TYPE', 'wayland')
       stubConstants({ isLinux: true, isWin: false })
       stubElectron()
@@ -268,7 +281,26 @@ describe('configureChromiumFlags', () => {
       const { configureChromiumFlags } = await loadModule()
       configureChromiumFlags()
 
-      expect(appendSwitchMock).toHaveBeenCalledWith('enable-features', UNCONDITIONAL_FEATURES)
+      expect(effectiveEnabledFeatures()).toEqual([...UNCONDITIONAL_FEATURES, 'GlobalShortcutsPortal'])
+    })
+
+    it('keeps features the user passed with --enable-features', async () => {
+      vi.stubEnv('XDG_SESSION_TYPE', 'wayland')
+      stubConstants({ isLinux: true, isWin: false })
+      stubElectron()
+      stubBootConfig()
+      getSwitchValueMock.mockImplementation((name: string) =>
+        name === 'enable-features' ? 'WaylandWindowDecorations' : ''
+      )
+
+      const { configureChromiumFlags } = await loadModule()
+      configureChromiumFlags()
+
+      expect(effectiveEnabledFeatures()).toEqual([
+        'WaylandWindowDecorations',
+        ...UNCONDITIONAL_FEATURES,
+        'GlobalShortcutsPortal'
+      ])
     })
   })
 
@@ -284,10 +316,7 @@ describe('configureChromiumFlags', () => {
       expect(disableHardwareAccelerationMock).not.toHaveBeenCalled()
       // Only the unconditional enable-features call: 1 total.
       expect(appendSwitchMock).toHaveBeenCalledTimes(1)
-      expect(appendSwitchMock).toHaveBeenCalledWith(
-        'enable-features',
-        'DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,PageAllocatorRetryOnCommitFailure'
-      )
+      expect(effectiveEnabledFeatures()).toEqual(UNCONDITIONAL_FEATURES)
     })
   })
 })

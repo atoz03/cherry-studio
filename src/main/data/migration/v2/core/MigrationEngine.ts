@@ -6,7 +6,6 @@
 import fs from 'fs/promises'
 
 import { eq, sql } from 'drizzle-orm'
-import Store from 'electron-store'
 
 import { agentTable } from '@data/db/schemas/agent'
 import { agentChannelTable, agentChannelTaskTable } from '@data/db/schemas/agentChannel'
@@ -210,7 +209,7 @@ export class MigrationEngine {
     }
 
     // No migration status record — check if this is a fresh install or an upgrade.
-    if (this.legacyDataConfirmed || this.hasLegacyData()) {
+    if (this.legacyDataConfirmed || (await this.hasLegacyData())) {
       return true
     }
 
@@ -230,7 +229,8 @@ export class MigrationEngine {
    * by v2, causing false positives. Prefer to over-trigger (empty-
    * data migration completes safely) rather than miss a real upgrade.
    */
-  private hasLegacyData(): boolean {
+  private async hasLegacyData(): Promise<boolean> {
+    const { default: Store } = await import('electron-store')
     const legacyStore = new Store({ cwd: this.paths.userData })
     const hasData = legacyStore.size > 0
 

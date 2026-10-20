@@ -3,7 +3,6 @@ import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { type BrowserWindow, dialog } from 'electron'
-import MarkdownIt from 'markdown-it'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
@@ -13,12 +12,6 @@ import type { PrintableDocumentPayload } from '@shared/ipc/schemas/print'
 import { sanitizeFilename } from '@shared/utils/file'
 
 const logger = loggerService.withContext('PrintService')
-
-const markdownIt = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: false
-})
 
 const PRINT_CJK_FONT_LOCAL_NAMES = [
   'PingFang SC',
@@ -112,8 +105,9 @@ new Promise((resolve) => {
 })`
 }
 
-export function buildPrintableHtml({ title, markdown, sourcePath }: PrintableDocumentPayload): string {
-  const renderedContent = markdownIt.render(markdown)
+export async function buildPrintableHtml({ title, markdown, sourcePath }: PrintableDocumentPayload): Promise<string> {
+  const { default: MarkdownIt } = await import('markdown-it')
+  const renderedContent = new MarkdownIt({ html: false, linkify: true, typographer: false }).render(markdown)
   const escapedTitle = escapeHtml(title.trim() || 'Untitled')
   const baseTag = getBaseTag(sourcePath)
 
@@ -282,7 +276,7 @@ export class PrintService {
     }
 
     try {
-      await window.loadURL(toDataUrl(buildPrintableHtml(payload)))
+      await window.loadURL(toDataUrl(await buildPrintableHtml(payload)))
       await window.webContents.executeJavaScript(buildRendererReadyScript(), true)
       return { windowId, window }
     } catch (error) {

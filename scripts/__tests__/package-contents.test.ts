@@ -11,12 +11,15 @@ const projectRoot = path.resolve(import.meta.dirname, '../..')
 const require = createRequire(import.meta.url)
 const builderRequire = createRequire(require.resolve('electron-builder'))
 const { FileMatcher } = builderRequire('app-builder-lib/out/fileMatcher')
-const config = parse(readFileSync(path.join(projectRoot, 'electron-builder.yml'), 'utf8')) as { files: string[] }
+const config = parse(readFileSync(path.join(projectRoot, 'electron-builder.yml'), 'utf8')) as {
+  files: string[]
+  extraResources: Array<{ from: string; to: string; filter?: string[] }>
+}
 const fileStat = statSync(path.join(projectRoot, 'package.json'))
 
-function includesFile(filename: string, patterns = config.files): boolean {
-  return new FileMatcher(projectRoot, projectRoot, (value: string) => value, patterns).createFilter()(
-    path.join(projectRoot, filename),
+function includesFile(filename: string, patterns = config.files, root = projectRoot): boolean {
+  return new FileMatcher(root, root, (value: string) => value, patterns).createFilter()(
+    path.join(root, filename),
     fileStat
   )
 }
@@ -134,6 +137,58 @@ describe('packaged dependency contents', () => {
       'resources/builtin-agents/icon.png'
     ]) {
       expect(includesFile(file), file).toBe(true)
+    }
+  })
+
+  it('keeps the pdf-parse ESM entries and the pdf.js files they load while dropping unused builds', () => {
+    for (const file of [
+      'node_modules/pdf-parse/package.json',
+      'node_modules/pdf-parse/dist/pdf-parse/esm/index.js',
+      'node_modules/pdf-parse/dist/pdf-parse/esm/PDFParse.js',
+      'node_modules/pdf-parse/dist/worker/esm/index.js',
+      'node_modules/pdfjs-dist/package.json',
+      'node_modules/pdfjs-dist/legacy/build/pdf.mjs',
+      'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs',
+      'node_modules/pdfjs-dist/standard_fonts/FoxitDingbats.pfb',
+      'node_modules/@napi-rs/canvas/index.js'
+    ]) {
+      expect(includesFile(file), file).toBe(true)
+    }
+    for (const file of [
+      'node_modules/pdf-parse/bin/cli.mjs',
+      'node_modules/pdf-parse/dist/pdf-parse/cjs/index.cjs',
+      'node_modules/pdf-parse/dist/pdf-parse/web/pdf-parse.es.js',
+      'node_modules/pdf-parse/dist/pdf-parse/esm/pdf.worker.mjs',
+      'node_modules/pdf-parse/dist/worker/cjs/index.cjs',
+      'node_modules/pdf-parse/dist/worker/pdf.worker.mjs',
+      'node_modules/pdfjs-dist/build/pdf.mjs',
+      'node_modules/pdfjs-dist/web/pdf_viewer.mjs',
+      'node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+      'node_modules/pdfjs-dist/legacy/build/pdf.sandbox.mjs',
+      'node_modules/pdfjs-dist/wasm/openjpeg.wasm',
+      'node_modules/canvas/index.js',
+      'node_modules/@mapbox/node-pre-gyp/lib/node-pre-gyp.js',
+      'node_modules/nan/include_dirs.js'
+    ]) {
+      expect(includesFile(file), file).toBe(false)
+    }
+  })
+
+  it('ships each journaled migration once, outside ASAR, without drizzle-kit snapshots', () => {
+    const from = 'migrations/sqlite-drizzle'
+    const resource = config.extraResources.find((entry) => entry.from === from)
+    const root = path.join(projectRoot, from)
+    const journal = JSON.parse(readFileSync(path.join(root, 'meta/_journal.json'), 'utf8')) as {
+      entries: Array<{ tag: string }>
+    }
+    const shipped = (file: string) => includesFile(file, resource?.filter ?? [], root)
+
+    expect(includesFile(`${from}/meta/_journal.json`)).toBe(false)
+    expect(shipped('meta/_journal.json')).toBe(true)
+    expect(journal.entries.length).toBeGreaterThan(0)
+    for (const { tag } of journal.entries) {
+      expect(shipped(`${tag}.sql`), tag).toBe(true)
+      expect(shipped(`meta/${tag.slice(0, 4)}_snapshot.json`), tag).toBe(false)
     }
   })
 })

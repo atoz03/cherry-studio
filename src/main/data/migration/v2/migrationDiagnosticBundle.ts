@@ -3,7 +3,6 @@ import { release } from 'node:os'
 import path from 'node:path'
 import { type Readable, Transform } from 'node:stream'
 
-import { ZipArchive } from 'archiver'
 import { app } from 'electron'
 
 import { application } from '@application'
@@ -177,6 +176,7 @@ async function writeZip(
   snapshots: LogSnapshot[],
   createLogReadStream: (handle: FileHandle, snapshotBytes: number) => Readable
 ): Promise<void> {
+  const { ZipArchive } = await import('archiver')
   const output = createAtomicWriteStream(destination)
   const archive = new ZipArchive({ zlib: { level: 1 } })
   const activeStreams = new Set<Readable>()

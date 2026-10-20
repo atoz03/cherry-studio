@@ -70,8 +70,8 @@ describe('PrintService', () => {
     writeFile.mockResolvedValue(undefined)
   })
 
-  it('builds paper-oriented HTML from rendered Markdown and a file base URL', () => {
-    const html = buildPrintableHtml({
+  it('builds paper-oriented HTML from rendered Markdown and a file base URL', async () => {
+    const html = await buildPrintableHtml({
       title: '<Unsafe>',
       markdown: '# Safe\n\n<script>alert(1)</script>',
       sourcePath: '/Users/me/Notes/safe.md'
@@ -84,8 +84,8 @@ describe('PrintService', () => {
     expect(html).toContain('@page')
   })
 
-  it('includes CJK-capable font fallbacks for printable documents', () => {
-    const html = buildPrintableHtml({
+  it('includes CJK-capable font fallbacks for printable documents', async () => {
+    const html = await buildPrintableHtml({
       title: '会议记录',
       markdown: '# 标题\n\n中文正文'
     })
@@ -182,9 +182,7 @@ describe('PrintService', () => {
     const service = new PrintService()
 
     const printPromise = service.print(payload)
-    for (let i = 0; i < 5; i += 1) {
-      await Promise.resolve()
-    }
+    await vi.waitFor(() => expect(print).toHaveBeenCalled())
 
     expect(open).toHaveBeenCalledWith(WindowType.Print)
     expect(loadURL).toHaveBeenCalledWith(expect.stringMatching(/^data:text\/html;charset=utf-8,/))

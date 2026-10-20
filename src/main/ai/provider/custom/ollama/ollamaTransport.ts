@@ -1,5 +1,5 @@
 import type { FetchFunction } from '@ai-sdk/provider-utils'
-import { Agent } from 'undici'
+import type { Dispatcher } from 'undici'
 
 import type { ImageGenerationSubmitInput, ImageGenerationTransport } from '../imageGenerationModel'
 
@@ -20,15 +20,21 @@ import type { ImageGenerationSubmitInput, ImageGenerationTransport } from '../im
 // Cold-loading a multi-GB image model (e.g. x/z-image-turbo, ~12.7GB) before it
 // can even start generating routinely exceeds undici's default 300s fetch
 // timeout, which surfaces as an opaque "fetch failed" — give this transport a
-// longer one. Module-level singleton so repeated calls reuse the connection pool.
+// longer one. Created on first use, then shared so repeated calls reuse the connection pool.
 // Only applies to the global-fetch fallback below: an injected `fetch` (e.g.
 // Electron's proxy-aware `customFetch`, wired in via `ollamaProvider.ts`) rides
 // on Chromium's network stack, which has no analogous default timeout to trip.
 const IMAGE_GENERATION_TIMEOUT_MS = 15 * 60 * 1000
-const longRunningDispatcher = new Agent({
-  headersTimeout: IMAGE_GENERATION_TIMEOUT_MS,
-  bodyTimeout: IMAGE_GENERATION_TIMEOUT_MS
-})
+let longRunningDispatcher: Dispatcher | undefined
+
+async function getLongRunningDispatcher(): Promise<Dispatcher> {
+  const { Agent } = await import('undici')
+  longRunningDispatcher ??= new Agent({
+    headersTimeout: IMAGE_GENERATION_TIMEOUT_MS,
+    bodyTimeout: IMAGE_GENERATION_TIMEOUT_MS
+  })
+  return longRunningDispatcher
+}
 
 export interface OllamaTransportSettings {
   /** Already carries the `/api` suffix, matching `ollama-ai-provider-v2`'s own baseURL convention. */
@@ -65,7 +71,7 @@ class OllamaTransport implements ImageGenerationTransport {
         ...(input.seed !== undefined && { options: { seed: input.seed } })
       }),
       signal: input.signal,
-      ...(this.fetch ? {} : { dispatcher: longRunningDispatcher })
+      ...(this.fetch ? {} : { dispatcher: await getLongRunningDispatcher() })
     })
 
     if (!response.ok) {
