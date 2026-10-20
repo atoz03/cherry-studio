@@ -231,7 +231,7 @@ releaseInfo:
     - [App] About 490 MB at idle, down from about 750 MB on the 1.9 fork and 630 MB on upstream 2.1.8 (Linux, fresh profile).
     - [Windows] No hidden windows at startup. Detached tabs, Quick Assistant and the selection toolbar open on first use without a blank flash; Quick Assistant and the toolbar are released after 5 minutes hidden.
     - [Tools] MCP servers connect on first use and idle local servers stop after 10 minutes. mise, bun, uv and MinGit download on first need, and an installed mise is used as is.
-    - [Install] Smaller installer: only ripgrep is bundled.
+    - [Install] Installers are 75–165 MB smaller than upstream 2.1.8's: only ripgrep is bundled, and other tools download when first needed.
 
     🗑️ Removed
     - [Privacy] Crash reporting, usage analytics, Cherry Cloud accounts and the built-in free CherryAI model.
@@ -261,7 +261,7 @@ releaseInfo:
     - [应用] 空闲内存约 490 MB，1.9 二开版约 750 MB，上游 2.1.8 约 630 MB（Linux，全新配置）。
     - [窗口] 启动时不再创建隐藏窗口。分离标签页、快捷助手和划词工具栏在首次使用时创建，打开时不再闪白；快捷助手和划词工具栏隐藏 5 分钟后释放。
     - [工具] MCP 服务器首次使用时才连接，空闲 10 分钟的本地服务器自动停止。mise、bun、uv 和 MinGit 在首次需要时下载，已安装的 mise 直接使用。
-    - [安装包] 安装包更小，只内置 ripgrep。
+    - [安装包] 安装包比上游 2.1.8 小 75–165 MB：只内置 ripgrep，其他工具在首次需要时下载。
 
     🗑️ 移除
     - [隐私] 错误上报、使用统计、Cherry Cloud 账号和内置的免费 CherryAI 模型。
