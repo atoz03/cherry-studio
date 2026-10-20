@@ -55,7 +55,7 @@ export class ApiGateway {
       await this.listen(host, port)
       this.boundPort = this.getPort()
       try {
-        await this.listen(host === '0.0.0.0' ? '::' : '::1', this.boundPort)
+        await this.listen('::1', this.boundPort)
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code
         if (code !== 'EAFNOSUPPORT' && code !== 'EADDRNOTAVAIL') throw error
