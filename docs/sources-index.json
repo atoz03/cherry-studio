@@ -2,20 +2,12 @@
   "version": 1,
   "documents": [
     {
-      "path": "docs/contrib/app-upgrade.md",
-      "sources": ["dev-app-update.yml","electron-builder.cn.config.cjs","electron-builder.yml","package.json","resources/cherry-studio/release-history.json","src/main/services/AppUpdaterService.ts"]
-    },
-    {
-      "path": "docs/contrib/feishu-notify.md",
-      "sources": ["scripts/feishu-notify.ts"]
-    },
-    {
       "path": "docs/contrib/linux-packaging.md",
       "sources": ["scripts/linux-native"]
     },
     {
       "path": "docs/contrib/release-workflow.md",
-      "sources": [".github/workflows/release.yml","electron-builder.yml","src/main/services/forkUpdateFeed.ts"]
+      "sources": [".github/workflows/release.yml","dev-app-update.yml","electron-builder.yml","src/main/services/AppUpdaterService.ts","src/main/services/forkUpdateFeed.ts"]
     },
     {
       "path": "docs/references/ai/adapter-family.md",

@@ -4,6 +4,8 @@ sources:
   - .github/workflows/release.yml
   - electron-builder.yml
   - src/main/services/forkUpdateFeed.ts
+  - src/main/services/AppUpdaterService.ts
+  - dev-app-update.yml
 ---
 
 # Release Workflow Operations
@@ -31,3 +33,7 @@ To rebuild one platform, run the workflow manually with the tag and platform. Th
 ## How clients find updates
 
 electron-builder writes the `publish` section of `electron-builder.yml` (GitHub, `atoz03/cherry-studio`) into the packaged `app-update.yml`. On each check, [`forkUpdateFeed.ts`](../../src/main/services/forkUpdateFeed.ts) makes electron-updater read the release marked latest, never offer an older version, and send no identifying headers. Only the global edition is built; a China-edition build would look for `latest-cn*.yml`, which this workflow does not produce.
+
+Packaged, non-portable builds check every 4 hours and back off exponentially after failed scheduled checks; manual checks are also available in development. Portable Windows builds never check. Development builds read [`dev-app-update.yml`](../../dev-app-update.yml), which points at the same GitHub Releases and documents how to switch to a local generic server.
+
+Windows NSIS builds also produce differential packages and `.blockmap` files, which the workflow attaches to the release. electron-updater uses them to download only the changed ranges, and falls back to a full download when a blockmap or cached base package is missing.

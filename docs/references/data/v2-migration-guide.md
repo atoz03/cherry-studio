@@ -59,12 +59,10 @@ target until their migration compatibility is explicitly verified.
 
 ### Relationship with the auto-updater
 
-The auto-updater (`AppUpdaterService`) sends the installed version and
-other client metadata to the [managed release service](../../contrib/app-upgrade.md),
-which selects the OTA target and enforces upgrade gateways. The migration
-gate is a **separate safety net** for users who manually download and
-install a version. Both systems enforce compatible upgrade paths but
-operate independently.
+The auto-updater (`AppUpdaterService`) offers the release marked latest on
+this fork's [GitHub Releases](../../contrib/release-workflow.md#how-clients-find-updates)
+and has no upgrade gateways of its own. The migration gate is the safety net
+for every install path, auto-update and manual download alike.
 
 ## Directory Layout
 
