@@ -55,7 +55,7 @@ export function useWindowRuntime(): void {
 
   // dayjs locale — only the windows that render localized dates need it.
   useEffect(() => {
-    setDayjsLocale(language || navigator.language || defaultLanguage)
+    void setDayjsLocale(language || navigator.language || defaultLanguage)
   }, [language])
 
   // Root background (macOS vibrancy / transparent-window aware).

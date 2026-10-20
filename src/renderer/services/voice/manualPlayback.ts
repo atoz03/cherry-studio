@@ -4,7 +4,7 @@ import { popup } from '@renderer/services/popup'
 import { toast } from '@renderer/services/toast'
 import type { VoiceErrorReason } from '@shared/ipc/errors/voice'
 
-import { normalizeReadableText, type ReadableTextMode } from './readableText'
+import type { ReadableTextMode } from './readableText'
 import { speechPlaybackService, type SpeechPlaybackSourceLabel } from './SpeechPlaybackService'
 import { VoiceDomainError } from './VoiceService'
 
@@ -81,6 +81,7 @@ export async function readTextAloud({
   }
 
   try {
+    const { normalizeReadableText } = await import('./readableText')
     if (!normalizeReadableText(text, { mode })) return
 
     const result = await speechPlaybackService.start(startInput)

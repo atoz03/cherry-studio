@@ -7,14 +7,6 @@ export type {
   VoiceTargetInsertResult,
   VoiceTargetRegistration
 } from './VoiceTargetManager'
-export {
-  chunkReadableText,
-  normalizeReadableText,
-  planReadableText,
-  READABLE_TEXT_CHUNK_LIMIT,
-  READABLE_TEXT_CONFIRMATION_THRESHOLD,
-  SPEECH_ADAPTER_TEXT_LIMIT
-} from './readableText'
 export type { ReadableTextMode, ReadableTextPlan, ReadableTextTrigger } from './readableText'
 export { dictationService } from './DictationService'
 export type { DictationErrorCategory, DictationPhase, DictationSnapshot } from './DictationService'

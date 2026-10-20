@@ -2,52 +2,27 @@
  * Plugin presets for Streamdown's `plugins` prop.
  *
  * Defaults to `code` + `cjk` (the most commonly needed for chat / docs UIs).
- * Math + Mermaid are opt-in via `withMath()` / `withMermaid()` so a
- * consumer that doesn't need them can avoid bundling KaTeX / Mermaid into
- * their tree-shaken build.
+ * Math + Mermaid are opt-in via `withMath()` / `withMermaid()`. Importing this
+ * module bundles Shiki and Mermaid; `withCjk()` / `withMath()` live in
+ * `base-presets.ts` so consumers that only need those avoid both.
  */
 
-import { cjk, type CjkPlugin } from '@streamdown/cjk'
 import { code } from '@streamdown/code'
-import { createMathPlugin } from '@streamdown/math'
 import { mermaid } from '@streamdown/mermaid'
 import type { PluginConfig } from 'streamdown'
-import type { Pluggable } from 'unified'
 
-import { rehypeStreamingMath } from './plugins'
+import { withCjk, withMath } from './base-presets'
 
-export interface WithMathOptions {
-  singleDollar?: boolean
-  /** Render the longest closed, valid prefix; keep final input errors visible when false. */
-  streaming?: boolean
-}
+export { withCjk, withMath, type WithMathOptions } from './base-presets'
 
 export interface WithFullMarkdownOptions {
   singleDollarMath?: boolean
 }
 
-const cjkWithLiteralTildes: CjkPlugin = (() => {
-  const remarkPluginsAfter = cjk.remarkPluginsAfter.map((plugin, index, plugins) =>
-    index === plugins.length - 1 ? ([plugin, { singleTilde: false }] as Pluggable) : plugin
-  )
-
-  return {
-    ...cjk,
-    remarkPluginsAfter,
-    remarkPlugins: [...cjk.remarkPluginsBefore, ...remarkPluginsAfter]
-  }
-})()
-
 /** Code (Shiki highlighting) + CJK line-break tweaks. */
 export const defaultMarkdownPlugins: PluginConfig = {
   code,
-  cjk: cjkWithLiteralTildes
-}
-
-/** KaTeX math plugin. `singleDollar` enables `$x$` inline math (off by default). */
-export function withMath(opts?: WithMathOptions): PluginConfig['math'] {
-  const math = createMathPlugin({ singleDollarTextMath: opts?.singleDollar ?? false })
-  return opts?.streaming ? { ...math, rehypePlugin: [rehypeStreamingMath, math.rehypePlugin] } : math
+  cjk: withCjk()
 }
 
 /** Mermaid diagram plugin. Heavy — only import where actually rendered. */

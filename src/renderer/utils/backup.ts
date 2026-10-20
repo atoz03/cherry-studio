@@ -1,5 +1,5 @@
 import i18n from '@renderer/i18n/resolver'
-import { formatFileSize } from '@renderer/utils/file'
+import { formatFileSize } from '@renderer/utils/fileSize'
 import {
   BACKUP_ACTIVE_WRITERS_ERROR_CODE,
   BACKUP_BACKGROUND_TASKS_ERROR_CODE,

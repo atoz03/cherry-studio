@@ -1272,7 +1272,7 @@ describe('SpeechPlaybackService ownership and lifecycle', () => {
     voice.initialize.mockReturnValueOnce(new Promise<void>((resolve) => (finishInitialization = resolve)))
     const starting = service.start(baseInput)
     const stopped = expect(starting).rejects.toMatchObject({ reason: 'aborted' })
-    await vi.waitFor(() => expect(finishInitialization).toBeTypeOf('function'))
+    await vi.waitFor(() => expect(voice.initialize).toHaveBeenCalled())
 
     ownerWindow.dispatchEvent(new Event('beforeunload'))
     finishInitialization()

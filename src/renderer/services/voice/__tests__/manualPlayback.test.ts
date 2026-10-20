@@ -87,7 +87,7 @@ describe('readTextAloud', () => {
 
   it('does not restore focus when ordinary playback finishes starting asynchronously', async () => {
     let finish!: () => void
-    vi.spyOn(speechPlaybackService, 'start').mockImplementationOnce(
+    const start = vi.spyOn(speechPlaybackService, 'start').mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           finish = () => resolve({ status: 'started' })
@@ -102,6 +102,7 @@ describe('readTextAloud', () => {
       focusOnClose
     })
 
+    await vi.waitFor(() => expect(start).toHaveBeenCalled())
     finish()
     await playback
 
