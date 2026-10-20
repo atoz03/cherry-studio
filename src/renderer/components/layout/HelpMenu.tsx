@@ -5,12 +5,17 @@ import { useTranslation } from 'react-i18next'
 import { Button, MenuItem, MenuList, Popover, PopoverContent, PopoverTrigger, Tooltip } from '@cherrystudio/ui'
 import { loggerService } from '@logger'
 import AppLogo from '@renderer/assets/images/logo.png'
-import { DoctorPopup } from '@renderer/components/doctor'
 import type { SidebarVisibleLayout } from '@renderer/components/Sidebar'
 import { useMiniAppPopup } from '@renderer/hooks/useMiniAppPopup'
 import { useOpenReleaseNotes } from '@renderer/hooks/useOpenReleaseNotes'
 
 const logger = loggerService.withContext('HelpMenu')
+
+// Loaded on click: the doctor barrel drags the Markdown pipeline into the sidebar's eager graph.
+async function showDoctor(initialPanel: 'report' | 'checks'): Promise<void> {
+  const { DoctorPopup } = await import('@renderer/components/doctor')
+  await DoctorPopup.show({ initialPanel })
+}
 
 export function HelpMenu({
   layout,
@@ -146,11 +151,7 @@ export function HelpMenu({
               className="h-8"
               icon={<FileArchive size={16} />}
               label={t('settings.about.feedback.diagnostics.title')}
-              onClick={() =>
-                runAfterClose(async () => {
-                  await DoctorPopup.show({ initialPanel: 'report' })
-                })
-              }
+              onClick={() => runAfterClose(() => showDoctor('report'))}
             />
             <MenuItem
               size="sm"
@@ -164,11 +165,7 @@ export function HelpMenu({
               className="h-8"
               icon={<Stethoscope size={16} />}
               label={t('settings.doctor.entry.title')}
-              onClick={() =>
-                runAfterClose(async () => {
-                  await DoctorPopup.show({ initialPanel: 'checks' })
-                })
-              }
+              onClick={() => runAfterClose(() => showDoctor('checks'))}
             />
           </MenuList>
         </PopoverContent>
