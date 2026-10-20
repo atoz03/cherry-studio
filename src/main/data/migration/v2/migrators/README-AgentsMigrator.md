@@ -42,6 +42,11 @@ resolves migration storage through the live application path registry.
   from user creation times and terminal assistant completion times. Transient
   assistant rows contribute only their creation time. Empty transcripts fall
   back to Session creation.
+- Agent and Session TEXT timestamps accept ISO strings and the bare 10/13-digit
+  epoch strings (optional trailing `Z`) left by #17685. An unparseable
+  `created_at` or `updated_at` falls back to the other column, then to
+  migration time; an unparseable `deleted_at` falls back to the repaired
+  `updated_at`, so the Agent stays deleted.
 - Agent and per-Agent Session ordering is converted to fractional order keys.
 - Scheduled-task trigger fields become JobManager trigger objects. Legacy task
   run logs are intentionally not migrated.

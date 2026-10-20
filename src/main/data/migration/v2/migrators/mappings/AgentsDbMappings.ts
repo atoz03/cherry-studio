@@ -49,6 +49,32 @@ function notNullCol(name: string, defaultExpr: string): AgentsColumnExpr {
   }
 }
 
+const EPOCH_SECONDS_GLOB = '[0-9]'.repeat(10)
+const EPOCH_MILLIS_GLOB = '[0-9]'.repeat(13)
+const NOW_MS_EXPR = "CAST(strftime('%s', 'now') AS INTEGER) * 1000"
+
+/**
+ * SQL epoch-ms for one legacy TEXT timestamp column, or NULL when unparseable.
+ * Besides ISO strings, some v1 rows hold bare epoch strings (`'1712345678'`,
+ * `'1712345678901Z'`, #17685) that `strftime` reads as Julian days and turns
+ * into NULL. Same rules as v1's `normalizeAgentTimestampValue`: 10 digits are
+ * seconds, 13 are milliseconds, one trailing `Z` is ignored.
+ */
+function legacyTimestampMsExpr(column: string): string {
+  const value = `TRIM(${column})`
+  return (
+    `CASE WHEN ${value} GLOB '${EPOCH_SECONDS_GLOB}' OR ${value} GLOB '${EPOCH_SECONDS_GLOB}[Zz]' ` +
+    `THEN CAST(${value} AS INTEGER) * 1000 ` +
+    `WHEN ${value} GLOB '${EPOCH_MILLIS_GLOB}' OR ${value} GLOB '${EPOCH_MILLIS_GLOB}[Zz]' ` +
+    `THEN CAST(${value} AS INTEGER) ` +
+    `ELSE CAST(strftime('%s', ${value}) AS INTEGER) * 1000 END`
+  )
+}
+
+// Like v1, an unparseable created/updated value falls back to the other one, then to now.
+const LEGACY_CREATED_AT_MS_EXPR = `COALESCE(${legacyTimestampMsExpr('created_at')}, ${legacyTimestampMsExpr('updated_at')}, ${NOW_MS_EXPR})`
+const LEGACY_UPDATED_AT_MS_EXPR = `COALESCE(${legacyTimestampMsExpr('updated_at')}, ${legacyTimestampMsExpr('created_at')}, ${NOW_MS_EXPR})`
+
 export type AgentsTableMigrationSpec = {
   sourceTable: AgentsSourceTableName
   targetTable:
@@ -127,18 +153,20 @@ export const AGENTS_TABLE_MIGRATION_SPECS: readonly AgentsTableMigrationSpec[] =
       // ordered by source `sort_order` after INSERT.
       notNullCol('order_key', "''"),
       {
+        // v1 soft delete wrote deleted_at and updated_at together; an unparseable
+        // value keeps the agent deleted at that time instead of resurrecting it.
         name: 'deleted_at',
-        expr: "CASE WHEN deleted_at IS NULL THEN NULL ELSE CAST(strftime('%s', deleted_at) AS INTEGER) * 1000 END",
+        expr: `CASE WHEN deleted_at IS NULL THEN NULL ELSE COALESCE(${legacyTimestampMsExpr('deleted_at')}, ${LEGACY_UPDATED_AT_MS_EXPR}) END`,
         sourceColumn: 'deleted_at'
       },
       {
         name: 'created_at',
-        expr: "CAST(strftime('%s', created_at) AS INTEGER) * 1000",
+        expr: LEGACY_CREATED_AT_MS_EXPR,
         sourceColumn: 'created_at'
       },
       {
         name: 'updated_at',
-        expr: "CAST(strftime('%s', updated_at) AS INTEGER) * 1000",
+        expr: LEGACY_UPDATED_AT_MS_EXPR,
         sourceColumn: 'updated_at'
       }
     ]
@@ -163,17 +191,17 @@ export const AGENTS_TABLE_MIGRATION_SPECS: readonly AgentsTableMigrationSpec[] =
         // Seed the required parent field from creation. AgentsMigrator replaces
         // it with the exact maximum imported message activity after message import.
         name: 'last_activity_at',
-        expr: "CAST(strftime('%s', created_at) AS INTEGER) * 1000",
+        expr: LEGACY_CREATED_AT_MS_EXPR,
         sourceColumn: 'created_at'
       },
       {
         name: 'created_at',
-        expr: "CAST(strftime('%s', created_at) AS INTEGER) * 1000",
+        expr: LEGACY_CREATED_AT_MS_EXPR,
         sourceColumn: 'created_at'
       },
       {
         name: 'updated_at',
-        expr: "CAST(strftime('%s', updated_at) AS INTEGER) * 1000",
+        expr: LEGACY_UPDATED_AT_MS_EXPR,
         sourceColumn: 'updated_at'
       }
     ],
