@@ -174,6 +174,7 @@ describe('TranslateOutputPane', () => {
     const props = { ...baseProps(), translatedContent: 'first result' }
     const view = render(<TranslateOutputPane {...props} />)
     fireEvent.click(screen.getByRole('button', { name: 'chat.message.read_aloud.label' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(1))
     const first = start.mock.calls.at(-1)![0].signal!
     expect(first.aborted).toBe(false)
 
@@ -181,12 +182,14 @@ describe('TranslateOutputPane', () => {
     expect(first.aborted).toBe(true)
     view.rerender(<TranslateOutputPane {...props} />)
     fireEvent.click(screen.getByRole('button', { name: 'chat.message.read_aloud.label' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(2))
     const second = start.mock.calls.at(-1)![0].signal!
     expect(second.aborted).toBe(false)
 
     view.rerender(<TranslateOutputPane {...props} translatedContent="next result" />)
     expect(second.aborted).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'chat.message.read_aloud.label' }))
+    await waitFor(() => expect(start).toHaveBeenCalledTimes(3))
     const third = start.mock.calls.at(-1)![0].signal!
     view.unmount()
     expect(third.aborted).toBe(true)
