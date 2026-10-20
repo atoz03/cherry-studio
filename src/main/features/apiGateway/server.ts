@@ -99,43 +99,6 @@ export class ApiGateway {
     return this.getHosts()[0]
   }
 
-  async rebind(host: string): Promise<void> {
-    if (this.getHost() === host) return
-    if (!this.servers.length || this.boundPort === undefined) throw new Error('API Gateway has no TCP listener')
-    // Release listening handles only; existing local streams retain their sockets.
-    for (const server of this.servers) {
-      const http = server.raw.node.server
-      if (http.listening) http.close()
-    }
-    try {
-      for (const [index, server] of this.servers.entries()) {
-        const address = index === 0 ? host : host === '0.0.0.0' ? '::' : '::1'
-        const http = server.raw.node.server
-        await new Promise<void>((resolve, reject) => {
-          const onError = (error: Error) => {
-            http.off('listening', onListening)
-            reject(error)
-          }
-          const onListening = () => {
-            http.off('error', onError)
-            resolve()
-          }
-          http.once('error', onError)
-          http.once('listening', onListening)
-          http.listen({ port: this.boundPort, host: address, ipv6Only: true })
-        })
-      }
-    } catch (error) {
-      // A partially rebound pair must not leave an unreported network listener open.
-      for (const server of this.servers) {
-        const http = server.raw.node.server
-        if (http.listening) http.close()
-      }
-      this.servers.length = 0
-      throw error
-    }
-  }
-
   private applyServerTimeouts(server: HttpServer): void {
     server.requestTimeout = GLOBAL_REQUEST_TIMEOUT_MS
     server.headersTimeout = Math.max(GLOBAL_HEADERS_TIMEOUT_MS, server.requestTimeout + 1_000)

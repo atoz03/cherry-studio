@@ -716,7 +716,7 @@ describe('AgentChat artifact pane', () => {
             modifiedAt: 1,
             mime: 'text/plain'
           })
-        : Promise.resolve(route === 'ai.agent.attachment_selections.list' ? [] : undefined)
+        : Promise.resolve(undefined)
     )
     agentSessionPartsMocks.useAgentSessionParts.mockReturnValue({
       messages: [],

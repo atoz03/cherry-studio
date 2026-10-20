@@ -31,7 +31,6 @@ const cacheCleanupGroupsInputSchema = z
   })
 
 export const appRequestSchemas = {
-  'app.mobile.get_android_download_url': defineRoute({ input: z.void(), output: z.url() }),
   'app.get_info': defineRoute({
     input: z.void(),
     output: z.object({

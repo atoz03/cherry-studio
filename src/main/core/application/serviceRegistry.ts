@@ -67,7 +67,6 @@ import { ProviderRegistryUpdaterService } from '@main/services/ProviderRegistryU
 import { ProxyService } from '@main/services/proxy/ProxyService'
 import { PythonService } from '@main/services/PythonService'
 import { QuickAssistantService } from '@main/services/QuickAssistantService'
-import { AttachmentPresenceService, RemoteAccessService } from '@main/services/remoteAccess'
 import { ScreenshotOverlayService } from '@main/services/screenshot'
 import { ScreenshotChatService } from '@main/services/ScreenshotChatService'
 import { SelectionService } from '@main/services/selection/SelectionService'
@@ -106,7 +105,6 @@ import { WebviewService } from '@main/services/webview'
 export const services = {
   ComputerUseService,
   AutomationReplService,
-  RemoteAccessService,
   MainNetworkDevtoolsService,
   WindowManager,
   UtilityProcessManager,
@@ -126,7 +124,6 @@ export const services = {
   DeepSeekHarnessService,
   HermesDashboardService,
   FileManager,
-  AttachmentPresenceService,
   FileIntakeService,
   DirectoryTreeManager,
   FileProcessingService,

@@ -57,9 +57,7 @@ const citationsPanelModuleLoads = vi.hoisted(() => ({ value: 0 }))
 vi.mock('@renderer/ipc', () => ({
   ipcApi: {
     request: (route: string, input: unknown) =>
-      route === 'ai.tool.respond_approval'
-        ? toolApprovalRespondMock(input)
-        : Promise.resolve(route === 'ai.agent.attachment_selections.list' ? [] : undefined),
+      route === 'ai.tool.respond_approval' ? toolApprovalRespondMock(input) : Promise.resolve(undefined),
     on: () => () => {}
   },
   useIpcOn: vi.fn()

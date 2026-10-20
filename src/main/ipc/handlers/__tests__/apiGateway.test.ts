@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { IpcRouter } from '@main/ipc/IpcRouter'
-import { apiGatewayRequestSchemas } from '@shared/ipc/schemas/apiGateway'
-
 const { apiGatewayService } = vi.hoisted(() => ({
   apiGatewayService: {
     start: vi.fn(),
     stop: vi.fn(),
-    restart: vi.fn(),
-    setLanEnabled: vi.fn(),
-    createRemoteInvitation: vi.fn()
+    restart: vi.fn()
   }
 }))
 vi.mock('@application', async () => {
@@ -26,22 +21,6 @@ beforeEach(() => {
 })
 
 describe('apiGatewayHandlers', () => {
-  it('propagates LAN startup failures through the IpcApi error channel', async () => {
-    apiGatewayService.setLanEnabled.mockRejectedValueOnce(new Error('bind failed'))
-    const router = new IpcRouter(apiGatewayRequestSchemas, apiGatewayHandlers)
-
-    await expect(router.dispatch('api_gateway.lan.set_enabled', { enabled: true }, ctx)).rejects.toThrow('bind failed')
-  })
-
-  it('propagates invitation failures to the IpcApi error channel', async () => {
-    apiGatewayService.createRemoteInvitation.mockRejectedValueOnce(new Error('API Gateway is not running'))
-    const router = new IpcRouter(apiGatewayRequestSchemas, apiGatewayHandlers)
-
-    await expect(router.dispatch('api_gateway.remote.create_invitation', undefined, ctx)).rejects.toThrow(
-      'API Gateway is not running'
-    )
-  })
-
   it('start returns success when the service starts cleanly', async () => {
     apiGatewayService.start.mockResolvedValue(undefined)
     expect(await apiGatewayHandlers['api_gateway.start'](undefined, ctx)).toEqual({ success: true })

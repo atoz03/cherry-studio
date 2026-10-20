@@ -54,8 +54,7 @@ const ApiGatewaySettings: FC = () => {
     setApiGatewayConfig
   } = useApiGateway()
 
-  // 0.0.0.0 is a bind address, not a reachable one — render the loopback URL instead
-  // (LAN URLs live in Device Connections settings).
+  // 0.0.0.0 is a bind address, not a reachable one — render the loopback URL instead.
   const configuredHost = apiGatewayConfig.host || API_SERVER_DEFAULTS.HOST
   const serverHost = configuredHost === '0.0.0.0' ? API_SERVER_DEFAULTS.HOST : configuredHost
   const serverPort = apiGatewayConfig.port || API_SERVER_DEFAULTS.PORT

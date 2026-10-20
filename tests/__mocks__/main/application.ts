@@ -1,6 +1,5 @@
 import { vi } from 'vitest'
 
-import { mockAttachmentPresenceService } from './AttachmentPresenceService'
 import { MockMainCacheServiceExport } from './CacheService'
 import { MockMainDataApiServiceExport } from './DataApiService'
 import { MockMainDbServiceExport } from './DbService'
@@ -90,7 +89,6 @@ export const defaultServiceInstances = {
   DbService: MockMainDbServiceExport.dbService,
   FileManager: MockMainFileManagerExport.fileManager,
   FileIntakeService: mockFileIntakeService,
-  AttachmentPresenceService: mockAttachmentPresenceService,
   MainWindowService: mockMainWindowService,
   WindowManager: mockWindowManager,
   IpcApiService: mockIpcApiService,
