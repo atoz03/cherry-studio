@@ -180,6 +180,7 @@
   "settings.mcp.oauth.not_completed": "浏览器中的授权未完成。",
   "settings.mcp.oauth.required": "需要登录授权。",
   "settings.title": "设置",
+  "skill.library_source.name": "技能库",
   "tray.computer_use.active": "正在控制",
   "tray.computer_use.all_apps": "所有应用",
   "tray.computer_use.allow": "重新允许控制",

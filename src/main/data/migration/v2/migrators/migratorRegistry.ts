@@ -5,6 +5,7 @@
 import { AgentsMigrator } from './AgentsMigrator'
 import { AiUsageRecordMigrator } from './AiUsageRecordMigrator'
 import { AssistantMigrator } from './AssistantMigrator'
+import { AssistantSkillSelectionMigrator } from './AssistantSkillSelectionMigrator'
 import { BootConfigMigrator } from './BootConfigMigrator'
 import { ChatMigrator } from './ChatMigrator'
 import { FileMigrator } from './FileMigrator'
@@ -33,6 +34,7 @@ export function getAllMigrators() {
     new AssistantMigrator(),
     new FileMigrator(),
     new AgentsMigrator(),
+    new AssistantSkillSelectionMigrator(),
     new KnowledgeMigrator(),
     new KnowledgeVectorMigrator(),
     new ChatMigrator(),

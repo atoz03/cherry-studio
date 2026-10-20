@@ -180,6 +180,7 @@
   "settings.mcp.oauth.not_completed": "Authorization was not completed in the browser.",
   "settings.mcp.oauth.required": "Sign-in required.",
   "settings.title": "Settings",
+  "skill.library_source.name": "Skill library",
   "tray.computer_use.active": "Controlling",
   "tray.computer_use.all_apps": "All applications",
   "tray.computer_use.allow": "Allow control again",

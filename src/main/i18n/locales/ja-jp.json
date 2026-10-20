@@ -180,6 +180,7 @@
   "settings.mcp.oauth.not_completed": "ブラウザーでの認可が完了しませんでした。",
   "settings.mcp.oauth.required": "サインインが必要です。",
   "settings.title": "設定",
+  "skill.library_source.name": "スキルライブラリ",
   "tray.computer_use.active": "操作中",
   "tray.computer_use.all_apps": "すべてのアプリ",
   "tray.computer_use.allow": "操作を再び許可",

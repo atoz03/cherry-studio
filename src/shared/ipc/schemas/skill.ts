@@ -1,5 +1,6 @@
 import * as z from 'zod'
 
+import { ContextSkillEstimateSchema } from '@shared/ai/contextSkills'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 import {
   type InstalledSkill,
@@ -85,5 +86,10 @@ export const skillRequestSchemas = {
         readOnlyReason: z.literal('builtin')
       })
     ])
+  }),
+  /** Fork: prompt-cost estimate of skills kept in a chat's context (`@shared/ai/contextSkills`). */
+  'skill.context_estimate': defineRoute({
+    input: z.strictObject({ skillIds: z.array(z.string().min(1)).max(500) }),
+    output: z.array(ContextSkillEstimateSchema)
   })
 }

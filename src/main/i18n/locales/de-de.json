@@ -180,6 +180,7 @@
   "settings.mcp.oauth.not_completed": "Die Autorisierung im Browser wurde nicht abgeschlossen.",
   "settings.mcp.oauth.required": "Anmeldung erforderlich.",
   "settings.title": "Einstellungen",
+  "skill.library_source.name": "Fähigkeiten-Bibliothek",
   "tray.computer_use.active": "Wird gesteuert",
   "tray.computer_use.all_apps": "Alle Anwendungen",
   "tray.computer_use.allow": "Steuerung erneut erlauben",

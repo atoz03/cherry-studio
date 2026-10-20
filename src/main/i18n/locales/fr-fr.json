@@ -180,6 +180,7 @@
   "settings.mcp.oauth.not_completed": "L'autorisation dans le navigateur n'a pas été terminée.",
   "settings.mcp.oauth.required": "Connexion requise.",
   "settings.title": "Paramètres",
+  "skill.library_source.name": "Bibliothèque de compétences",
   "tray.computer_use.active": "Contrôle en cours",
   "tray.computer_use.all_apps": "Toutes les applications",
   "tray.computer_use.allow": "Autoriser à nouveau le contrôle",

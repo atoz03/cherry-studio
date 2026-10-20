@@ -458,6 +458,9 @@ vi.mock('@renderer/components/resourceCatalog/dialogs/ResourceEditDialogEventHos
   openResourceEditDialog: vi.fn()
 }))
 
+// Fork: a tool runtime like ComposerToolRuntimeHost above; covered by its own tests.
+vi.mock('../chat/ContextSkillsComposerRuntime', () => ({ ContextSkillsComposerRuntime: () => null }))
+
 vi.mock('@renderer/utils/model', () => ({
   // Mirrors the real reconcile logic using the mocked predicates below:
   // canModelUseAssistantWebSearch = isWebSearchModel || isOpenRouterBuiltInWebSearchModel || isFunctionCallingModel.

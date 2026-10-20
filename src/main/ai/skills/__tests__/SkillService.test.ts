@@ -641,6 +641,47 @@ describe('SkillService', () => {
       )
     })
 
+    it('discovers and imports skills from the configured skills library folder', async () => {
+      const libraryRoot = path.join(home, 'my-skills')
+      const librarySkillDir = path.join(libraryRoot, 'notes-helper')
+      await fs.promises.mkdir(librarySkillDir, { recursive: true })
+      await fs.promises.writeFile(path.join(librarySkillDir, 'SKILL.md'), '# Notes helper')
+      MockMainPreferenceServiceUtils.setPreferenceValue('feature.skills.library_path', libraryRoot)
+      vi.mocked(findAllSkillDirectories).mockImplementation(async (directoryPath) =>
+        directoryPath === libraryRoot ? [{ folderPath: librarySkillDir, sourcePath: 'notes-helper' }] : []
+      )
+      vi.mocked(parseSkillMetadata).mockResolvedValue({
+        sourcePath: 'notes-helper',
+        filename: 'notes-helper',
+        name: 'Notes Helper',
+        description: 'Lives in the skills library',
+        category: 'skills',
+        type: 'skill',
+        version: '1.0.0',
+        size: 0,
+        contentHash: 'library-hash'
+      })
+
+      const result = await skillService.discoverSystem()
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          name: 'Notes Helper',
+          directoryPath: await fs.promises.realpath(librarySkillDir),
+          status: 'available',
+          placements: [expect.objectContaining({ sourceId: 'library', directoryPath: librarySkillDir })]
+        })
+      ])
+      await expect(skillService.importSystem({ directoryPath: librarySkillDir })).resolves.toMatchObject({
+        name: 'Notes Helper',
+        source: 'system',
+        namespace: 'library'
+      })
+      await expect(fs.promises.readFile(path.join(dataSkillsRoot, 'notes-helper', 'SKILL.md'), 'utf-8')).resolves.toBe(
+        '# Notes helper'
+      )
+    })
+
     it('imports a system skill into the managed library without changing agent associations', async () => {
       const result = await skillService.importSystem({ directoryPath: sourceSkillDir })
 

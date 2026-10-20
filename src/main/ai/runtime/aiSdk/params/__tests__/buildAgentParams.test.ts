@@ -52,6 +52,8 @@ vi.mock('@application', () => ({
       if (name === 'McpRuntimeService')
         return { getConnectedServerCapabilities: () => undefined, getConnectedServerInstructions: getMcpInstructions }
       if (name === 'McpCatalogService') return { listTools: listMcpTools }
+      // Fork: no per-conversation context-skill override in these tests.
+      if (name === 'CacheService') return { getShared: () => undefined }
       throw new Error(`unexpected service: ${name}`)
     }
   }

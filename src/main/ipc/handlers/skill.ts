@@ -1,6 +1,7 @@
 import { shell } from 'electron'
 
 import { loggerService } from '@logger'
+import { estimateContextSkills } from '@main/ai/skills/contextSkills'
 import { SkillRemoteUpdateError, skillService } from '@main/ai/skills/SkillService'
 import { IpcError } from '@shared/ipc/errors/IpcError'
 import type { skillRequestSchemas } from '@shared/ipc/schemas/skill'
@@ -64,5 +65,6 @@ export const skillHandlers: IpcHandlersFor<typeof skillRequestSchemas> = {
     return skill.source === 'builtin'
       ? { rootPath, access: 'read_only', readOnlyReason: 'builtin' }
       : { rootPath, access: 'read_write' }
-  }
+  },
+  'skill.context_estimate': ({ skillIds }) => estimateContextSkills(skillIds)
 }

@@ -33,6 +33,7 @@ import {
   parseSkillSourceUrl
 } from '@shared/utils/skillMarketplace'
 
+import { resolveLibrarySkillSources } from './librarySkillSource'
 import { assertSkillDirectoryWithinLimits, extractZip, resolveSkillDirectory, validateZipFile } from './skillArchive'
 import { SkillInstaller } from './SkillInstaller'
 import { createTempDir, normalizeFolderKey, safeRemoveDirectory, sanitizeFolderName } from './skillPaths'
@@ -330,7 +331,8 @@ export class SkillService {
   /** Discover skills in known system-level CLI directories without copying them. */
   async discoverSystem(): Promise<SystemSkillCandidate[]> {
     const env = await getShellEnv()
-    const sources = buildSystemSkillSources(application.getPath('sys.home'), env)
+    const home = application.getPath('sys.home')
+    const sources = [...buildSystemSkillSources(home, env), ...resolveLibrarySkillSources(home)]
     const installed = agentGlobalSkillService.list()
     const installedByPath = new Map(
       installed.flatMap((skill) => {

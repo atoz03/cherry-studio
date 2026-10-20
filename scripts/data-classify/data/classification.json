@@ -3410,6 +3410,16 @@
           "category": null,
           "targetKey": null
         }
+      ],
+      "skillsLibraryPath": [
+        {
+          "originalKey": "skillsLibraryPath",
+          "type": "string",
+          "defaultValue": null,
+          "status": "classified",
+          "category": "preferences",
+          "targetKey": "feature.skills.library_path"
+        }
       ]
     },
     "localStorage": {
