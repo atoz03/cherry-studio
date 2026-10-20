@@ -4,10 +4,9 @@
  * delegates the write to a `PersistenceBackend`.
  */
 
-import type { ExecutionFailure } from '@cherrystudio/remote-protocol/failure'
 import { loggerService } from '@logger'
 import { serializeError } from '@main/ai/utils/serializeError'
-import { toExecutionFailure } from '@shared/ai/executionFailure'
+import { type ExecutionFailure, toExecutionFailure } from '@shared/ai/executionFailure'
 import type {
   CherryMessagePart,
   CherryUIMessage,

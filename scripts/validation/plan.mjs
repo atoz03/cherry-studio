@@ -12,7 +12,6 @@ export const testProjects = [
   'web-search',
   'scripts',
   'ai-sdk-provider',
-  'remote-protocol',
   'system-speech'
 ]
 
@@ -27,7 +26,6 @@ export const checkTasks = {
   'types-web': { group: 'types', args: ['typecheck:web'] },
   'types-aicore': { group: 'types', args: ['--filter', '@cherrystudio/ai-core', 'typecheck'] },
   'types-e2e': { group: 'types', args: ['typecheck:e2e'] },
-  'types-remote-protocol': { group: 'types', args: ['--filter', '@cherrystudio/remote-protocol', 'typecheck'] },
   'types-system-speech': { group: 'types', args: ['--filter', '@cherrystudio/system-speech', 'typecheck'] },
   'types-web-search': { group: 'types', args: ['--filter', '@cherrystudio/web-search', 'typecheck'] },
   'types-file-preview': { group: 'types', args: ['--filter', '@cherrystudio/file-preview', 'typecheck'] },
@@ -47,7 +45,6 @@ const consumers = {
   'provider-registry': ['provider-registry', 'shared', 'scripts', 'main', 'preload', 'renderer'],
   'web-search': ['web-search', 'shared', 'main', 'preload', 'renderer'],
   'extension-table-plus': ['renderer'],
-  'remote-protocol': ['remote-protocol', 'shared', 'scripts', 'main', 'preload', 'renderer'],
   'system-speech': ['system-speech', 'main', 'preload'],
   scripts: ['scripts']
 }
@@ -131,7 +128,6 @@ export function createPlan(files, fullReason) {
       add('types-node', file)
     if (affected.includes('renderer')) add('types-web', file)
     if (affected.includes('aiCore')) add('types-aicore', file)
-    if (affected.includes('remote-protocol')) add('types-remote-protocol', file)
     if (affected.includes('system-speech')) add('types-system-speech', file)
     if (affected.includes('web-search')) add('types-web-search', file)
     if (affected.includes('file-preview')) add('types-file-preview', file)

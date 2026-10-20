@@ -1,8 +1,8 @@
 import type { Span } from '@opentelemetry/api'
 import type { UIMessageChunk } from 'ai'
 
-import type { ExecutionFailure } from '@cherrystudio/remote-protocol/failure'
 import type { CompactionAnchorData } from '@shared/ai/compaction'
+import type { ExecutionFailure } from '@shared/ai/executionFailure'
 import type { StreamChunkPayload, TopicStreamStatus } from '@shared/ai/transport'
 import type { CherryUIMessage, MessageRuntimeTiming } from '@shared/data/types/message'
 import type { UniqueModelId } from '@shared/data/types/model'

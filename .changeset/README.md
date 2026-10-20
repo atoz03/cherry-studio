@@ -59,7 +59,6 @@ See `config.json` for the changeset configuration:
 | `@cherrystudio/ai-sdk-provider` | AI SDK provider bundle with CherryIN routing |
 | `@cherrystudio/extension-table-plus` | Table extension for Tiptap |
 | `@cherrystudio/file-preview` | Portable React previews for PDF, DOCX, PPTX, XLSX and images |
-| `@cherrystudio/remote-protocol` | Remote access schemas and Agent recovery contracts |
 
 ### Dependency relationships
 

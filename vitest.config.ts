@@ -222,10 +222,7 @@ export default defineConfig({
           include: ['packages/web-search/src/**/__tests__/**/*.test.ts']
         }
       },
-      ...[
-        ['ai-sdk-provider', 'src'],
-        ['remote-protocol', 'tests']
-      ].map(([name, directory]) => ({
+      ...[['ai-sdk-provider', 'src']].map(([name, directory]) => ({
         extends: true as const,
         test: {
           name,
