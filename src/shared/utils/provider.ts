@@ -8,7 +8,6 @@ import {
   type ServerToolConfig,
   supportsServerToolFunctionMixing
 } from '@cherrystudio/provider-registry'
-import { CHERRYAI_PROVIDER_ID, isManagedCherryAiProviderId } from '@shared/data/presets/cherryai'
 import { ENDPOINT_TYPE, type EndpointType, type Model } from '@shared/data/types/model'
 import type { EndpointDialect, Provider } from '@shared/data/types/provider'
 
@@ -88,10 +87,6 @@ export function isOpenAICompatibleProvider(provider: Provider): boolean {
 
 export function isPerplexityProvider(provider: Provider): boolean {
   return provider.id === 'perplexity' || provider.presetProviderId === 'perplexity'
-}
-
-export function isCherryAIProvider(provider: Provider): boolean {
-  return isManagedCherryAiProviderId(provider.id) || provider.presetProviderId === CHERRYAI_PROVIDER_ID
 }
 
 export function isNewApiProvider(provider: Provider): boolean {

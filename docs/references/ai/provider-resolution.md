@@ -127,7 +127,6 @@ The builder table (`config.ts`, first match wins):
 | Match | Builder | Notes |
 |---|---|---|
 | `id === copilot` | `buildCopilotConfig` | async — fetches a Copilot token |
-| `id === 'cherryai'` | `buildCherryAIConfig` | |
 | `isOllamaProvider` | `buildOllamaConfig` | |
 | `isAzureOpenAIProvider` | `buildAzureConfig` | returns `azure` / `azure-responses` / `azure-anthropic` (Claude on Azure) |
 | `id === 'bedrock'` | `buildBedrockConfig` | |

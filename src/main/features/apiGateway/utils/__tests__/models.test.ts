@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CHERRYAI_DEFAULT_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { MODEL_CAPABILITY } from '@shared/data/types/model'
 
 const mocks = vi.hoisted(() => ({
@@ -34,23 +33,8 @@ describe('api gateway model listing', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getProvider.mockReturnValue({ id: 'openai', name: 'OpenAI', isEnabled: true })
-    mocks.listProviders.mockReturnValue([
-      { id: CHERRYAI_PROVIDER_ID, name: 'CherryAI' },
-      { id: 'openai', name: 'OpenAI' }
-    ])
-    mocks.listModels.mockImplementation(({ providerId }: { providerId: string }) => {
-      if (providerId === CHERRYAI_PROVIDER_ID) {
-        return [
-          {
-            id: 'cherryai::qwen',
-            providerId: CHERRYAI_PROVIDER_ID,
-            apiModelId: CHERRYAI_DEFAULT_MODEL_ID,
-            ownedBy: 'CherryAI',
-            capabilities: []
-          }
-        ]
-      }
-
+    mocks.listProviders.mockReturnValue([{ id: 'openai', name: 'OpenAI' }])
+    mocks.listModels.mockImplementation(() => {
       return [
         {
           id: 'openai::gpt-4o',
@@ -61,12 +45,6 @@ describe('api gateway model listing', () => {
         }
       ]
     })
-  })
-
-  it('does not expose the managed CherryAI default model', async () => {
-    const response = await getModels()
-
-    expect(response.data.map((model) => model.id)).toEqual(['openai:gpt-4o'])
   })
 
   it('surfaces the resolved model record for provider-option translation', async () => {

@@ -10,8 +10,6 @@ import {
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
-
 const responsiveStyles = readFileSync(join(process.cwd(), 'src/renderer/assets/styles/responsive.css'), 'utf8')
 
 const toastErrorMock = vi.fn()
@@ -259,27 +257,6 @@ describe('OnboardingPage', () => {
     expect(dataApiMocks.patch).toHaveBeenCalledTimes(2)
   })
 
-  it('does not allow CherryAI to satisfy the provider setup requirements', async () => {
-    enabledProvidersMock.splice(0, enabledProvidersMock.length, { id: 'cherryai', isEnabled: true })
-    enabledModelsMock.splice(0, enabledModelsMock.length, {
-      id: 'cherryai::qwen',
-      providerId: 'cherryai',
-      isEnabled: true,
-      capabilities: []
-    })
-    render(<OnboardingPage />)
-
-    await openProviderSetup()
-
-    const nextButton = screen.getByRole('button', { name: 'onboarding.provider_setup.next' })
-    expect(nextButton).toHaveAttribute('aria-disabled', 'true')
-    nextButton.focus()
-    expect(nextButton).toHaveFocus()
-    fireEvent.click(nextButton)
-    expect(screen.getByRole('heading', { name: 'onboarding.provider_setup.title' })).toBeInTheDocument()
-    expect(nextButton.parentElement).toHaveAttribute('data-title', 'onboarding.provider_setup.missing_provider')
-  })
-
   it('explains when an enabled provider has no enabled model', async () => {
     enabledModelsMock.splice(0)
     render(<OnboardingPage />)
@@ -328,10 +305,7 @@ describe('OnboardingPage', () => {
     expect(screen.getByRole('button', { name: /onboarding\.select_model\.start/ })).toBeDisabled()
   })
 
-  it('excludes CherryAI models, hides painting, and rejects built-in selections', async () => {
-    selectedModelsMock.defaultModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.quickModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.translateModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
+  it('hides painting and offers only chat models', async () => {
     render(<OnboardingPage />)
 
     await openModelSelection()
@@ -340,27 +314,23 @@ describe('OnboardingPage', () => {
     expect(modelSettingsProps?.autoFillEmptyModels).toBe(true)
     expect(modelSettingsProps?.onDefaultModelSelected).toBeTypeOf('function')
     expect(modelSettingsProps?.showPaintingModel).toBe(false)
-    expect(modelSettingsProps?.modelFilter?.({ providerId: CHERRYAI_PROVIDER_ID, capabilities: [] })).toBe(false)
+    expect(modelSettingsProps?.modelFilter?.({ providerId: 'openai', capabilities: ['embedding'] })).toBe(false)
     expect(modelSettingsProps?.modelFilter?.({ providerId: 'openai', capabilities: [] })).toBe(true)
-    expect(screen.getByRole('button', { name: /onboarding\.select_model\.start/ })).toBeDisabled()
   })
 
-  it.each([
-    ['an unconfigured seeded agent', null],
-    ['a legacy CherryAI-seeded agent', CHERRYAI_DEFAULT_UNIQUE_MODEL_ID]
-  ])('configures %s after the user selects a default model', async (_description, seededAgentModel) => {
+  it('configures the unconfigured seeded assistant and agents after the user selects a default model', async () => {
     dataApiMocks.get.mockImplementation(async (path: string) => {
       if (path === '/assistants') {
         return {
-          items: [{ id: 'assistant-1', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID }],
+          items: [{ id: 'assistant-1', modelId: null }],
           total: 1
         }
       }
       if (path === '/agents') {
         return {
           items: [
-            { id: 'assistant-agent', model: seededAgentModel, configuration: { builtin_role: 'assistant' } },
-            { id: 'support-agent', model: seededAgentModel, configuration: { builtin_role: 'support' } }
+            { id: 'assistant-agent', model: null, configuration: { builtin_role: 'assistant' } },
+            { id: 'support-agent', model: null, configuration: { builtin_role: 'support' } }
           ],
           total: 2
         }
@@ -395,8 +365,8 @@ describe('OnboardingPage', () => {
       if (path === '/assistants') {
         return {
           items: [
-            { id: 'assistant-1', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID },
-            { id: 'assistant-2', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID }
+            { id: 'assistant-1', modelId: null },
+            { id: 'assistant-2', modelId: null }
           ],
           total: 2
         }

@@ -139,7 +139,7 @@ describe('useModelSelectorData', () => {
     expect(result.current.selectableModelsById.has('google::gemini-pro')).toBe(false)
   })
 
-  it.each(['cherryai', LOCAL_EMBEDDING_PROVIDER_ID])('hides the provider settings action for %s', (providerId) => {
+  it.each([LOCAL_EMBEDDING_PROVIDER_ID])('hides the provider settings action for %s', (providerId) => {
     wireDeps({
       providers: [makeProvider(providerId)],
       models: [makeModel('qwen', providerId)]

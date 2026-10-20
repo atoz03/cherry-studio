@@ -9,7 +9,7 @@ import { isUniqueModelId, type Model, parseUniqueModelId } from '@shared/data/ty
 import type { Provider } from '@shared/data/types/provider'
 import { CodeCli, isApiGatewayProviderId } from '@shared/types/codeCli'
 import { isEmbeddingModel, isGatewayRoutableModel, isRerankModel, isTextToImageModel } from '@shared/utils/model'
-import { isAgentOnlyProvider, isCherryAIProvider, isLoginBasedProvider } from '@shared/utils/provider'
+import { isAgentOnlyProvider, isLoginBasedProvider } from '@shared/utils/provider'
 
 import { CLI_TOOL_PROVIDER_MAP } from '../constants/cliTools'
 import { modelSupportsCliTool } from '../utils/modelSupport'
@@ -53,9 +53,7 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
     // Exclude login-based providers (Claude Code / Codex OAuth, etc.): they carry no API
     // key/baseUrl to inject into the CLI config, and their "own login" is already surfaced by
     // the synthetic own-login card. `isLoginBasedProvider` keeps api-key-capable mixed providers.
-    return filterFn
-      ? filterFn(providers).filter((p) => p.isEnabled && !isCherryAIProvider(p) && !isLoginBasedProvider(p))
-      : []
+    return filterFn ? filterFn(providers).filter((p) => p.isEnabled && !isLoginBasedProvider(p)) : []
   }, [])
   const filterProviders = useCallback(
     (providers: Provider[]): Provider[] => filterProvidersForTool(selectedCliTool, providers),

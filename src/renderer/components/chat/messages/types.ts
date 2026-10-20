@@ -147,24 +147,6 @@ export interface MessageModelPickerRenderOptions {
   onOpenChange?: (open: boolean) => void
 }
 
-export interface MessageErrorDiagnosisStep {
-  text: string
-}
-
-export interface MessageErrorDiagnosisResult {
-  summary: string
-  category: string
-  explanation: string
-  steps: MessageErrorDiagnosisStep[]
-}
-
-export interface MessageErrorDiagnosisInput {
-  message: MessageListItem
-  partId: string
-  error: SerializedError
-  language: string
-}
-
 export interface MessageUserProfile {
   name?: string
   avatar?: string
@@ -410,9 +392,6 @@ export interface MessageListActions {
   abortTool?: (toolId: string) => boolean | Promise<boolean>
   subscribeToolProgress?: (toolId: string, onProgress: (progress: number) => void) => void | (() => void)
   respondToolApproval?: (input: MessageToolApprovalInput) => void | Promise<void>
-  diagnoseMessageError?: (
-    input: MessageErrorDiagnosisInput
-  ) => Promise<MessageErrorDiagnosisResult | string | null | undefined>
   removeMessageErrorPart?: (input: RemoveMessageErrorPartInput) => void | Promise<void>
   openErrorDetail?: (input: MessageErrorDetailInput) => void | Promise<void>
   navigateErrorTarget?: (target: string) => void | Promise<void>

@@ -73,7 +73,7 @@ Each seeder declares how it relates to re-runs via `executionPolicy` (mirrors Li
 
 **Why there is no `run-once`**: "execute once ever, ignore content changes" is migration-tool semantics (Liquibase's default for incremental deltas) — that responsibility belongs to Drizzle migrations and the v2 migrators, not seeding. For seed data, ignoring version changes silently desyncs the database from the data source. Its legitimate use cases are already covered: new-installs-only → `bootstrap-only`; one-time for everyone → `run-on-change` + idempotent guard; data fixes → migrations.
 
-**Ordering**: array order in `seeding/seederRegistry.ts` is execution order. Cross-seeder **data** dependencies (e.g. `CherryAiDefaultModelSeeder` must precede `DefaultAssistantSeeder` because of the `assistant.modelId` FK) are expressed by ordering. `bootstrap-only` imposes no ordering constraints of its own, but a bootstrap seeder that checks domain tables for emptiness is sensitive to earlier seeders writing those tables within the same first pass — keep that in mind when inserting seeders before one.
+**Ordering**: array order in `seeding/seederRegistry.ts` is execution order. Cross-seeder **data** dependencies (e.g. a seeder that writes rows another seeder references by FK must run first) are expressed by ordering. `bootstrap-only` imposes no ordering constraints of its own, but a bootstrap seeder that checks domain tables for emptiness is sensitive to earlier seeders writing those tables within the same first pass — keep that in mind when inserting seeders before one.
 
 ## Version Strategies
 

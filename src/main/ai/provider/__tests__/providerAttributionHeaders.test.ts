@@ -134,15 +134,6 @@ describe('provider attribution headers on the chat request boundary', () => {
     expect(headers.get('x-title')).toBe('Cherry Studio')
   })
 
-  it('keeps default attribution for a managed provider outside the registry', async () => {
-    const headers = await captureRequestHeaders(
-      makeOpenAICompatibleProvider({ id: 'cherryai', presetProviderId: 'cherryai' })
-    )
-
-    expect(headers.get('http-referer')).toBe('https://cherry-ai.com')
-    expect(headers.get('x-title')).toBe('Cherry Studio')
-  })
-
   it('does not reclassify a fully custom provider when its id matches the registry', async () => {
     const headers = await captureRequestHeaders(
       makeOpenAICompatibleProvider({ id: 'openai', presetProviderId: undefined })

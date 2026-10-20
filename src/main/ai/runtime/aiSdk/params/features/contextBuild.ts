@@ -59,8 +59,8 @@ const MIN_MESSAGES_KEPT = 2
  * default is ~3% of a 1M window but several times a 16k one, so on small
  * windows it never fired and a single tool result could swamp the request.
  *
- * `contextWindow` is optional on `Model` (custom / v1-imported / CherryAI rows
- * can omit it). With no window known there is nothing to take a share of, so
+ * `contextWindow` is optional on `Model` (custom / v1-imported rows can omit
+ * it). With no window known there is nothing to take a share of, so
  * the user's absolute character setting stands alone — never a computed `NaN`,
  * which would make `text.length <= threshold` false for EVERY result and
  * offload ordinary tool output.

@@ -6,12 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { agentTable } from '@data/db/schemas/agent'
 import { agentSessionTable } from '@data/db/schemas/agentSession'
 import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
-import { CherryAiDefaultModelSeeder } from '@data/db/seeding/seeders/cherryaiDefaultModelSeeder'
+import { userModelTable } from '@data/db/schemas/userModel'
+import { userProviderTable } from '@data/db/schemas/userProvider'
 import { CherryAssistantSeeder } from '@data/db/seeding/seeders/cherryAssistantSeeder'
 import { CherrySupportSeeder } from '@data/db/seeding/seeders/cherrySupportSeeder'
 import { BUILTIN_AGENT_ROLE, CHERRY_SUPPORT_AGENT_ID } from '@shared/ai/builtinAgent'
 import { AGENT_WORKSPACE_TYPE } from '@shared/data/api/schemas/agentWorkspaces'
-import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID } from '@shared/data/presets/cherryai'
+
+const MODEL_ID = 'openai::gpt-4o'
 
 function builtinAgents(db: ReturnType<typeof setupTestDatabase>['db'], role: string) {
   return db
@@ -29,14 +31,22 @@ describe('CherrySupportSeeder', () => {
   })
 
   it('creates Cherry Support beside Cherry Assistant with a system session and copied model', () => {
-    new CherryAiDefaultModelSeeder().run(dbh.db)
+    dbh.db.insert(userProviderTable).values({ providerId: 'openai', name: 'OpenAI', orderKey: 'a0' }).run()
+    dbh.db
+      .insert(userModelTable)
+      .values({
+        id: MODEL_ID,
+        providerId: 'openai',
+        modelId: 'gpt-4o',
+        name: 'GPT-4o',
+        capabilities: [],
+        supportsStreaming: true,
+        orderKey: 'a0'
+      })
+      .run()
     new CherryAssistantSeeder().run(dbh.db)
     const [assistant] = builtinAgents(dbh.db, BUILTIN_AGENT_ROLE.ASSISTANT)
-    dbh.db
-      .update(agentTable)
-      .set({ model: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID })
-      .where(eq(agentTable.id, assistant.id))
-      .run()
+    dbh.db.update(agentTable).set({ model: MODEL_ID }).where(eq(agentTable.id, assistant.id)).run()
 
     new CherrySupportSeeder().run(dbh.db)
 
@@ -46,7 +56,7 @@ describe('CherrySupportSeeder', () => {
       name: 'Cherry Support',
       description: '',
       instructions: '',
-      model: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
+      model: MODEL_ID
     })
     expect(support.configuration).toMatchObject({
       avatar: '🧰',

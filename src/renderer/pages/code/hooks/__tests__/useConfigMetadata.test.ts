@@ -2,7 +2,6 @@ import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CHERRYAI_DEFAULT_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { CLI_API_GATEWAY_PROVIDER_ID, CodeCli } from '@shared/types/codeCli'
@@ -142,15 +141,6 @@ describe('useConfigMetadata.makeModelFilter (gateway)', () => {
     expect(filter(model('openai', 'text-embedding-3', [MODEL_CAPABILITY.EMBEDDING]))).toBe(false)
     expect(filter(model('jina', 'reranker', [MODEL_CAPABILITY.RERANK]))).toBe(false)
     expect(filter(model('openai', 'dall-e-3', [MODEL_CAPABILITY.IMAGE_GENERATION]))).toBe(false)
-  })
-
-  it('excludes the CherryAI managed default model (not routable through the gateway)', () => {
-    const { result } = renderHook(() => useConfigMetadata(CodeCli.CLAUDE_CODE, [enabledProvider(CHERRYAI_PROVIDER_ID)]))
-    const filter = result.current.makeModelFilter(CLI_API_GATEWAY_PROVIDER_ID)
-
-    expect(filter(model(CHERRYAI_PROVIDER_ID, CHERRYAI_DEFAULT_MODEL_ID))).toBe(false)
-    // A non-default CherryAI model is still routable.
-    expect(filter(model(CHERRYAI_PROVIDER_ID, 'some-other-model'))).toBe(true)
   })
 
   // The picker shares isGatewayRoutableModel with the gateway's /v1/models listing, so every

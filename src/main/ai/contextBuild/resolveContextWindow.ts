@@ -1,8 +1,8 @@
 /**
  * Single validation point for `Model.contextWindow` before it feeds any budget.
  *
- * `contextWindow` is `z.number().optional()` — custom / v1-imported / CherryAI
- * models really can arrive without it. Every budget in the context-build layer
+ * `contextWindow` is `z.number().optional()` — custom / v1-imported models
+ * really can arrive without it. Every budget in the context-build layer
  * multiplies it, so an absent value used to reach the arithmetic as `NaN`:
  * `Math.min(chars, NaN)` is `NaN`, the truncator's `text.length <= NaN` is
  * always false (so ordinary tool results got offloaded), and the durable /

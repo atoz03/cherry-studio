@@ -34,7 +34,6 @@ const cacheHookMocks = vi.hoisted(() => ({
   setSelectedMessageIds: vi.fn()
 }))
 const errorActionsMock = vi.hoisted(() => ({
-  diagnoseMessageError: vi.fn(),
   openErrorDetail: vi.fn(),
   navigateErrorTarget: vi.fn()
 }))
@@ -449,7 +448,6 @@ describe('useAgentMessageListProviderValue', () => {
     expect(value?.actions.exportToObsidian).toBe(exportActionsMock.exportToObsidian)
     expect(value?.actions.exportToJoplin).toBe(exportActionsMock.exportToJoplin)
     expect(value?.actions.exportToSiyuan).toBe(exportActionsMock.exportToSiyuan)
-    expect(value?.actions.diagnoseMessageError).toBe(errorActionsMock.diagnoseMessageError)
     expect(value?.actions.openErrorDetail).toBe(errorActionsMock.openErrorDetail)
     expect(value?.actions.navigateErrorTarget).toBe(errorActionsMock.navigateErrorTarget)
     expect(value?.actions.removeMessageErrorPart).toBeUndefined()

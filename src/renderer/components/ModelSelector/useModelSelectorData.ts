@@ -7,7 +7,6 @@ import { usePins } from '@renderer/hooks/usePins'
 import { useProviders } from '@renderer/hooks/useProvider'
 import { getSearchMatchScore } from '@renderer/utils/model'
 import { isProviderSettingsListVisibleProvider } from '@renderer/utils/providerSettings'
-import { CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { isUniqueModelId, type Model, parseUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { isExternalCliProvider } from '@shared/utils/provider'
@@ -22,10 +21,6 @@ import type {
 import { getProviderDisplayName } from './utils'
 
 const EMPTY_TAGS: ModelSelectorTag[] = []
-const CHERRYAI_DISPLAY_GROUP = {
-  id: CHERRYAI_PROVIDER_ID,
-  providerIds: [CHERRYAI_PROVIDER_ID]
-} as const
 
 interface ModelSelectorDisplayGroup {
   id: string
@@ -64,13 +59,9 @@ function getModelIdentifier(model: Model) {
   return model.apiModelId ?? parseUniqueModelId(model.id).modelId
 }
 
-function getDisplayGroupId(providerId: string) {
-  return CHERRYAI_DISPLAY_GROUP.providerIds.some((id) => id === providerId) ? CHERRYAI_DISPLAY_GROUP.id : providerId
-}
-
 function sortProvidersByPriority(providers: Provider[], prioritizedProviderIds: readonly string[]) {
   const providerById = new Map(providers.map((provider) => [provider.id, provider]))
-  const prioritized = [...new Set([...CHERRYAI_DISPLAY_GROUP.providerIds, ...prioritizedProviderIds])]
+  const prioritized = [...new Set(prioritizedProviderIds)]
     .map((providerId) => providerById.get(providerId))
     .filter((provider): provider is Provider => Boolean(provider))
   const prioritizedIds = new Set(prioritized.map((provider) => provider.id))
@@ -273,7 +264,7 @@ export function useModelSelectorData({
         continue
       }
 
-      const groupId = getDisplayGroupId(provider.id)
+      const groupId = provider.id
       const group = displayGroupsById.get(groupId)
       const modelsWithProvider = providerModels.map((model) => ({ model, provider }))
 
@@ -302,7 +293,7 @@ export function useModelSelectorData({
             provider,
             'pinned',
             true,
-            duplicateModelNamesByDisplayGroup.get(getDisplayGroupId(provider.id))?.has(model.name) ?? false
+            duplicateModelNamesByDisplayGroup.get(provider.id)?.has(model.name) ?? false
           )
         ]
       })

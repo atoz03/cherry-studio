@@ -46,8 +46,7 @@ export class CherryAssistantSeeder implements ISeeder {
         name: this.getNameForPreferredSystemLanguage(),
         description: '',
         instructions: '',
-        // The managed CherryAI model cannot run the agent runtime. Onboarding
-        // assigns the user's default model when they choose one.
+        // Onboarding assigns the user's default model when they choose one.
         model: null,
         configuration: { ...CHERRY_ASSISTANT_SEED.configuration }
       })

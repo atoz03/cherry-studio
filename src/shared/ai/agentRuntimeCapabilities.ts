@@ -2,10 +2,8 @@ import { claudeUserFacingTools } from '@shared/ai/claudecode/toolRegistry'
 import { PI_BUILTIN_TOOLS } from '@shared/ai/piBuiltinTools'
 import { isPiCompatibleModel } from '@shared/ai/piModelCompatibility'
 import type { AgentPermissionMode } from '@shared/data/api/schemas/agents'
-import { isManagedCherryAiDefaultModel } from '@shared/data/presets/cherryai'
 import type { AgentType } from '@shared/data/types/agent'
 import type { Model } from '@shared/data/types/model'
-import { parseUniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { isGatewayRoutableModel } from '@shared/utils/model'
 
@@ -110,12 +108,8 @@ export const AGENT_RUNTIME_CAPABILITIES = {
     slashCommands: PI_BUILTIN_COMMANDS,
     createDefaults: { permissionMode: 'auto' },
     // Orphan models are rejected (pre-descriptor behavior): pi needs the provider's endpoint
-    // config to resolve a wire protocol, so no provider ⇒ not drivable. The managed CherryAI
-    // free-quota default is barred too — like claude, pi must not drive it directly.
-    isModelCompatible: (provider, model) =>
-      !!provider &&
-      isPiCompatibleModel(provider, model) &&
-      !isManagedCherryAiDefaultModel(model.providerId, model.apiModelId ?? parseUniqueModelId(model.id).modelId),
+    // config to resolve a wire protocol, so no provider ⇒ not drivable.
+    isModelCompatible: (provider, model) => !!provider && isPiCompatibleModel(provider, model),
     transport: 'pi-agent',
     builtinTools: () =>
       PI_BUILTIN_TOOLS.map((tool) => ({

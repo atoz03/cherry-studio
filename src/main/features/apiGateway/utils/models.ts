@@ -1,7 +1,6 @@
 import { modelService } from '@data/services/ModelService'
 import { providerService } from '@data/services/ProviderService'
 import { loggerService } from '@logger'
-import { isManagedCherryAiDefaultModel } from '@shared/data/presets/cherryai'
 import { type Model, parseUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { formatGatewayModelId } from '@shared/utils/apiGateway'
@@ -105,9 +104,6 @@ export async function resolveGatewayModelAddress(modelAddress: string): Promise<
 
   const providerId = modelAddress.slice(0, sepIdx)
   const apiModelId = modelAddress.slice(sepIdx + 1)
-  if (isManagedCherryAiDefaultModel(providerId, apiModelId)) {
-    throw gatewayModelError('CherryAI managed default model is not available through the API gateway', 400)
-  }
 
   let provider: Provider
   try {

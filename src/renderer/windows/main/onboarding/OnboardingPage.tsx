@@ -27,7 +27,6 @@ import { toast } from '@renderer/services/toast'
 import { isWin } from '@renderer/utils/platform'
 import { isProtectedBuiltinAgentRole } from '@shared/ai/builtinAgent'
 import type { OnboardingProviderSetupStatus } from '@shared/data/preference/preferenceTypes'
-import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, isManagedCherryAiProviderId } from '@shared/data/presets/cherryai'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
 import { defaultLanguage } from '@shared/utils/languages'
 import { isNonChatModel } from '@shared/utils/model'
@@ -36,7 +35,7 @@ type OnboardingStep = 'welcome' | 'provider' | 'select-model'
 type OnboardingCompletionStatus = Exclude<OnboardingProviderSetupStatus, 'pending'>
 
 const PESSIMISTIC_PREFERENCE_OPTIONS = { optimistic: false } as const
-const isOnboardingModel = (model: Model) => !isManagedCherryAiProviderId(model.providerId) && !isNonChatModel(model)
+const isOnboardingModel = (model: Model) => !isNonChatModel(model)
 const ONBOARDING_PREFERENCE_KEYS = {
   providerSetupStatus: 'app.onboarding.provider_setup.status'
 } as const
@@ -63,9 +62,7 @@ export default function OnboardingPage() {
   const { defaultModel, quickModel, translateModel } = useDefaultModel()
   const [step, setStep] = useState<OnboardingStep>('welcome')
   const [isCompleting, setIsCompleting] = useState(false)
-  const eligibleProviderIds = new Set(
-    enabledProviders.filter((provider) => !isManagedCherryAiProviderId(provider.id)).map((provider) => provider.id)
-  )
+  const eligibleProviderIds = new Set(enabledProviders.map((provider) => provider.id))
   const canCompleteModelSetup = [defaultModel, quickModel, translateModel].every(
     (model) => model && eligibleProviderIds.has(model.providerId) && isOnboardingModel(model)
   )
@@ -98,9 +95,7 @@ export default function OnboardingPage() {
     do {
       const response = await dataApiService.get('/agents', { query: { limit, page } })
       const officialAgents = response.items.filter(
-        (agent) =>
-          isProtectedBuiltinAgentRole(agent.configuration?.builtin_role) &&
-          (agent.model === null || agent.model === CHERRYAI_DEFAULT_UNIQUE_MODEL_ID)
+        (agent) => isProtectedBuiltinAgentRole(agent.configuration?.builtin_role) && agent.model === null
       )
       await Promise.all(
         officialAgents.map((agent) => dataApiService.patch(`/agents/${agent.id}`, { body: { model: modelId } }))
@@ -116,7 +111,7 @@ export default function OnboardingPage() {
         .get('/assistants', { query: { limit: 2 } })
         .then(async ({ items, total }) => {
           const assistant = total === 1 ? items[0] : undefined
-          if (assistant?.modelId === CHERRYAI_DEFAULT_UNIQUE_MODEL_ID) {
+          if (assistant?.modelId === null) {
             await dataApiService.patch(`/assistants/${assistant.id}`, { body: { modelId: model.id } })
           }
         })

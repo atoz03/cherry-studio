@@ -965,8 +965,8 @@ export class PersistentChatContextProvider implements ChatContextProvider {
     if (!on) return serve(effective)
     if (!compressionModel) return serve(effective)
 
-    // `contextWindow` is optional on `Model` (custom / v1-imported / CherryAI
-    // rows can omit it). Without one there is no budget to compact against —
+    // `contextWindow` is optional on `Model` (custom / v1-imported rows can
+    // omit it). Without one there is no budget to compact against —
     // and an `as number` cast here made every derived budget `NaN`, which
     // silently disabled compaction instead of triggering it. Serve as-is; the
     // persist lane still bounds tool outputs by the character setting.

@@ -82,10 +82,9 @@ describe('ErrorBlock', () => {
     vi.clearAllMocks()
   })
 
-  it('renders a known app-owned i18nKey without AI diagnosis', () => {
+  it('renders a known app-owned i18nKey', () => {
     const i18nKey = 'tool_call_limit_reached'
-    const diagnoseMessageError = vi.fn().mockResolvedValue('AI summary')
-    mocks.actions = { diagnoseMessageError }
+    mocks.actions = {}
     mocks.i18nKeys.add(`error.${i18nKey}`)
 
     render(
@@ -102,7 +101,6 @@ describe('ErrorBlock', () => {
     )
 
     expect(screen.getByText(`error.${i18nKey}`)).toBeInTheDocument()
-    expect(diagnoseMessageError).not.toHaveBeenCalled()
   })
 
   it('hides mutation and detail affordances when capabilities are unavailable', () => {
@@ -176,9 +174,8 @@ describe('ErrorBlock', () => {
   })
 
   it('shows only the safe Claude Code exit status and diagnostic reference', () => {
-    const diagnoseMessageError = vi.fn()
     const navigateErrorTarget = vi.fn()
-    mocks.actions = { diagnoseMessageError, navigateErrorTarget }
+    mocks.actions = { navigateErrorTarget }
 
     render(
       <ErrorBlock
@@ -198,15 +195,13 @@ describe('ErrorBlock', () => {
     expect(screen.getByText('error.diagnosis.auth')).toBeInTheDocument()
     expect(screen.getByText('error.claude_code_exit.code')).toBeInTheDocument()
     expect(screen.queryByText(/stderr|api_key|sk-ant/i)).toBeNull()
-    expect(diagnoseMessageError).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByText(GO_TO_SETTINGS_LABEL))
     expect(navigateErrorTarget).toHaveBeenCalledWith('/settings/provider?id=openai')
   })
 
-  it('does not treat an unknown exit category as a Claude Code diagnostic', async () => {
-    const diagnoseMessageError = vi.fn().mockResolvedValue('diagnosed')
-    mocks.actions = { diagnoseMessageError }
+  it('does not treat an unknown exit category as a Claude Code diagnostic', () => {
+    mocks.actions = {}
 
     render(
       <ErrorBlock
@@ -222,11 +217,10 @@ describe('ErrorBlock', () => {
     )
 
     expect(screen.queryByText('error.claude_code_exit.start')).toBeNull()
-    await waitFor(() => expect(diagnoseMessageError).toHaveBeenCalledOnce())
   })
 
   it('does not promise a diagnostic reference the payload never carried', () => {
-    mocks.actions = { diagnoseMessageError: vi.fn() }
+    mocks.actions = {}
 
     render(
       <ErrorBlock
@@ -346,8 +340,7 @@ describe('ErrorBlock', () => {
   it('shows a Claude SDK request failure with its original error and provider settings', async () => {
     const user = userEvent.setup()
     const navigateErrorTarget = vi.fn()
-    const diagnoseMessageError = vi.fn().mockResolvedValue('AI summary')
-    mocks.actions = { navigateErrorTarget, diagnoseMessageError }
+    mocks.actions = { navigateErrorTarget }
     mocks.translations.set('error.diagnosis.bad_request', enUS['error.diagnosis.bad_request'])
 
     render(
@@ -367,56 +360,6 @@ describe('ErrorBlock', () => {
     expect(screen.getByText(/API Error: 400 Provider returned error/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: GO_TO_SETTINGS_LABEL }))
     expect(navigateErrorTarget).toHaveBeenCalledWith('/settings/provider?id=openai')
-    expect(diagnoseMessageError).not.toHaveBeenCalled()
-  })
-
-  it('uses injected diagnosis capability for unknown errors', async () => {
-    const diagnoseMessageError = vi.fn().mockResolvedValue('AI summary')
-    mocks.actions = {
-      diagnoseMessageError
-    }
-
-    render(
-      <ErrorBlock
-        partId="message-1-part-0"
-        error={{
-          name: 'UnknownError',
-          message: 'unmapped provider failure',
-          stack: null,
-          i18nKey: 'missing_app_error'
-        }}
-        message={message}
-      />
-    )
-
-    expect(await screen.findByText('AI summary')).toBeInTheDocument()
-    expect(diagnoseMessageError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message,
-        partId: 'message-1-part-0',
-        language: 'en'
-      })
-    )
-  })
-
-  it('refreshes an AI summary when the app language changes', async () => {
-    const diagnoseMessageError = vi.fn().mockResolvedValueOnce('English summary').mockResolvedValueOnce('中文摘要')
-    mocks.actions = { diagnoseMessageError }
-    const error = {
-      name: 'UnknownError',
-      message: 'unmapped provider failure',
-      stack: null,
-      i18nKey: 'missing_app_error'
-    }
-
-    const { rerender } = render(<ErrorBlock partId="message-1-part-0" error={error} message={message} />)
-    expect(await screen.findByText('English summary')).toBeInTheDocument()
-
-    mocks.language = 'zh-CN'
-    rerender(<ErrorBlock partId="message-1-part-0" error={{ ...error }} message={message} />)
-
-    expect(await screen.findByText('中文摘要')).toBeInTheDocument()
-    expect(diagnoseMessageError).toHaveBeenLastCalledWith(expect.objectContaining({ language: 'zh-CN' }))
   })
 
   it('offers network settings for a client-certificate authentication failure', async () => {

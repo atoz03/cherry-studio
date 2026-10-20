@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { CHERRYAI_DEFAULT_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import type { Model } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 
@@ -41,29 +40,13 @@ describe('AGENT_RUNTIME_CAPABILITIES', () => {
     expect(AGENT_RUNTIME_CAPABILITIES.pi.createDefaults.permissionMode).toBe('auto')
   })
 
-  describe('isModelCompatible — managed CherryAI default model', () => {
-    const piIsCompatible = AGENT_RUNTIME_CAPABILITIES.pi.isModelCompatible
-    const claudeIsCompatible = AGENT_RUNTIME_CAPABILITIES['claude-code'].isModelCompatible
-
-    // A CherryAI provider whose endpoint pi can drive, hosting the managed free-quota default model.
-    const cherryProvider = makeProvider({ id: CHERRYAI_PROVIDER_ID })
-    const managedDefaultModel = makeModel({
-      providerId: CHERRYAI_PROVIDER_ID,
-      apiModelId: CHERRYAI_DEFAULT_MODEL_ID
+  describe('isModelCompatible', () => {
+    it('pi accepts a normal pi-compatible model', () => {
+      expect(AGENT_RUNTIME_CAPABILITIES.pi.isModelCompatible(makeProvider({}), makeModel({}))).toBe(true)
     })
 
-    it('pi rejects the managed CherryAI default model even though the provider is drivable', () => {
-      expect(piIsCompatible(cherryProvider, managedDefaultModel)).toBe(false)
-    })
-
-    it('pi still accepts a normal pi-compatible model', () => {
-      const provider = makeProvider({})
-      expect(piIsCompatible(provider, makeModel({}))).toBe(true)
-    })
-
-    it('claude behavior is unchanged: it also bars the managed default and accepts a normal model', () => {
-      expect(claudeIsCompatible(cherryProvider, managedDefaultModel)).toBe(false)
-      expect(claudeIsCompatible(makeProvider({}), makeModel({}))).toBe(true)
+    it('claude accepts a normal model', () => {
+      expect(AGENT_RUNTIME_CAPABILITIES['claude-code'].isModelCompatible(makeProvider({}), makeModel({}))).toBe(true)
     })
   })
 })
