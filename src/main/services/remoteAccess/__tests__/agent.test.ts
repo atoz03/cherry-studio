@@ -108,6 +108,11 @@ const fake = vi.hoisted(() => {
   }
 })
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@cherrystudio/remote-protocol', async (importOriginal) => {
   const original = await importOriginal<typeof RemoteProtocol>()
   return {
@@ -304,8 +309,9 @@ describe('remote agent access', () => {
     notifications.length = 0
     fake.runtime.respondToolApproval.mockClear()
     service = new RemoteAccessService()
-    hub = service['hub']
     await service._doInit()
+    await service.prepareIngress()
+    hub = service['runtime']!.hub
     await dbh.db.insert(agentTable).values({
       id: 'agent-1',
       type: 'claude-code',

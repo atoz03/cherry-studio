@@ -1,10 +1,15 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
 
 import { BaseService } from '@main/core/lifecycle'
 
 const state = vi.hoisted(() => ({
   load: vi.fn<() => Promise<Uint8Array>>(),
   published: [] as Array<{ identity: string; port: number }>
+}))
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
 }))
 vi.mock('@application', async () => {
   const { mockApplicationFactory } = await import('@test-mocks/main/application')
@@ -27,6 +32,8 @@ import { createDeviceIdentity, deviceIdentityId } from '@cherrystudio/remote-tra
 import { RemoteAccessService } from '../RemoteAccessService'
 
 let service: RemoteAccessService
+// The runtime loads lazily; warm the module cache so each waitFor measures discovery, not the first import.
+beforeAll(() => import('../remoteRuntime'))
 beforeEach(() => {
   BaseService.resetInstances()
   state.load.mockReset()

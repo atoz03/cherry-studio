@@ -880,6 +880,11 @@ export class RemoteAgentHub {
   readonly uploads = new RemoteUploads()
   private readonly journals = new Map<string, SessionJournal>()
 
+  /** No journal is retained, so a sweep has nothing to poll or evict. */
+  get idle(): boolean {
+    return this.journals.size === 0
+  }
+
   publishSession(sessionId: string): void {
     this.journals.get(sessionId)?.publishSession()
   }

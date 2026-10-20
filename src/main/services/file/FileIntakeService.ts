@@ -9,7 +9,7 @@ import { v7 as uuidv7 } from 'uuid'
 import { application } from '@application'
 import { hasPendingRestore } from '@data/db/restore/restoreJournal'
 import { loggerService } from '@logger'
-import { BaseService, DependsOn, Injectable, Phase, ServicePhase, Emitter } from '@main/core/lifecycle'
+import { BaseService, DependsOn, type Disposable, Injectable, Phase, ServicePhase, Emitter } from '@main/core/lifecycle'
 import { FileEntryIdSchema } from '@shared/data/types/file'
 import { AbsoluteFilePathSchema } from '@shared/types/file'
 
@@ -50,10 +50,11 @@ export class FileIntakeService extends BaseService {
     this.registerDisposable(this.changes)
     await this.load()
     for (const upload of this.uploads.values()) if (upload.state === 'verifying') this.verify(upload)
-    this.registerInterval(() => this.sweep(), 1000)
+    this.armSweep()
   }
   protected async onStop(): Promise<void> {
     await this.drain()
+    this.sweeper = null // auto-disposed after onStop; null'd so a restart re-arms it
   }
 
   private get store() {
@@ -72,6 +73,11 @@ export class FileIntakeService extends BaseService {
   private loading?: Promise<void>
   private stopped = false
   private sweeping = false
+  /** Expiry and cancelled-file cleanup need a timer only while a staged upload is retained. */
+  private sweeper: Disposable | null = null
+  private armSweep(): void {
+    if (this.uploads.size) this.sweeper ??= this.registerInterval(() => this.sweep(), 1000)
+  }
 
   private root(): string {
     return this.store.root()
@@ -98,6 +104,7 @@ export class FileIntakeService extends BaseService {
   }
   private async save(upload: Upload): Promise<void> {
     await this.store.save(upload)
+    this.armSweep()
     this.changes.fire({ ownerId: upload.ownerId, uploadId: upload.uploadId })
   }
   async owners(): Promise<FileIntakeOwner[]> {
@@ -441,6 +448,10 @@ export class FileIntakeService extends BaseService {
             } else if (upload.state === 'cancelled')
               await rm(path.dirname(this.file(upload)), { recursive: true, force: true })
           })
+        if (!this.uploads.size) {
+          this.sweeper?.dispose()
+          this.sweeper = null
+        }
       })
       .catch((error) => logger.warn('Upload cleanup failed', error))
       .finally(() => {

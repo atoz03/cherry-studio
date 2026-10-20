@@ -14,6 +14,11 @@ const { isMacTransparentWindowMock, navigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn()
 }))
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: vi.fn().mockResolvedValue(undefined) } }))
 
 vi.mock('@cherrystudio/ui', async (importOriginal) => ({

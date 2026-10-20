@@ -1,7 +1,7 @@
 import { application } from '@application'
 import type { AgentAttachmentSelection } from '@cherrystudio/remote-protocol/agent'
 import { remoteCommandService } from '@data/services/RemoteCommandService'
-import { BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
+import { BaseService, DependsOn, type Disposable, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { FileIntakeError, type FileIntakeOwner } from '@main/services/file'
 
 import type { UploadOwner } from './RemoteUploads'
@@ -22,6 +22,8 @@ export class AttachmentPresenceService extends BaseService {
   private readonly generations = new Map<string, number>()
   private readonly changed = new Set<string>()
   private generation = 0
+  /** Expiry and change broadcasts need a timer only while a selection is tracked or a change is unsent. */
+  private ticker: Disposable | null = null
   connection(): number {
     return ++this.generation
   }
@@ -31,19 +33,30 @@ export class AttachmentPresenceService extends BaseService {
   protected onInit(): void {
     this.registerDisposable(
       application.get('FileIntakeService').onChanged(({ ownerId }) => {
-        for (const row of this.rows.values()) if (row.owner.ownerId === ownerId) this.changed.add(row.input.sessionId)
+        for (const row of this.rows.values()) if (row.owner.ownerId === ownerId) this.markChanged(row.input.sessionId)
       })
     )
-    this.registerInterval(() => {
-      for (const [key, row] of this.rows)
-        if (row.expiresAt <= Date.now()) {
-          this.rows.delete(key)
-          this.changed.add(row.input.sessionId)
-        }
-      for (const sessionId of this.changed)
-        application.get('IpcApiService').broadcast('ai.agent.attachment_selections.changed', { sessionId })
-      this.changed.clear()
-    }, 100)
+  }
+  protected onStop(): void {
+    this.ticker = null // auto-disposed after onStop; null'd so a restart re-arms it
+  }
+  private markChanged(sessionId: string): void {
+    this.changed.add(sessionId)
+    this.ticker ??= this.registerInterval(() => this.tick(), 100)
+  }
+  private tick(): void {
+    for (const [key, row] of this.rows)
+      if (row.expiresAt <= Date.now()) {
+        this.rows.delete(key)
+        this.changed.add(row.input.sessionId)
+      }
+    for (const sessionId of this.changed)
+      application.get('IpcApiService').broadcast('ai.agent.attachment_selections.changed', { sessionId })
+    this.changed.clear()
+    if (!this.rows.size) {
+      this.ticker?.dispose()
+      this.ticker = null
+    }
   }
   present(owner: FileIntakeOwner, auth: UploadOwner, generation: number, input: AgentAttachmentSelection) {
     const active = this.generations.get(owner.ownerId) ?? 0
@@ -62,7 +75,7 @@ export class AttachmentPresenceService extends BaseService {
       expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       commandId: previous?.commandId
     })
-    this.changed.add(input.sessionId)
+    this.markChanged(input.sessionId)
     return { accepted: true }
   }
   submitting(owner: FileIntakeOwner, selectionId: string | undefined, commandId: string): void {
@@ -70,7 +83,7 @@ export class AttachmentPresenceService extends BaseService {
     const row = this.rows.get(this.key(owner, selectionId))
     if (row) {
       row.commandId = commandId
-      this.changed.add(row.input.sessionId)
+      this.markChanged(row.input.sessionId)
     }
   }
   owners(): string[] {
@@ -80,7 +93,7 @@ export class AttachmentPresenceService extends BaseService {
     for (const [key, row] of this.rows)
       if (row.owner.ownerId === owner.ownerId) {
         this.rows.delete(key)
-        this.changed.add(row.input.sessionId)
+        this.markChanged(row.input.sessionId)
       }
   }
   async list(sessionId: string): Promise<AgentAttachmentSelection[]> {

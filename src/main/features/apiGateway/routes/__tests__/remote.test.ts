@@ -46,6 +46,11 @@ import type { CherryMessagePart } from '@shared/data/types/message'
 const desktopIdentity = vi.hoisted(() => ({ bytes: undefined as Uint8Array | undefined }))
 const service = vi.hoisted(() => ({ current: undefined as unknown }))
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@main/services/remoteAccess/deviceIdentity', () => ({
   loadDesktopIdentity: async () => desktopIdentity.bytes
 }))
