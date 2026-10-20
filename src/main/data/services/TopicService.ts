@@ -25,6 +25,8 @@ import type {
   LatestTopicQuery,
   ListTopicsQuery,
   MoveTopicDto,
+  ReassignTopicsDto,
+  ReassignTopicsResult,
   ReusableTopicPlaceholderResponse,
   ReuseOrCreateTopicDto,
   UpdateTopicDto
@@ -461,6 +463,29 @@ export class TopicService {
     })
     this.notifyReadModelChange([id], 'projection')
     return topic
+  }
+
+  /** Move every active topic of one assistant to another in one write; topic order and pins are kept. */
+  reassignAssistant(dto: ReassignTopicsDto): ReassignTopicsResult {
+    if (dto.sourceAssistantId === dto.targetAssistantId) {
+      const message = 'reassign: target assistant must differ from the source assistant'
+      throw DataApiErrorFactory.validation({ targetAssistantId: [message] }, message)
+    }
+
+    const movedIds = application.get('DbService').withWriteTx((tx) => {
+      assertActiveAssistantTx(tx, dto.targetAssistantId)
+      return tx
+        .update(topicTable)
+        .set({ assistantId: dto.targetAssistantId })
+        .where(and(eq(topicTable.assistantId, dto.sourceAssistantId), isNull(topicTable.deletedAt)))
+        .returning({ id: topicTable.id })
+        .all()
+        .map((row) => row.id)
+    })
+    this.notifyReadModelChange(movedIds, 'projection')
+    logger.info('Reassigned assistant topics', { ...dto, count: movedIds.length })
+
+    return { movedIds }
   }
 
   /** Move an active topic to the Recycle Bin by default; permanently remove only a topic already there. */

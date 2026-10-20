@@ -8,6 +8,7 @@ const {
   getLatestActiveMock,
   listByCursorMock,
   moveMock,
+  reassignAssistantMock,
   reorderBatchMock,
   reorderMock,
   restoreMock,
@@ -22,6 +23,7 @@ const {
   getLatestActiveMock: vi.fn(),
   listByCursorMock: vi.fn(),
   moveMock: vi.fn(),
+  reassignAssistantMock: vi.fn(),
   reorderBatchMock: vi.fn(),
   reorderMock: vi.fn(),
   restoreMock: vi.fn(),
@@ -39,6 +41,7 @@ vi.mock('@data/services/TopicService', () => ({
     getLatestActive: getLatestActiveMock,
     listByCursor: listByCursorMock,
     move: moveMock,
+    reassignAssistant: reassignAssistantMock,
     reorder: reorderMock,
     reorderBatch: reorderBatchMock,
     restore: restoreMock,
@@ -142,6 +145,18 @@ describe('topicHandlers', () => {
       ).rejects.toThrow()
 
       expect(moveMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('/topics:reassign', () => {
+    it('rejects invalid assistant ids before calling the service', async () => {
+      await expect(
+        topicHandlers['/topics:reassign'].POST({
+          body: { sourceAssistantId: 'assistant-a', targetAssistantId: 'assistant-b' }
+        })
+      ).rejects.toThrow()
+
+      expect(reassignAssistantMock).not.toHaveBeenCalled()
     })
   })
 

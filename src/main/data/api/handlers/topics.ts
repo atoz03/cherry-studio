@@ -18,6 +18,7 @@ import {
   LatestTopicQuerySchema,
   ListTopicsQuerySchema,
   MoveTopicSchema,
+  ReassignTopicsSchema,
   ReuseOrCreateTopicSchema,
   SetActiveNodeSchema,
   type TopicSchemas,
@@ -71,6 +72,13 @@ export const topicHandlers: HandlersFor<TopicSchemas> = {
 
   '/topics/:id/restore': {
     POST: async ({ params }) => topicService.restore(params.id)
+  },
+
+  '/topics:reassign': {
+    POST: async ({ body }) => {
+      const parsed = ReassignTopicsSchema.parse(body)
+      return topicService.reassignAssistant(parsed)
+    }
   },
 
   '/topics/:id/move': {

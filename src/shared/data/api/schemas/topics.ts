@@ -49,6 +49,17 @@ export const MoveTopicSchema = z.strictObject({
 })
 export type MoveTopicDto = z.infer<typeof MoveTopicSchema>
 
+/** Move every active topic of one assistant to another; topic order and pins are kept. */
+export const ReassignTopicsSchema = z.strictObject({
+  sourceAssistantId: AssistantIdSchema,
+  targetAssistantId: AssistantIdSchema
+})
+export type ReassignTopicsDto = z.infer<typeof ReassignTopicsSchema>
+
+export interface ReassignTopicsResult {
+  movedIds: string[]
+}
+
 /**
  * Query parameters for `GET /topics` (cursor pagination + search).
  */
@@ -256,6 +267,14 @@ export type TopicSchemas = {
       params: { id: string }
       body: MoveTopicDto
       response: Topic
+    }
+  }
+
+  /** Atomically move every active topic of one assistant to another. */
+  '/topics:reassign': {
+    POST: {
+      body: ReassignTopicsDto
+      response: ReassignTopicsResult
     }
   }
 
