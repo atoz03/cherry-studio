@@ -805,6 +805,94 @@ describe('ProviderModelMigrator', () => {
       })
     })
 
+    describe('final-v1 persist steps a persist-206 profile never ran', () => {
+      const CHERRYIN_NET = 'https://open.cherryin.net'
+      const STEPFUN_HOST = 'https://api.stepfun.com'
+
+      beforeEach(() => {
+        registryFixtures.providers = [
+          {
+            id: 'cherryin',
+            name: 'CherryIN',
+            endpointConfigs: {
+              'openai-chat-completions': { baseUrl: CHERRYIN_NET, adapterFamily: 'cherryin' },
+              'anthropic-messages': { baseUrl: CHERRYIN_NET, adapterFamily: 'cherryin' }
+            },
+            defaultChatEndpoint: 'openai-chat-completions'
+          },
+          {
+            id: 'stepfun',
+            name: 'StepFun',
+            endpointConfigs: {
+              'openai-chat-completions': { baseUrl: STEPFUN_HOST, adapterFamily: 'openai-compatible' },
+              'anthropic-messages': { baseUrl: STEPFUN_HOST, adapterFamily: 'anthropic' }
+            },
+            defaultChatEndpoint: 'openai-chat-completions'
+          }
+        ]
+      })
+
+      // Fork v1.9.15 state: CherryIN still on the retired `.cc` host (step 208), StepFun without
+      // the anthropicApiHost that step 207 backfills.
+      const forkProvider = (id: string, apiHost: string, anthropicApiHost?: string) => ({
+        id,
+        name: id,
+        type: 'openai',
+        enabled: true,
+        isSystem: true,
+        apiKey: `sk-${id}`,
+        apiHost,
+        ...(anthropicApiHost && { anthropicApiHost }),
+        isNotSupportArrayContent: false,
+        isNotSupportDeveloperRole: false,
+        isNotSupportStreamOptions: false,
+        models: []
+      })
+
+      it('moves CherryIN off the retired .cc host instead of storing it as a user override', async () => {
+        const migrationContext = createContext(dbh.db, {
+          llm: {
+            providers: [forkProvider('cherryin', 'https://open.cherryin.cc', 'https://open.cherryin.cc')]
+          }
+        })
+        await migrator.prepare(migrationContext)
+        expect((await migrator.execute(migrationContext)).success).toBe(true)
+
+        const [providerRow] = await dbh.db
+          .select()
+          .from(userProviderTable)
+          .where(eq(userProviderTable.providerId, 'cherryin'))
+        expect(JSON.stringify(providerRow.endpointConfigs ?? {})).not.toContain('cherryin.cc')
+        const runtime = providerService.getByProviderId('cherryin')
+        expect(runtime.endpointConfigs?.[ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]?.baseUrl).toBe(CHERRYIN_NET)
+        expect(runtime.endpointConfigs?.[ENDPOINT_TYPE.ANTHROPIC_MESSAGES]?.baseUrl).toBe(CHERRYIN_NET)
+      })
+
+      it('keeps a CherryIN host the user picked that step 208 never touched', async () => {
+        const migrationContext = createContext(dbh.db, {
+          llm: { providers: [forkProvider('cherryin', 'https://open.cherryin.ai')] }
+        })
+        await migrator.prepare(migrationContext)
+        expect((await migrator.execute(migrationContext)).success).toBe(true)
+
+        const runtime = providerService.getByProviderId('cherryin')
+        expect(runtime.endpointConfigs?.[ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]?.baseUrl).toBe(
+          'https://open.cherryin.ai'
+        )
+      })
+
+      it('gives StepFun its Anthropic endpoint although the legacy row lacks anthropicApiHost', async () => {
+        const migrationContext = createContext(dbh.db, {
+          llm: { providers: [forkProvider('stepfun', STEPFUN_HOST)] }
+        })
+        await migrator.prepare(migrationContext)
+        expect((await migrator.execute(migrationContext)).success).toBe(true)
+
+        const runtime = providerService.getByProviderId('stepfun')
+        expect(runtime.endpointConfigs?.[ENDPOINT_TYPE.ANTHROPIC_MESSAGES]?.baseUrl).toBe(STEPFUN_HOST)
+      })
+    })
+
     it('backfills the anthropic adapterFamily for a custom relay with no catalog match', async () => {
       // End-to-end regression for the Xiaomi MIMO token-plan provider: a v1
       // custom relay (UUID id, type='openai', anthropicApiHost) with no

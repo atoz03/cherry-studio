@@ -70,6 +70,7 @@ import { createClearContextPart, withCherryMeta } from '@shared/data/types/uiPar
 import { AbsoluteFilePathSchema, type Base64String } from '@shared/types/file'
 
 import { legacyModelToUniqueId } from '../transformers/ModelTransformers'
+import { legacyThinkingTurnOptions } from './legacyThinkingEffort'
 
 const logger = loggerService.withContext('ChatMappings')
 
@@ -561,13 +562,16 @@ export async function transformMessage(
     }
   }
 
+  const turnOptions = oldMessage.role === 'assistant' ? legacyThinkingTurnOptions(blocks) : undefined
+
   return {
     id: oldMessage.id,
     parentId,
     topicId: correctTopicId,
     role: oldMessage.role,
     data: {
-      parts: oldMessage.type === 'clear' ? [...parts, createClearContextPart()] : parts
+      parts: oldMessage.type === 'clear' ? [...parts, createClearContextPart()] : parts,
+      ...(turnOptions && { turnOptions })
     },
     searchableText: searchableText || '',
     status: normalizeStatus(oldMessage.status),

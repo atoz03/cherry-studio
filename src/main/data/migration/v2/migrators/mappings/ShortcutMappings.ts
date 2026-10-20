@@ -44,7 +44,8 @@ export const LEGACY_KEY_TO_TARGET_KEY: Record<string, string> = {
   exit_fullscreen: 'shortcut.app.fullscreen.exit',
   mini_window: 'shortcut.quick_assistant.toggle',
   selection_assistant_toggle: 'shortcut.selection.toggle',
-  selection_assistant_select_text: 'shortcut.selection.capture_text'
+  selection_assistant_select_text: 'shortcut.selection.capture_text',
+  close_tab: 'shortcut.tab.close' // atoz03 fork v1 only
 }
 
 export const SHORTCUT_TARGET_KEYS: readonly string[] = [...new Set(Object.values(LEGACY_KEY_TO_TARGET_KEY))]

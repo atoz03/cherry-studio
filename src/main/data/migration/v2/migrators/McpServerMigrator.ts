@@ -19,6 +19,7 @@ import type { ExecuteResult, PrepareResult, ValidateResult } from '@shared/data/
 
 import type { MigrationContext } from '../core/MigrationContext'
 import { BaseMigrator } from './BaseMigrator'
+import { repairLegacyMcpServer } from './mappings/legacyPersistRepairs'
 import { type McpServerTransformResult, transformMcpServer } from './mappings/McpServerMappings'
 
 const logger = loggerService.withContext('McpServerMigrator')
@@ -68,7 +69,7 @@ export class McpServerMigrator extends BaseMigrator {
           seenIds.add(s.id)
 
           try {
-            this.preparedResults.push(transformMcpServer(s, this.preparedResults.length))
+            this.preparedResults.push(transformMcpServer(repairLegacyMcpServer(s), this.preparedResults.length))
           } catch (err) {
             this.skippedCount++
             warnings.push(`Failed to transform server ${s.id}: ${(err as Error).message}`)

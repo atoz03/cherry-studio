@@ -4,12 +4,13 @@ import { setupTestDatabase } from '@test-helpers/db'
 import { describe, expect, it, vi } from 'vitest'
 
 import { fileEntryTable } from '@data/db/schemas/file'
-import type {
-  CherryMessagePart,
-  DynamicToolUIPart,
-  FileUIPart,
-  ReasoningUIPart,
-  TextUIPart
+import {
+  type CherryMessagePart,
+  type DynamicToolUIPart,
+  type FileUIPart,
+  MessageDataSchema,
+  type ReasoningUIPart,
+  type TextUIPart
 } from '@shared/data/types/message'
 import { readCherryMeta } from '@shared/data/types/uiParts'
 
@@ -946,6 +947,49 @@ describe('transformMessage', () => {
     )
 
     expect(result).not.toHaveProperty('traceId')
+  })
+
+  describe('fork-v1 thinking-block reasoning effort', () => {
+    const thinkingBlock = (id: string, metadata?: Record<string, unknown>): OldBlock => ({
+      ...block('thinking', { content: 'thinking…', thinking_millsec: 1200, metadata }),
+      id,
+      messageId: 'm1'
+    })
+
+    it('freezes the recorded effort as the assistant turn option, in a shape v2 accepts', async () => {
+      const result = await transformMessage(
+        msg('m1', 'assistant'),
+        null,
+        0,
+        [thinkingBlock('b1', { reasoning_effort: 'xhigh' }), mainTextBlock('b2', 'm1', 'answer')],
+        't1'
+      )
+
+      expect(result.data.turnOptions).toEqual({ reasoningEffort: 'xhigh' })
+      expect(MessageDataSchema.safeParse(result.data).success).toBe(true)
+    })
+
+    it.each([
+      ['no effort was recorded', undefined],
+      ['the recorded effort is not a v2 option', { reasoning_effort: 'turbo' }],
+      ['the recorded effort is the default sentinel', { reasoning_effort: 'default' }]
+    ])('leaves turn options unset when %s', async (_case, metadata) => {
+      const result = await transformMessage(msg('m1', 'assistant'), null, 0, [thinkingBlock('b1', metadata)], 't1')
+
+      expect(result.data).not.toHaveProperty('turnOptions')
+    })
+
+    it('never puts turn options on a user message', async () => {
+      const result = await transformMessage(
+        msg('m1', 'user'),
+        null,
+        0,
+        [thinkingBlock('b1', { reasoning_effort: 'high' })],
+        't1'
+      )
+
+      expect(result.data).not.toHaveProperty('turnOptions')
+    })
   })
 
   it('does not stamp block-level createdAt/updatedAt/metadata/error onto part.providerMetadata.cherry', async () => {

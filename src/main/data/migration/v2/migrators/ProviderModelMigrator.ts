@@ -45,6 +45,7 @@ import type { EndpointDialect } from '@shared/data/types/provider'
 
 import type { MigrationContext } from '../core/MigrationContext'
 import { BaseMigrator } from './BaseMigrator'
+import { repairLegacyProvider } from './mappings/legacyPersistRepairs'
 import {
   buildProviderApiKeys,
   type OldLlmSettings,
@@ -480,7 +481,7 @@ export class ProviderModelMigrator extends BaseMigrator {
           continue
         }
         seenIds.add(provider.id)
-        dedupedProviders.push({ ...provider, models: cleanProviderModels(provider) })
+        dedupedProviders.push(repairLegacyProvider({ ...provider, models: cleanProviderModels(provider) }))
       }
 
       this.providers = dedupedProviders

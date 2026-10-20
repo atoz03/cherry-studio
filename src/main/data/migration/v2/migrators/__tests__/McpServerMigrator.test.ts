@@ -215,6 +215,41 @@ describe('McpServerMigrator', () => {
       expect((mapping as Map<string, string>).size).toBe(0)
     })
 
+    it('repoints a stale auto-install server at the published package (v1 step 209), keeping user args', async () => {
+      // Profiles persisted below v1 step 209 (e.g. fork v1.9.15 at 206) still launch the removed package.
+      const ctx = createMockContext({
+        mcp: {
+          servers: [
+            {
+              id: 'auto-install',
+              name: '@cherry/mcp-auto-install',
+              type: 'stdio',
+              command: '/usr/local/bin/npx',
+              args: ['--registry', 'https://registry.example', '@cherry/mcp-auto-install', 'connect', '--json'],
+              isActive: true
+            },
+            {
+              id: 'unrelated',
+              name: 'my-wrapper',
+              type: 'stdio',
+              command: 'npx',
+              args: ['@cherry/mcp-auto-install'],
+              isActive: false
+            }
+          ]
+        }
+      })
+      await migrator.prepare(ctx as any)
+      await migrator.execute(ctx as any)
+
+      const rows = new Map(ctx.insertedRows.map((row) => [row.name, row]))
+      expect(rows.get('@cherry/mcp-auto-install')).toMatchObject({
+        command: '/usr/local/bin/npx',
+        args: ['--registry', 'https://registry.example', '@mcpmarket/mcp-auto-install', 'connect', '--json']
+      })
+      expect(rows.get('my-wrapper')?.args).toEqual(['@cherry/mcp-auto-install'])
+    })
+
     it('coerces legacy values of the wrong shape so a scalar column never receives an object or array', async () => {
       // better-sqlite3 binds an array as positional parameters and an object as
       // named parameters, which aborts the whole batched INSERT with

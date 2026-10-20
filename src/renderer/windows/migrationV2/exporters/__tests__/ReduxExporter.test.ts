@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { MigrationIpcChannels } from '@shared/data/migration/v2/types'
+import { MIGRATION_REDUX_SLICES, MigrationIpcChannels } from '@shared/data/migration/v2/types'
 
 import { ReduxExporter } from '../ReduxExporter'
 
@@ -30,6 +30,18 @@ describe('ReduxExporter', () => {
     expect(invoke.mock.calls.map((call) => call[2])).toEqual(['assistants', 'settings'])
     expect(invoke.mock.calls.map((call) => call[3])).toEqual(['not-json', '{"theme":"dark"}'])
     expect(invoke.mock.calls.every((call) => call[0] === MigrationIpcChannels.WriteExportFile)).toBe(true)
+  })
+
+  it('exports every migration-owned slice, including shortcuts, nutstore, translate and openclaw', async () => {
+    const persisted = Object.fromEntries(MIGRATION_REDUX_SLICES.map((slice) => [slice, `{"slice":"${slice}"}`]))
+    localStorage.setItem('persist:cherry-studio', JSON.stringify({ ...persisted, runtime: '{}', _persist: '{}' }))
+
+    const result = await new ReduxExporter().export('/export/redux')
+
+    expect(result.slicesMissing).toEqual([])
+    expect(result.slicesFound).toEqual(expect.arrayContaining(['shortcuts', 'nutstore', 'translate', 'openclaw']))
+    const written = Object.fromEntries(invoke.mock.calls.map((call) => [call[2], call[3]]))
+    expect(written).toEqual(persisted)
   })
 
   it('splits a large slice on valid UTF-16 boundaries', async () => {

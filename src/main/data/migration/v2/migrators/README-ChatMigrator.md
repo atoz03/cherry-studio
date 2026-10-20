@@ -122,7 +122,7 @@ Topic data is merged from Dexie + Redux before transformation:
 | Old Type | New Type | Notes |
 |----------|----------|-------|
 | `main_text` | `MainTextBlock` | Direct, references added from citations/mentions |
-| `thinking` | `ThinkingBlock` | `thinking_millsec` → `thinkingMs` |
+| `thinking` | `ThinkingBlock` | `thinking_millsec` → `thinkingMs`; a fork-v1 `metadata.reasoning_effort` becomes the assistant row's `data.turnOptions.reasoningEffort` (`mappings/legacyThinkingEffort.ts`) |
 | `translation` | `TranslationBlock` | Direct copy |
 | `code` | `CodeBlock` | Direct copy |
 | `image` | `ImageBlock` | `file.id` → `fileId` |
