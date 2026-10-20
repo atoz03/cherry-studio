@@ -10,6 +10,7 @@ import { loggerService } from '@logger'
 import { resolveRequestedMaxOutputTokens } from '@main/ai/contextBuild/resolveOutputReservation'
 import { buildMcpInstructionsContext } from '@main/ai/mcp/serverInstructions'
 import { collectMcpToolResources } from '@main/ai/messages/mcpToolResources'
+import { loadContextSkills, resolveContextSkillIds } from '@main/ai/skills/contextSkills'
 import { resolveKnowledgeBaseScope } from '@main/ai/utils/knowledgeScope'
 import type { AutomationRun } from '@main/services/automation'
 import { getProviderById, getProviderForCapability, isPermanentWebSearchConfigError } from '@main/services/webSearch'
@@ -350,7 +351,8 @@ export async function buildAgentParams(input: BuildAgentParamsInput): Promise<Bu
           deferredEntries,
           hasCitableTools,
           webSearchEnabled: finalWebToolRoutes.webSearch !== 'none',
-          mcpInstructions
+          mcpInstructions,
+          contextSkills: await loadContextSkills(resolveContextSkillIds(assistant, request.conversation.topicId))
         })
   const options = buildAgentOptions(
     scope,

@@ -4,6 +4,7 @@
 
 import type { ToolSet } from 'ai'
 
+import { type ContextSkill, formatContextSkillsPrompt } from '@main/ai/skills/contextSkillsPrompt'
 import { replacePromptVariables } from '@main/utils/prompt'
 import type { Assistant } from '@shared/data/types/assistant'
 import type { Model } from '@shared/data/types/model'
@@ -25,6 +26,8 @@ export interface AssembleSystemPromptInput {
   /** Add a volatile local-date anchor when this request can execute web search. */
   webSearchEnabled?: boolean
   mcpInstructions?: string
+  /** Fork: skills kept in context for this conversation, in selection order. */
+  contextSkills?: readonly ContextSkill[]
   /** Injectable clock for deterministic tests. */
   now?: Date
 }
@@ -39,6 +42,9 @@ export async function assembleSystemPrompt(input: AssembleSystemPromptInput): Pr
     const resolved = await replacePromptVariables(assistant.prompt, model.name)
     if (resolved) sections.push(resolved)
   }
+
+  const skillsSection = formatContextSkillsPrompt(input.contextSkills ?? [])
+  if (skillsSection) sections.push(skillsSection)
 
   if (tools && TOOL_SEARCH_TOOL_NAME in tools) {
     sections.push(getDeferredToolsSystemPrompt(deferredEntries))

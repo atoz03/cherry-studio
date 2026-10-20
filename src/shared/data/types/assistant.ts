@@ -96,7 +96,10 @@ export const AssistantSettingsSchema = z.object({
    *  `null` = inherit the global `chat.context_settings.*` preferences. `null`
    *  is the wire form for "clear the override" — JSON drops `undefined` keys,
    *  and the resolver's `??` chain treats null/undefined alike. */
-  contextSettings: ContextSettingsOverrideSchema.nullable().optional()
+  contextSettings: ContextSettingsOverrideSchema.nullable().optional(),
+
+  /** Fork: installed-skill ids whose SKILL.md is kept in this assistant's system prompt (see `src/main/ai/skills/contextSkills.ts`). */
+  contextSkillIds: z.array(z.string()).optional()
 })
 export type AssistantSettings = z.infer<typeof AssistantSettingsSchema>
 

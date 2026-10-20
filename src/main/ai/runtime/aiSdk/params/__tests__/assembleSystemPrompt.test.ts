@@ -191,4 +191,45 @@ describe('assembleSystemPrompt', () => {
 
     expect(out).toBe('base')
   })
+
+  describe('context skills', () => {
+    const reviewer = {
+      id: 'skill-review',
+      name: 'Code review',
+      description: 'Review "diffs" <carefully>',
+      body: '# Review\nCheck every hunk.'
+    }
+    const writer = { id: 'skill-write', name: 'Writer', description: null, body: 'Write plainly.' }
+
+    it('adds nothing when no skill is selected', async () => {
+      const out = await assembleSystemPrompt({ assistant: makeAssistant({ prompt: 'base' }), model, contextSkills: [] })
+      expect(out).toBe('base')
+      expect(await assembleSystemPrompt({ model, contextSkills: [] })).toBeUndefined()
+    })
+
+    it('wraps every selected skill body in one delimited block right after the assistant prompt', async () => {
+      const out = await assembleSystemPrompt({
+        assistant: makeAssistant({ prompt: 'base' }),
+        model,
+        tools: { tool_search: {} } as unknown as ToolSet,
+        mcpInstructions: 'mcp-instructions',
+        contextSkills: [reviewer, writer]
+      })
+
+      expect(out!.startsWith('base\n\n<skills>')).toBe(true)
+      const block = out!.slice(out!.indexOf('<skills>'), out!.indexOf('</skills>') + '</skills>'.length)
+      expect(block).toContain(
+        '<skill name="Code review" description="Review &quot;diffs&quot; &lt;carefully&gt;">\n# Review\nCheck every hunk.\n</skill>'
+      )
+      expect(block).toContain('<skill name="Writer">\nWrite plainly.\n</skill>')
+      expect(block.indexOf('Code review')).toBeLessThan(block.indexOf('Writer'))
+      expect(out!.indexOf('</skills>')).toBeLessThan(out!.indexOf('<deferred-tools>'))
+      expect(out!.endsWith('mcp-instructions')).toBe(true)
+    })
+
+    it('keeps skills even when the assistant has no prompt of its own', async () => {
+      const out = await assembleSystemPrompt({ model, contextSkills: [writer] })
+      expect(out).toMatch(/^<skills>[\s\S]*<skill name="Writer">[\s\S]*<\/skills>$/)
+    })
+  })
 })
