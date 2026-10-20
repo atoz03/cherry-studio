@@ -7,7 +7,7 @@
     },
     {
       "path": "docs/contrib/release-workflow.md",
-      "sources": [".github/workflows/release.yml","dev-app-update.yml","electron-builder.yml","src/main/services/AppUpdaterService.ts","src/main/services/forkUpdateFeed.ts"]
+      "sources": [".github/workflows/release.yml","dev-app-update.yml","electron-builder.yml","src/main/data/migration/v2/core/versionPolicy.ts","src/main/services/AppUpdaterService.ts","src/main/services/forkUpdateFeed.ts"]
     },
     {
       "path": "docs/references/ai/adapter-family.md",

@@ -2,7 +2,7 @@
 
 本仓库是 [CherryHQ/cherry-studio](https://github.com/CherryHQ/cherry-studio) 的二开版本：保留上游 v2 的全部主要功能，同时尽量压低常驻内存、安装体积和后台活动，并移植 v1 二开版本中常用的功能。
 
-- **独立开发**：从上游 `v2.1.8` 分出后独立维护，不再同步上游，也不向上游提交 PR。版本号为 `2.1.8-atoz.N`（见[发布流程](docs/contrib/release-workflow.md)）；v2 之前的二开历史保留在 tag `v1-final`。
+- **独立开发**：从上游 `v2.1.8` 分出后独立维护，不再同步上游，也不向上游提交 PR。版本号从 `3.0.0` 起独立编号（见[发布流程](docs/contrib/release-workflow.md)）；v2 之前的二开历史保留在 tag `v1-final`。
 - **开发约定**：见 [CLAUDE.md](CLAUDE.md) 末尾的 Fork Rules。
 
 ## 资源占用

@@ -4,6 +4,7 @@ sources:
   - .github/workflows/release.yml
   - electron-builder.yml
   - src/main/services/forkUpdateFeed.ts
+  - src/main/data/migration/v2/core/versionPolicy.ts
   - src/main/services/AppUpdaterService.ts
   - dev-app-update.yml
 ---
@@ -14,12 +15,14 @@ This fork (`atoz03/cherry-studio`) is developed independently of upstream and do
 
 ## Versions
 
-Fork versions are `2.1.8-atoz.<n>`: the upstream release the fork branched from, plus a fork counter that increases with every release. Semver orders them as the updater needs (`2.1.8-atoz.9 < 2.1.8-atoz.10`).
+Fork versions are plain semver, numbered independently of upstream from `3.0.0` (the fork branched from upstream `v2.1.8`). Publish them as regular releases, never prereleases: the updater only offers the release marked latest.
+
+Stay on 3.x while the app still migrates v1 data: [`versionPolicy.ts`](../../src/main/data/migration/v2/core/versionPolicy.ts) blocks a first migration from v1 into 4.0.0 or later.
 
 ## Publish a release
 
-1. On `main`, set `version` in `package.json` and commit it (`chore(release): v2.1.8-atoz.2`, `--signoff`).
-2. Tag and push: `git tag v2.1.8-atoz.2 && git push origin main v2.1.8-atoz.2`.
+1. On `main`, set `version` in `package.json` and commit it (`chore(release): v3.0.1`, `--signoff`).
+2. Tag and push: `git tag v3.0.1 && git push origin main v3.0.1`.
 3. `release.yml` builds macOS, Windows, and Linux with `--publish never`. Each platform uploads its installers, `latest*.yml` manifests, and blockmaps as a build artifact.
 4. The `publish` job runs only after every platform succeeded. It creates the GitHub Release for the tag, marks it latest, and attaches all files. The release body is what the in-app update dialog shows as release notes, so edit it on GitHub after publishing.
 

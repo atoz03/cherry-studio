@@ -211,68 +211,62 @@ artifactBuildCompleted: scripts/packaging/artifact-build-completed.js
 releaseInfo:
   releaseNotes: |
     <!--LANG:en-->
-    Cherry Studio 2.1.8 - Models, Search, and Workflow Updates
+    Cherry Studio 3.0.0 - The atoz03 fork moves to Cherry Studio v2
+
+    This fork now builds on Cherry Studio v2 (upstream 2.1.8) and is developed independently from here on.
+
+    ⚠️ Before upgrading from 1.9.x
+    - [Data] The first launch migrates your v1 data into the new database. The migration is one-way and v2 cannot restore v1 backups: back up your data directory, export Global Memory, and try the migration on a copy first.
 
     ✨ New Features
-    - [Voice] Customize hold and toggle dictation shortcuts in Voice Settings.
-    - [Search] Use DeepSeek for web search and page fetching.
-    - [Models] Set a price per generated image to estimate image costs in Usage.
-    - [Agents] Drag pinned Agent sessions into your preferred order.
-    - [Files] Preview files in the right pane while working in chat.
-    - [Language] Use Cherry Studio in Thai.
+    - [App] Everything in Cherry Studio v2 up to upstream 2.1.8.
+    - [Tabs] Choose how many tabs stay loaded (default 4) in General → Runtime and performance.
 
     💄 Improvements
-    - [Translation] Start selection translation with your saved language preferences.
-    - [Prompts] Keep the editor locked while a prompt is being polished.
-    - [Errors] Copy error details for troubleshooting.
+    - [Fork] Kept from the 1.9 fork: thinking effort and time on thinking blocks, ChatGPT-format topic export, moving all topics with duplicate archiving, ChatGPT conversation import, Context Skills, note git history with restore, inline provider notes, custom New API image sizes, PingFang SC and other macOS system fonts, and chosen fonts winning over custom CSS.
+    - [Updates] Updates come from this fork's GitHub Releases, without client identifiers; feedback links open this fork's GitHub issues.
+    - [Models] New installs pick their default model during onboarding.
 
-    🐛 Bug Fixes
-    - [Models] Fix AiHubMix model synchronization when a model has no pricing data.
-    - [Models] Fix Claude requests rejected for unsupported sampling settings or adaptive thinking in Pi Agent sessions.
-    - [Models] Resolve Coding Partner model IDs containing a [1M] marker.
-    - [Search] Fix the Querit URL fetch check for API hosts ending in /v1 and support the hosted Crawl4AI Cloud API.
-    - [MCP] Connect to remote servers whose version probe returns an empty or non-protocol 5xx response when the legacy handshake succeeds.
-    - [Agents] Keep large remote Agent lists from disconnecting the session; open a pinned Agent directly from its shortcut.
-    - [Images] Display successful Pi Agent image results inline and keep Windows image previews clear of caption buttons.
-    - [Files] Recognize Chinese, Japanese, and Korean text in files; include text boxes, footnotes, and endnotes when reading legacy .doc files.
-    - [Voice] Accept standard 16 kHz WAV input for Windows speech recognition.
-    - [Translation] Fix PDF translation with custom HTTP proxies using IPv6 bypass addresses.
-    - [Chat] Preserve an edited queued draft when switching between messages to edit; stabilize scrolling and Markdown word animation.
-    - [Chat] Show OpenAI Responses URL citations even when position indexes are missing.
-    - [Prompts] Make global prompts available from editors.
-    - [Browser] Prevent address-bar history flashing and partial URL selection.
-    - [Code] Align virtual rows in wrapped, collapsed code blocks.
+    ⚡ Performance
+    - [App] About 490 MB at idle, down from about 750 MB on the 1.9 fork and 630 MB on upstream 2.1.8 (Linux, fresh profile).
+    - [Windows] No hidden windows at startup. Detached tabs, Quick Assistant and the selection toolbar open on first use without a blank flash; Quick Assistant and the toolbar are released after 5 minutes hidden.
+    - [Tools] MCP servers connect on first use and idle local servers stop after 10 minutes. mise, bun, uv and MinGit download on first need, and an installed mise is used as is.
+    - [Install] Smaller installer: only ripgrep is bundled.
+
+    🗑️ Removed
+    - [Privacy] Crash reporting, usage analytics, Cherry Cloud accounts and the built-in free CherryAI model.
+    - [Providers] CherryIN, AIHubMix and PPIO sign-in; their API keys still work.
+    - [App] Diagnostics upload (reports are exported locally), Device Connections for the mobile app, and RC/Beta update channels.
+
+    Known issues: macOS builds are unsigned and cannot install updates automatically, so download the new DMG; Windows shows a SmartScreen prompt on first install.
 
     <!--LANG:zh-CN-->
-    Cherry Studio 2.1.8 - 模型、搜索与工作流更新
+    Cherry Studio 3.0.0 - atoz03 二开版升级到 Cherry Studio v2
+
+    本版本基于 Cherry Studio v2（上游 2.1.8），此后独立开发。
+
+    ⚠️ 从 1.9.x 升级前
+    - [数据] 首次启动会把 v1 数据迁移到新数据库。迁移是单向的，v2 无法恢复 v1 备份：请先备份数据目录、导出全局记忆，并先用数据副本试一次迁移。
 
     ✨ 新功能
-    - [语音] 在语音设置中自定义长按和切换听写快捷键。
-    - [搜索] 使用 DeepSeek 搜索网页和抓取页面。
-    - [模型] 为生成的每张图片设置价格，在用量记录中估算图片费用。
-    - [智能体] 拖拽已固定的智能体会话，自定义排列顺序。
-    - [文件] 在对话时通过右侧面板预览文件。
-    - [语言] 新增泰语界面。
+    - [应用] 包含上游 2.1.8 为止 Cherry Studio v2 的全部功能。
+    - [标签页] 可在"常规 → 运行与性能"中设置保持加载的标签页数量（默认 4 个）。
 
     💄 改进
-    - [翻译] 划词翻译优先使用已保存的语言偏好。
-    - [提示词] 润色提示词期间锁定编辑器。
-    - [错误] 支持复制错误详情，方便排查问题。
+    - [二开] 保留 1.9 二开版的功能：思考块显示思考程度与耗时、话题导出为 ChatGPT 格式、移动全部话题并归档重复话题、导入 ChatGPT 对话、上下文 Skills、笔记 Git 历史与恢复、服务商备注直接编辑、New API 自定义图片尺寸、PingFang SC 等 macOS 系统字体，以及所选字体不被自定义 CSS 覆盖。
+    - [更新] 从本仓库的 GitHub Releases 获取更新，不发送客户端标识；反馈入口指向本仓库的 GitHub Issues。
+    - [模型] 新安装在引导中选择默认模型。
 
-    🐛 问题修复
-    - [模型] 修复部分模型缺少价格数据时 AiHubMix 模型同步失败的问题。
-    - [模型] 修复不接受采样参数的 Claude 请求，以及 Pi 智能体会话中的自适应思考请求失败问题。
-    - [模型] 正确识别带有 [1M] 标记的 Coding Partner 模型 ID。
-    - [搜索] 修复 Querit 地址以 /v1 结尾时的网址抓取检查，并支持 Crawl4AI 云端接口。
-    - [MCP] 远程服务器的版本探测返回空白或非协议格式的 5xx 响应时，在旧版握手成功后仍可连接。
-    - [智能体] 修复远程智能体列表过大时断开连接的问题；从快捷入口直接打开已固定的智能体。
-    - [图片] 在对话中显示 Pi 智能体成功生成的图片，并避免 Windows 图片预览被标题栏按钮遮挡。
-    - [文件] 正确识别文件中的中日韩文本；读取旧版 .doc 文件中的文本框、脚注和尾注。
-    - [语音] Windows 语音识别接受标准 16 kHz WAV 音频。
-    - [翻译] 修复自定义 HTTP 代理使用 IPv6 绕过地址时 PDF 翻译失败的问题。
-    - [对话] 切换编辑目标时保留已修改的排队消息草稿，并修复滚动方向及 Markdown 逐词动画。
-    - [对话] OpenAI Responses 的网址引用缺少位置索引时仍可显示。
-    - [提示词] 在编辑器中显示全局提示词。
-    - [浏览器] 修复地址栏历史记录闪烁及网址只能部分选中的问题。
-    - [代码] 修复换行且折叠的代码块中行位置不对齐的问题。
+    ⚡ 性能优化
+    - [应用] 空闲内存约 490 MB，1.9 二开版约 750 MB，上游 2.1.8 约 630 MB（Linux，全新配置）。
+    - [窗口] 启动时不再创建隐藏窗口。分离标签页、快捷助手和划词工具栏在首次使用时创建，打开时不再闪白；快捷助手和划词工具栏隐藏 5 分钟后释放。
+    - [工具] MCP 服务器首次使用时才连接，空闲 10 分钟的本地服务器自动停止。mise、bun、uv 和 MinGit 在首次需要时下载，已安装的 mise 直接使用。
+    - [安装包] 安装包更小，只内置 ripgrep。
+
+    🗑️ 移除
+    - [隐私] 错误上报、使用统计、Cherry Cloud 账号和内置的免费 CherryAI 模型。
+    - [服务商] CherryIN、AIHubMix 和 PPIO 的账号登录；仍可使用它们的 API 密钥。
+    - [应用] 诊断包上传（改为导出到本地）、手机端设备连接，以及 RC/Beta 更新通道。
+
+    已知问题：macOS 安装包未签名，无法自动安装更新，请手动下载新的 DMG；Windows 首次安装会出现 SmartScreen 提示。
     <!--LANG:END-->
