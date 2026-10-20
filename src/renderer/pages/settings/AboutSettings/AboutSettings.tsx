@@ -5,16 +5,7 @@ import type { FC, ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import {
-  Badge,
-  Button,
-  CircularProgress,
-  Divider,
-  Scrollbar,
-  SegmentedControl,
-  Switch,
-  Tooltip
-} from '@cherrystudio/ui'
+import { Badge, Button, CircularProgress, Divider, Scrollbar, Switch } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import AppLogo from '@renderer/assets/images/logo.png'
 import { DoctorPopup } from '@renderer/components/doctor'
@@ -38,17 +29,13 @@ import { ipcApi } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
 import { openExternalWebsite } from '@renderer/services/website'
 import { cn } from '@renderer/utils/style'
-import { UpgradeChannel } from '@shared/data/preference/preferenceTypes'
 import { DOCTOR_OPEN_QUERY_PARAM, type DoctorPanel } from '@shared/utils/doctor'
-import { FORK_TEST_PLAN_ENABLED } from '@shared/utils/forkFeatures'
 import { FORK_RELEASES_URL } from '@shared/utils/forkRelease'
 
 import { ModelCatalogAutoUpdateRow } from './ModelCatalogAutoUpdateRow'
 
 const AboutSettings: FC = () => {
   const [autoCheckUpdate, setAutoCheckUpdate] = usePreference('app.dist.auto_update.enabled')
-  const [testPlan, setTestPlan] = usePreference('app.dist.test_plan.enabled')
-  const [testChannel, setTestChannel] = usePreference('app.dist.test_plan.channel')
 
   const [version, setVersion] = useState('')
   const [isPortable, setIsPortable] = useState(false)
@@ -131,65 +118,6 @@ const AboutSettings: FC = () => {
     onOpenWebsite('https://enterprise.cherry-ai.com')
   }
 
-  const currentChannelByVersion =
-    [
-      { pattern: `-${UpgradeChannel.BETA}.`, channel: UpgradeChannel.BETA },
-      { pattern: `-${UpgradeChannel.RC}.`, channel: UpgradeChannel.RC }
-    ].find(({ pattern }) => version.includes(pattern))?.channel || UpgradeChannel.LATEST
-
-  const handleTestChannelChange = async (value: UpgradeChannel) => {
-    if (testPlan && currentChannelByVersion !== UpgradeChannel.LATEST && value !== currentChannelByVersion) {
-      toast.warning(t('settings.general.test_plan.version_channel_not_match'))
-    }
-    void setTestChannel(value)
-    updateAppUpdateState({
-      available: false,
-      info: null,
-      downloaded: false,
-      checking: false,
-      downloading: false,
-      downloadProgress: 0
-    })
-  }
-
-  const getAvailableTestChannels = () => {
-    return [
-      {
-        tooltip: t('settings.general.test_plan.rc_version_tooltip'),
-        label: t('settings.general.test_plan.rc_version'),
-        value: UpgradeChannel.RC
-      },
-      {
-        tooltip: t('settings.general.test_plan.beta_version_tooltip'),
-        label: t('settings.general.test_plan.beta_version'),
-        value: UpgradeChannel.BETA
-      }
-    ]
-  }
-
-  const handleSetTestPlan = (value: boolean) => {
-    void setTestPlan(value)
-    updateAppUpdateState({
-      available: false,
-      info: null,
-      downloaded: false,
-      checking: false,
-      downloading: false,
-      downloadProgress: 0
-    })
-
-    if (value === true) {
-      void setTestChannel(getTestChannel())
-    }
-  }
-
-  const getTestChannel = () => {
-    if (testChannel === UpgradeChannel.LATEST) {
-      return UpgradeChannel.RC
-    }
-    return testChannel
-  }
-
   useEffect(() => {
     void (async () => {
       const appInfo = await ipcApi.request('app.get_info')
@@ -203,7 +131,6 @@ const AboutSettings: FC = () => {
     void openExternalWebsite(isChinese ? 'https://docs.cherry-ai.com/' : 'https://docs.cherry-ai.com/docs/en-us')
   }
 
-  const testChannels = getAvailableTestChannels()
   const isUpdateReady = appUpdateState.available && appUpdateState.downloaded && !appUpdateState.downloading
   const releaseNotesText =
     typeof appUpdateState.info?.releaseNotes === 'string'
@@ -294,33 +221,6 @@ const AboutSettings: FC = () => {
             <SettingRow id="setting-about-auto-check-update" className="scroll-mt-6 gap-3">
               <SettingRowTitle>{t('settings.general.auto_check_update.title')}</SettingRowTitle>
               <Switch checked={autoCheckUpdate} onCheckedChange={(v) => setAutoCheckUpdate(v)} />
-            </SettingRow>
-
-            <Divider className="my-3" hidden={!FORK_TEST_PLAN_ENABLED} />
-            <SettingRow className="flex-nowrap gap-6" hidden={!FORK_TEST_PLAN_ENABLED}>
-              <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
-                <SettingRowTitle>{t('settings.general.test_plan.title')}</SettingRowTitle>
-                {testPlan && (
-                  <SegmentedControl<UpgradeChannel>
-                    value={getTestChannel()}
-                    onValueChange={handleTestChannelChange}
-                    options={testChannels.map((option) => ({
-                      value: option.value,
-                      label: (
-                        <Tooltip content={option.tooltip}>
-                          <span>{option.label}</span>
-                        </Tooltip>
-                      )
-                    }))}
-                    size="sm"
-                  />
-                )}
-              </div>
-              <Tooltip
-                content={t('settings.general.test_plan.tooltip')}
-                classNames={{ placeholder: 'inline-flex items-center' }}>
-                <Switch className="shrink-0" checked={testPlan} onCheckedChange={(v) => handleSetTestPlan(v)} />
-              </Tooltip>
             </SettingRow>
           </>
         )}

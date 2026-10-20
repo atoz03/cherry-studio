@@ -85,7 +85,7 @@ import { PopupHost } from '@renderer/components/PopupHost'
 import DoctorPopup from '../DoctorPopup'
 
 function completedDoctorState(
-  results: readonly DoctorCheckResult[] = [{ id: 'install-version-channel', status: 'pass', durationMs: 1 }],
+  results: readonly DoctorCheckResult[] = [{ id: 'install-architecture-match', status: 'pass', durationMs: 1 }],
   expiresAt = new Date(Date.now() + 60_000).toISOString()
 ): DoctorState {
   const now = Date.now()
@@ -103,7 +103,6 @@ function completedDoctorState(
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',
@@ -195,7 +194,7 @@ describe('DoctorPopup', () => {
     expect(screen.queryByRole('region', { name: 'error.diagnostics.result' })).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
   })
@@ -303,7 +302,7 @@ describe('DoctorPopup', () => {
       selectedCheckIds: DOCTOR_CHECK_IDS.filter((id) => DOCTOR_CHECK_CATALOG[id].tier === 'quick'),
       startedAt: new Date().toISOString(),
       activeCheckIds: ['provider-api-key-present'],
-      results: [{ id: 'install-version-channel', status: 'pass', durationMs: 1 }]
+      results: [{ id: 'install-architecture-match', status: 'pass', durationMs: 1 }]
     }
     const view = render(<PopupHost />)
 
@@ -320,7 +319,7 @@ describe('DoctorPopup', () => {
     expect(screen.queryByText(/^Checking:/)).not.toBeInTheDocument()
     expect(
       within(checks).getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
     expect(
@@ -365,7 +364,6 @@ describe('DoctorPopup', () => {
         basics: {
           version: '2.0.0',
           edition: 'global',
-          channel: 'latest',
           platform: 'darwin',
           arch: 'arm64',
           osRelease: '25.0.0',
@@ -376,7 +374,7 @@ describe('DoctorPopup', () => {
         },
         results: [
           {
-            id: 'install-version-channel',
+            id: 'install-architecture-match',
             status: 'pass',
             durationMs: 1
           },
@@ -459,7 +457,7 @@ describe('DoctorPopup', () => {
       'settings.doctor.checks.permission-accessibility.title',
       'settings.doctor.checks.network-online.title',
       'settings.doctor.checks.logs-recent-findings.title',
-      'settings.doctor.checks.install-version-channel.title',
+      'settings.doctor.checks.install-architecture-match.title',
       'Default provider API key'
     ]
     for (const [index, title] of expectedTitles.entries()) {
@@ -471,7 +469,7 @@ describe('DoctorPopup', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
     expect(

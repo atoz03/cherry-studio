@@ -72,8 +72,7 @@ const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
       'weald',
       'wherearewe'
     ]
-  },
-  FORK_TEST_PLAN_ENABLED: { roots: [], excluded: [] }
+  }
 }
 
 type DependencyEntry = readonly [name: string, version: string, importer: string]

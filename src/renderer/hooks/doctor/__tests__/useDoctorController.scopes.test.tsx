@@ -23,14 +23,13 @@ function report(subject: DoctorSubjectRef): DoctorReport {
     runId: `run-${subject.kind}`,
     scope: doctorScopeKey(subject),
     tier: 'quick',
-    selectedCheckIds: [subject.kind === 'global' ? 'install-version-channel' : 'provider-model'],
+    selectedCheckIds: [subject.kind === 'global' ? 'install-architecture-match' : 'provider-model'],
     startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 60_000).toISOString(),
     basics: {
       version: '2.0.0',
       edition: 'global',
-      channel: 'latest',
       platform: 'darwin',
       arch: 'arm64',
       osRelease: '25',
@@ -40,7 +39,7 @@ function report(subject: DoctorSubjectRef): DoctorReport {
       userDataPath: '/tmp/doctor'
     },
     results: [
-      { id: subject.kind === 'global' ? 'install-version-channel' : 'provider-model', status: 'pass', durationMs: 1 }
+      { id: subject.kind === 'global' ? 'install-architecture-match' : 'provider-model', status: 'pass', durationMs: 1 }
     ],
     summary: { pass: 1, warn: 0, fail: 0, skip: 0, error: 0 }
   }

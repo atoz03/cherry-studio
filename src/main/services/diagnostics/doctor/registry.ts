@@ -1,11 +1,6 @@
 import { bootConfigValid, hardwareAcceleration } from './checks/config'
 import { modelEndpoint, modelList, modelConversation } from './checks/connectivity'
-import {
-  installArchitectureMatch,
-  installNativeModules,
-  installUpdateAvailable,
-  installVersionChannel
-} from './checks/install'
+import { installArchitectureMatch, installNativeModules, installUpdateAvailable } from './checks/install'
 import { recentLogFindings } from './checks/logs'
 import { mcpLaunchCommands, mcpServersConnected } from './checks/mcp'
 import { dnsResolution, endpointUpdate, online, providerEndpoint, proxyApplied, tlsHandshake } from './checks/network'
@@ -21,7 +16,6 @@ export const doctorCheckRegistry: DoctorCheckRegistry = {
   'provider-model-list': modelList,
   'provider-model-conversation': modelConversation,
   'install-architecture-match': installArchitectureMatch,
-  'install-version-channel': installVersionChannel,
   'install-update-available': installUpdateAvailable,
   'install-native-modules': installNativeModules,
   'permission-screen-capture': screenCapturePermission,

@@ -190,13 +190,6 @@ describe('AboutSettings fork update controls', () => {
     )
   })
 
-  it('hides the upstream test-plan channels the fork does not publish', async () => {
-    await renderAboutSettings()
-
-    expect(screen.getByText('settings.general.test_plan.title')).not.toBeVisible()
-    expect(screen.getByText('settings.general.auto_check_update.title')).toBeVisible()
-  })
-
   it('switches the background model catalog download through its preference', async () => {
     const user = userEvent.setup()
     MockUsePreferenceUtils.setPreferenceValue('app.provider_registry.auto_update.enabled', true)

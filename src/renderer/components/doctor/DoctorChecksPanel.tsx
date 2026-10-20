@@ -47,7 +47,6 @@ export function DoctorChecksPanel({ controller }: { readonly controller: DoctorC
           basics: {
             version: t('settings.doctor.copy.version'),
             edition: t('settings.doctor.copy.edition'),
-            channel: t('settings.doctor.copy.channel'),
             system: t('settings.doctor.copy.system'),
             osRelease: t('settings.doctor.copy.os_release'),
             isPackaged: t('settings.doctor.copy.packaged'),

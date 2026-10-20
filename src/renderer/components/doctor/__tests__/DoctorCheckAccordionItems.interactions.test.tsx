@@ -162,7 +162,6 @@ function createCompletedPanelController() {
         basics: {
           version: '2.0.0',
           edition: 'global',
-          channel: 'latest',
           platform: 'darwin',
           arch: 'arm64',
           osRelease: '25.0.0',
@@ -253,7 +252,7 @@ describe('DoctorCheckAccordionItems interactions', () => {
       ...report,
       results: [
         actionable,
-        { id: 'install-version-channel', status: 'pass', durationMs: 1 },
+        { id: 'install-architecture-match', status: 'pass', durationMs: 1 },
         {
           id: 'logs-recent-findings',
           status: 'warn',
@@ -278,7 +277,7 @@ describe('DoctorCheckAccordionItems interactions', () => {
 
     expect(screen.queryByRole('region', { name: 'error.diagnostics.result' })).not.toBeInTheDocument()
     const otherChecks = screen.getByRole('region', { name: 'settings.doctor.copy.checks_heading' })
-    for (const id of ['install-version-channel', 'runtime-claude-login', 'logs-recent-findings', 'network-online']) {
+    for (const id of ['install-architecture-match', 'runtime-claude-login', 'logs-recent-findings', 'network-online']) {
       expect(
         within(otherChecks).getByRole('button', { name: new RegExp(`settings.doctor.checks.${id}.title`) })
       ).toBeVisible()

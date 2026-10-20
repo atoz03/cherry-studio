@@ -217,7 +217,6 @@ describe('DoctorService.run', () => {
     expect(outcome.report.selectedCheckIds).toEqual(MOCKED)
     expect(outcome.report.basics).toMatchObject({
       edition: 'global',
-      channel: 'latest',
       userDataPath: '/mock/app.userdata'
     })
     expect(new Date(outcome.report.expiresAt).getTime()).toBeGreaterThan(new Date(outcome.report.finishedAt).getTime())

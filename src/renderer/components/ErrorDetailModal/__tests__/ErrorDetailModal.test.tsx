@@ -22,7 +22,7 @@ const providerError = {
 } satisfies SerializedError
 
 const passingVersionResult: DoctorCheckResult = {
-  id: 'install-version-channel',
+  id: 'install-architecture-match',
   status: 'pass',
   durationMs: 1
 }
@@ -144,7 +144,7 @@ const translations: Record<string, string> = {
   'settings.doctor.checks.provider-model-list.title': 'Remote model availability',
   'settings.doctor.checks.storage-disk-space.detail.low': 'Available disk space is low.',
   'settings.doctor.checks.storage-disk-space.title': 'Available disk space',
-  'settings.doctor.checks.install-version-channel.title': 'Version and release channel',
+  'settings.doctor.checks.install-architecture-match.title': 'Architecture match',
   'settings.doctor.checks.pending': 'Awaiting check',
   'settings.doctor.checks.skipped': 'Skipped because {{check}} did not pass.',
   'settings.doctor.empty.description': 'Run basic checks, or a full check that includes network and service checks.',
@@ -271,7 +271,6 @@ function completedDoctorState(
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',
@@ -571,7 +570,7 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(within(result).queryByRole('button', { name: 'Local details' })).not.toBeInTheDocument()
     expect(within(result).queryByText('/Users/local/CherryStudio')).not.toBeInTheDocument()
     expect(within(result).getByRole('button', { name: /Startup configuration/ })).toBeInTheDocument()
-    expect(within(result).queryByRole('button', { name: /Version and release channel/ })).not.toBeInTheDocument()
+    expect(within(result).queryByRole('button', { name: /Architecture match/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Recent findings/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Network availability/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Native components/ })).not.toBeInTheDocument()

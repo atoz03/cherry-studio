@@ -468,12 +468,10 @@ export class DoctorService extends BaseService {
   }
 
   private async collectBasics(): Promise<DoctorBasics> {
-    const preferences = application.get('PreferenceService')
     const info = await collectDiagnosticSystemInfo(new Set<DiagnosticWarning>())
     return {
       version: info.application?.version ?? 'unknown',
       edition: getAppEdition(),
-      channel: preferences.get('app.dist.test_plan.enabled') ? preferences.get('app.dist.test_plan.channel') : 'latest',
       platform: info.operatingSystem.platform,
       arch: info.operatingSystem.arch,
       osRelease: info.operatingSystem.release,

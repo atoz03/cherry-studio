@@ -1102,17 +1102,17 @@
           "originalKey": "testPlan",
           "type": "boolean",
           "defaultValue": false,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "testChannel",
           "type": "PreferenceTypes.UpgradeChannel",
           "defaultValue": "VALUE: PreferenceTypes.UpgradeChannel.LATEST",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.channel"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "renderInputMessageAsMarkdown",
@@ -3256,9 +3256,9 @@
           "originalKey": "TestPlan",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "TestChannel": [
@@ -3266,9 +3266,9 @@
           "originalKey": "TestChannel",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.channel"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "EnableDataCollection": [

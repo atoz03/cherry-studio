@@ -85,7 +85,6 @@ export function isDoctorFixRequest(value: unknown): value is DoctorFixRequest {
 export const DOCTOR_BASICS_DATA_CLASS: Readonly<Record<keyof DoctorBasics, DoctorDataClass>> = {
   version: 'public',
   edition: 'public',
-  channel: 'public',
   platform: 'public',
   arch: 'public',
   osRelease: 'public',

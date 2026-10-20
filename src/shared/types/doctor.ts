@@ -79,7 +79,6 @@ export type DoctorCheckScope = 'global' | 'any' | readonly [DoctorSubjectKey, ..
 
 export const DOCTOR_CHECK_IDS = [
   'install-architecture-match',
-  'install-version-channel',
   'install-update-available',
   'install-native-modules',
   'permission-screen-capture',
@@ -135,14 +134,6 @@ export const DOCTOR_CHECK_CATALOG = {
     scope: 'global',
     fixes: [],
     details: ['translated'],
-    requires: []
-  },
-  'install-version-channel': {
-    domain: 'install',
-    tier: 'quick',
-    scope: 'global',
-    fixes: [],
-    details: ['mismatch'],
     requires: []
   },
   'install-update-available': {
@@ -459,7 +450,6 @@ export type DoctorRunTier = 'quick' | 'live'
 export interface DoctorBasics {
   readonly version: string
   readonly edition: AppEdition
-  readonly channel: 'latest' | 'rc' | 'beta'
   readonly platform: NodeJS.Platform
   readonly arch: string
   readonly osRelease: string

@@ -58,7 +58,6 @@ const report: DoctorReport = {
   basics: {
     version: '2.0.0',
     edition: 'global',
-    channel: 'latest',
     platform: 'darwin',
     arch: 'arm64',
     osRelease: '25',
