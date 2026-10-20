@@ -118,7 +118,7 @@ preboot/
 │                        (if any) at the top of startApp(), after the
 │                        single-instance lock and the frozen path registry,
 │                        before v2MigrationGate reads the DB. Thin shell that
-│                        synchronously isolates sessionData before Sentry or
+│                        synchronously isolates sessionData before
 │                        asynchronous startup can open the live profile. An
 │                        isolated restore launch relaunches before bootstrap;
 │                        the next normal launch cleans up the temporary session.

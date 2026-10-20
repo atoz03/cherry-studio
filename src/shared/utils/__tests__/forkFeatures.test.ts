@@ -24,18 +24,6 @@ interface FeaturePackages {
  * here is a type error; a feature whose code is bundled (devDependencies) has nothing to exclude.
  */
 const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
-  FORK_SENTRY_ENABLED: {
-    roots: ['@sentry/electron'],
-    excluded: [
-      '@sentry',
-      '@opentelemetry',
-      'import-in-the-middle',
-      'require-in-the-middle',
-      'module-details-from-path',
-      'cjs-module-lexer',
-      'es-module-lexer'
-    ]
-  },
   // @cherrystudio/analytics-client is a devDependency, bundled into a chunk loaded only on activation.
   FORK_ANALYTICS_ENABLED: { roots: [], excluded: [] },
   FORK_REMOTE_ACCESS_ENABLED: {

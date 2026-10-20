@@ -15,7 +15,7 @@ import { resolveSystemLanguage, t } from '@main/i18n'
 
 const logger = loggerService.withContext('BackupRestoreGate')
 
-/** Isolate Chromium before Sentry or asynchronous preboot work can open the live profile. */
+/** Isolate Chromium before asynchronous preboot work can open the live profile. */
 export function prepareBackupRestoreSession(): boolean {
   const result = readRestoreJournal()
   const pending = result.kind === 'ok' && (result.journal.state === 'staged' || result.journal.state === 'promoting')

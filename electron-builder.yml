@@ -96,14 +96,6 @@ files:
   # Fork: production dependencies only reachable through features switched off in
   # src/shared/utils/forkFeatures.ts. forkFeatures.test.ts keeps this block in sync with the
   # switches and pnpm-lock.yaml — update the test's mapping together with these lines.
-  # FORK_SENTRY_ENABLED=false: @sentry/electron and everything only it pulls in
-  - "!**/node_modules/@sentry/**"
-  - "!**/node_modules/@opentelemetry/**"
-  - "!**/node_modules/import-in-the-middle/**"
-  - "!**/node_modules/require-in-the-middle/**"
-  - "!**/node_modules/module-details-from-path/**"
-  - "!**/node_modules/cjs-module-lexer/**"
-  - "!**/node_modules/es-module-lexer/**"
   # FORK_REMOTE_ACCESS_ENABLED=false: the Noise/libp2p remote transport and everything only it pulls in
   # (@cherrystudio/remote-protocol stays: shared types)
   - "!**/node_modules/@cherrystudio/remote-transport/**"
