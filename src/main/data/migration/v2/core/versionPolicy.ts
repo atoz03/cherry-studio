@@ -1,7 +1,7 @@
 /**
  * Version upgrade policy for the v1→v2 migration gate.
  *
- * Enforces a linear upgrade path: v1.old → v1.last → v2.x → v3.0+.
+ * Enforces a linear upgrade path: v1.old → v1.last → v2.x / fork 3.x → v4.0+.
  * Called by `v2MigrationGate.ts` after `needsMigration()` returns true
  * and before the migration window is created. If the check fails, the
  * gate shows an error dialog and quits — the user never sees the
@@ -41,10 +41,13 @@ export const V1_REQUIRED_VERSION = '1.9.12'
 export const V2_GATEWAY_VERSION = '2.0.0'
 
 /** User-facing label for the accepted migration gateway line. */
-const V2_GATEWAY_SERIES = '2.x'
+const V2_GATEWAY_SERIES = '3.x'
 
-/** First release line that cannot be a direct v1→v2 migration target. */
-const V2_DIRECT_MIGRATION_CEILING = '3.0.0'
+/**
+ * First release line that cannot be a direct v1→v2 migration target. The fork numbers its
+ * releases from 3.0.0 on top of upstream 2.1.8, and its 3.x line still ships the v1 migrators.
+ */
+const V2_DIRECT_MIGRATION_CEILING = '4.0.0'
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -100,8 +103,8 @@ export function checkUpgradePathCompatibility(input: VersionCheckInput): Version
     }
   }
 
-  // ❸ Direct migration from v1 is supported throughout v2.x; v3.0+
-  //    requires completing migration on v2 first.
+  // ❸ Direct migration from v1 is supported through the fork's 3.x line; v4.0+
+  //    requires completing migration on 3.x first.
   if (
     previousVersion &&
     semver.lt(previousVersion, V2_GATEWAY_VERSION) &&
