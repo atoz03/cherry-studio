@@ -332,6 +332,21 @@ function loadShellEnv(): Promise<Record<string, string>> {
 }
 
 /**
+ * A cancellable cold query owns its shell, so aborting it kills that shell without poisoning the
+ * shared app cache. When a shared capture is already running it waits for that one instead, and
+ * an abort only ends this caller's wait.
+ */
+function loadCancellableShellEnv(signal: AbortSignal): Promise<Record<string, string>> {
+  const shared = inflight
+  if (!shared) return getLoginShellEnvironment(signal)
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(signal.reason)
+    signal.addEventListener('abort', onAbort, { once: true })
+    shared.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
+  })
+}
+
+/**
  * Get the cached shell environment. If no cache exists yet, fetches it once.
  * This is a pure query -- it never invalidates the cache.
  *
@@ -341,8 +356,7 @@ function loadShellEnv(): Promise<Record<string, string>> {
  */
 export async function getRawShellEnv(signal?: AbortSignal): Promise<Record<string, string>> {
   signal?.throwIfAborted()
-  // A cancellable cold query owns its shell; aborting it must not poison the shared app cache.
-  const env = cachedEnv ?? (await (signal ? getLoginShellEnvironment(signal) : loadShellEnv()))
+  const env = cachedEnv ?? (await (signal ? loadCancellableShellEnv(signal) : loadShellEnv()))
   signal?.throwIfAborted()
   cachedEnv ??= env
   return { ...env }
