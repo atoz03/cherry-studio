@@ -1,16 +1,3 @@
-import 'dayjs/locale/de'
-import 'dayjs/locale/el'
-import 'dayjs/locale/es'
-import 'dayjs/locale/fr'
-import 'dayjs/locale/ja'
-import 'dayjs/locale/pt'
-import 'dayjs/locale/ro'
-import 'dayjs/locale/ru'
-import 'dayjs/locale/th'
-import 'dayjs/locale/tr'
-import 'dayjs/locale/vi'
-import 'dayjs/locale/zh-cn'
-import 'dayjs/locale/zh-tw'
 import dayjs from 'dayjs'
 import i18n from 'i18next'
 import resourcesToBackend from 'i18next-resources-to-backend'
@@ -69,9 +56,36 @@ const dayjsLocaleMap: Record<string, string> = {
   'tr-TR': 'tr'
 }
 
-export const setDayjsLocale = (language: string) => {
+// Only the active dayjs locale is loaded; `en` is built into dayjs.
+const dayjsLocaleLoaders: Record<string, () => Promise<unknown>> = {
+  ja: () => import('dayjs/locale/ja'),
+  ru: () => import('dayjs/locale/ru'),
+  'zh-cn': () => import('dayjs/locale/zh-cn'),
+  'zh-tw': () => import('dayjs/locale/zh-tw'),
+  de: () => import('dayjs/locale/de'),
+  el: () => import('dayjs/locale/el'),
+  es: () => import('dayjs/locale/es'),
+  fr: () => import('dayjs/locale/fr'),
+  pt: () => import('dayjs/locale/pt'),
+  ro: () => import('dayjs/locale/ro'),
+  th: () => import('dayjs/locale/th'),
+  vi: () => import('dayjs/locale/vi'),
+  tr: () => import('dayjs/locale/tr')
+}
+
+let dayjsLocaleRequest = 0
+
+/** Loads and applies the dayjs locale for an app language; a newer call wins over a slower earlier one. */
+export const setDayjsLocale = async (language: string): Promise<void> => {
+  const request = ++dayjsLocaleRequest
   const dayjsLocale = dayjsLocaleMap[language] || 'en'
-  dayjs.locale(dayjsLocale)
+  try {
+    await dayjsLocaleLoaders[dayjsLocale]?.()
+  } catch (error) {
+    logger.error(`Failed to load dayjs locale ${dayjsLocale}`, error as Error)
+    return
+  }
+  if (request === dayjsLocaleRequest) dayjs.locale(dayjsLocale)
 }
 
 let initPromise: Promise<void> | null = null
