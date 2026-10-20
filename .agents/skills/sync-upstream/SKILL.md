@@ -39,6 +39,7 @@ Resolve conflicts with these rules:
 | `CLAUDE.md` | take upstream's body, keep the `## Fork Rules` section at the end |
 | A file the fork gates with `forkFeatures.ts` | take upstream's change, then re-apply the one- or two-line gate |
 | `src/main/services/AppUpdaterService.ts`, `electron-builder*.{yml,cjs}` `publish`, `dev-app-update.yml` | keep the fork's version (GitHub Releases feed, lazy updater); port upstream bug fixes by hand |
+| `docs/contrib/release-workflow.md` | keep the fork's runbook; if upstream re-links a deleted workflow elsewhere, unlink it so `pnpm docs:check` passes |
 | Tests of upstream release infrastructure (`scripts/__tests__/release-*.test.ts`, backport, gitcode-sync) | delete the file again |
 | Anything else | understand both sides; keep the fork's behaviour only where a Fork Rule requires it |
 

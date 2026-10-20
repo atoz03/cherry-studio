@@ -12,7 +12,7 @@
 | [🖥️ Develop](./contrib/development.md) | Developer environment setup covering IDE configuration, Windows symlink support, and project install steps |
 | [Feishu Notification Script](./contrib/feishu-notify.md) | CLI script that sends Feishu webhook card notifications from GitHub Actions workflows, with command reference |
 | [Linux Packaging](./contrib/linux-packaging.md) | Linux packaging flow using pinned better-sqlite3 prebuilds, with build commands and prebuild update steps |
-| [Release Workflow Operations](./contrib/release-workflow.md) | Maintainer runbook for preparing, validating, hotfixing, publishing, and synchronizing release branches |
+| [Release Workflow Operations](./contrib/release-workflow.md) | Fork runbook for tagging atoz03/cherry-studio releases and publishing them to its GitHub Releases update feed |
 | [Test Plan](./contrib/test-plan.md) | The Test Plan process for beta and rc testing, covering user participation and maintainer PR workflow |
 
 ## Documentation Governance

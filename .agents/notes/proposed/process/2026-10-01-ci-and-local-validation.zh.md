@@ -60,7 +60,7 @@ CI 和本地 coding agent 花费时间检查无关代码，但各自维护的任
 | --- | --- |
 | 根 `test` | 包含 UI 和 preload，但未枚举 remote package 测试 |
 | 根 `ci:test-check` | 包含 remote package，但遗漏 UI 和 preload 项目命令 |
-| 主 CI 与 remote package | 没有 remote-protocol、remote-transport 的 filter 或根 Vitest project；独立测试另在 [package 发布工作流](../../../../.github/workflows/release-packages.yml)中运行 |
+| 主 CI 与 remote package | 没有 remote-protocol、remote-transport 的 filter 或根 Vitest project；独立测试另在 package 发布工作流（上游 `release-packages.yml`）中运行 |
 | dsh-bridge | 有独立测试，但没有对应的主 CI filter/project |
 | ai-sdk-provider | 改动会触发 aiCore/main/renderer，但 aiCore 项目只收集 `packages/aiCore/**`，provider 自身测试未被选择 |
 

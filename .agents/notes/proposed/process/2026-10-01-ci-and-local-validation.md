@@ -60,7 +60,7 @@ Within that group, typecheck projects are explicitly serialized because running 
 | --- | --- |
 | Root `test` | Includes UI and preload, but does not enumerate remote package tests |
 | Root `ci:test-check` | Includes remote packages, but omits the UI and preload project commands |
-| Main CI and remote packages | No remote-protocol or remote-transport filters or root Vitest projects; their standalone tests run separately in the [package release workflow](../../../../.github/workflows/release-packages.yml) |
+| Main CI and remote packages | No remote-protocol or remote-transport filters or root Vitest projects; their standalone tests run separately in the package release workflow (upstream `release-packages.yml`) |
 | dsh-bridge | Has standalone tests but no corresponding main CI filter/project |
 | ai-sdk-provider | Its changes trigger aiCore/main/renderer, but the aiCore project only collects `packages/aiCore/**`; provider-owned tests are not selected |
 
