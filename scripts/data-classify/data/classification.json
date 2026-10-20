@@ -1901,17 +1901,17 @@
           "originalKey": "enableDataCollection",
           "type": "boolean",
           "defaultValue": true,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.data_collection.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "privacyPolicyVersion",
           "type": "string",
           "defaultValue": "",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.policy_version"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "enableSpellCheck",
@@ -3276,9 +3276,9 @@
           "originalKey": "EnableDataCollection",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.data_collection.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "SelectionAssistantEnabled": [

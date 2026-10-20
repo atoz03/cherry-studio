@@ -16,7 +16,6 @@ import {
   CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
   CHERRYAI_PROVIDER_ID
 } from '@shared/data/presets/cherryai'
-import { LATEST_PRIVACY_POLICY_VERSION } from '@shared/utils/constants'
 
 const responsiveStyles = readFileSync(join(process.cwd(), 'src/renderer/assets/styles/responsive.css'), 'utf8')
 
@@ -56,12 +55,6 @@ const selectedModelsMock: {
 } = {}
 const defaultUsePreferenceImplementation = mockUsePreference.getMockImplementation()
 const defaultUseMultiplePreferencesImplementation = mockUseMultiplePreferences.getMockImplementation()
-
-// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
-vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FORK_DATA_COLLECTION_ENABLED: true
-}))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key })
@@ -139,28 +132,6 @@ vi.mock('@renderer/pages/settings/ModelSettings/ModelSettings', () => ({
   }
 }))
 
-vi.mock('../../privacy/PrivacyPolicyDialog', () => ({
-  PrivacyPolicyDialog: ({
-    open,
-    onAccept,
-    onDecline
-  }: {
-    open: boolean
-    onAccept: () => void
-    onDecline?: () => void
-  }) =>
-    open ? (
-      <div data-testid="privacy-policy-dialog">
-        <button type="button" onClick={onAccept}>
-          accept-policy
-        </button>
-        <button type="button" onClick={onDecline}>
-          decline-policy
-        </button>
-      </div>
-    ) : null
-}))
-
 import OnboardingPage from '../OnboardingPage'
 
 async function openProviderSetup() {
@@ -222,8 +193,6 @@ describe('OnboardingPage', () => {
     selectedModelsMock.quickModel = { id: 'quick-model', providerId: 'openai', capabilities: [] }
     selectedModelsMock.translateModel = { id: 'translate-model', providerId: 'openai', capabilities: [] }
     MockUsePreferenceUtils.setPreferenceValue('app.onboarding.provider_setup.status', 'pending')
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.data_collection.enabled', true)
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', LATEST_PRIVACY_POLICY_VERSION)
   })
 
   afterEach(() => {
@@ -252,8 +221,6 @@ describe('OnboardingPage', () => {
     await waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('completed')
     )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(true)
   })
 
   it('waits for official resources to use the selected model before completing', async () => {
@@ -544,124 +511,6 @@ describe('OnboardingPage', () => {
     await waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
     )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-  })
-
-  it('persists the privacy choice before leaving onboarding', async () => {
-    let resolvePrivacyUpdate: (() => void) | undefined
-    const updatePreferences = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolvePrivacyUpdate = resolve
-          })
-      )
-      .mockResolvedValueOnce(undefined)
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    expect(updatePreferences).toHaveBeenCalledExactlyOnceWith({
-      policyVersion: LATEST_PRIVACY_POLICY_VERSION
-    })
-
-    resolvePrivacyUpdate?.()
-
-    await waitFor(() =>
-      expect(updatePreferences).toHaveBeenNthCalledWith(2, {
-        providerSetupStatus: 'skipped'
-      })
-    )
-  })
-
-  it('does not rewrite an already-current privacy agreement before leaving onboarding', async () => {
-    const updatePreferences = vi.fn((updates: Record<string, unknown>) => {
-      if (updates.policyVersion !== undefined) {
-        return Promise.reject(new Error('privacy write unavailable'))
-      }
-      return Promise.resolve()
-    })
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: LATEST_PRIVACY_POLICY_VERSION
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ providerSetupStatus: 'skipped' }))
-    expect(updatePreferences).toHaveBeenCalledTimes(1)
-    expect(toastErrorMock).not.toHaveBeenCalled()
-  })
-
-  it('shows the privacy control only on the welcome step', async () => {
-    render(<OnboardingPage />)
-
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /onboarding\.welcome\.other_provider/ }))
-    await screen.findByTestId('provider-settings')
-    expect(screen.queryByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.provider_setup.next' }))
-    await screen.findByTestId('model-settings')
-    expect(screen.queryByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeInTheDocument()
-  })
-
-  it('checks privacy acceptance by default for a new user without a stored policy version', () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-  })
-
-  it('opens provider setup without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    await openProviderSetup()
-
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
-  it('starts CherryIN login without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    oauthWithCherryInMock.mockImplementation(async (setKey: (keys: string) => Promise<void>) => {
-      await setKey('sk-one')
-      return 'sk-one'
-    })
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
   })
 
   it('uses CherryIN in the CN edition when Cherry Account onboarding is disabled', async () => {
@@ -770,117 +619,15 @@ describe('OnboardingPage', () => {
     expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('pending')
   })
 
-  it('skips onboarding without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    )
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
-  it('persists a checked agreement only when leaving the welcome page', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    const agreement = screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })
-
-    expect(agreement).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-
-    await openProviderSetup()
-
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-  })
-
-  it('opens the full policy and updates the required agreement choice before closing', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.privacy.policy' }))
-    expect(screen.getByTestId('privacy-policy-dialog')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'decline-policy' }))
-
-    await waitFor(() => expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument())
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.privacy.policy' }))
-    fireEvent.click(screen.getByRole('button', { name: 'accept-policy' }))
-
-    await waitFor(() => expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument())
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-  })
-
-  it('stays on the welcome page when saving privacy acceptance fails', async () => {
-    const updatePreferences = vi.fn().mockRejectedValue(new Error('write failed'))
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.welcome.other_provider' }))
-
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('onboarding.privacy.update_failed'))
-    expect(updatePreferences).toHaveBeenCalledWith({ policyVersion: LATEST_PRIVACY_POLICY_VERSION })
-    expect(screen.queryByTestId('provider-settings')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'onboarding.welcome.other_provider' })).toBeInTheDocument()
-  })
-
-  it('keeps anonymous data collection independent from required privacy acceptance', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.data_collection.enabled', false)
-    render(<OnboardingPage />)
-
-    const agreement = screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })
-    expect(agreement).toBeChecked()
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    )
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(
-        LATEST_PRIVACY_POLICY_VERSION
-      )
-    )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
   it('shows an error when completing onboarding fails', async () => {
-    const updatePreferences = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('write failed'))
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
+    const updatePreferences = vi.fn().mockRejectedValueOnce(new Error('write failed'))
+    mockUseMultiplePreferences.mockReturnValueOnce([{ providerSetupStatus: 'pending' }, updatePreferences])
     render(<OnboardingPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
 
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('onboarding.toast.complete_failed'))
-    expect(updatePreferences).toHaveBeenNthCalledWith(1, { policyVersion: LATEST_PRIVACY_POLICY_VERSION })
-    expect(updatePreferences).toHaveBeenNthCalledWith(2, { providerSetupStatus: 'skipped' })
+    expect(updatePreferences).toHaveBeenCalledWith({ providerSetupStatus: 'skipped' })
     expect(screen.getByRole('button', { name: 'onboarding.skip' })).toBeEnabled()
   })
 

@@ -6,7 +6,7 @@ import { parse, parseAllDocuments } from 'yaml'
 
 import * as forkFeatureModule from '../forkFeatures'
 
-type ForkSwitch = Exclude<keyof typeof forkFeatureModule, 'FORK_DATA_COLLECTION_ENABLED'>
+type ForkSwitch = keyof typeof forkFeatureModule
 const forkFeatures: Record<ForkSwitch, boolean> = { ...forkFeatureModule }
 
 interface FeaturePackages {

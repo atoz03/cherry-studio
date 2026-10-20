@@ -24,6 +24,3 @@ export const FORK_DIAGNOSTICS_UPLOAD_ENABLED = false
  * GitHub Releases, so there is no other channel to join.
  */
 export const FORK_TEST_PLAN_ENABLED = false
-
-/** Data-collection consent only means something while a collector is shipped. */
-export const FORK_DATA_COLLECTION_ENABLED = false

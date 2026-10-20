@@ -156,50 +156,30 @@ describe('PreferencesMigrator', () => {
       await migrator.prepare(ctx)
       await migrator.execute(ctx)
 
-      // Representative scalar defaults, including the new privacy defaults.
+      // Representative scalar defaults.
       const theme = await selectByKey(dbh.db, 'ui.theme_mode')
       expect(theme).toHaveLength(1)
       expect(theme[0].value).toBe('system')
       const zoom = await selectByKey(dbh.db, 'app.zoom_factor')
       expect(zoom).toHaveLength(1)
       expect(zoom[0].value).toBe(1)
-      const policyVersion = await selectByKey(dbh.db, 'app.privacy.policy_version')
-      expect(policyVersion[0]?.value).toBe('')
-      const dataCollection = await selectByKey(dbh.db, 'app.privacy.data_collection.enabled')
-      expect(dataCollection[0]?.value).toBe(true)
     })
 
-    it.each(['20260531', '20240101'])(
-      'migrates v1 privacy policy version %s and data collection choice',
-      async (version) => {
-        const ctx = createTestContext(
-          {
-            redux: {
-              settings: {
-                privacyPolicyVersion: version,
-                enableDataCollection: false
-              }
-            }
-          },
-          dbh.db
-        )
-        await migrator.prepare(ctx)
-        await migrator.execute(ctx)
-
-        const policyVersion = await selectByKey(dbh.db, 'app.privacy.policy_version')
-        expect(policyVersion[0]?.value).toBe(version)
-        const dataCollection = await selectByKey(dbh.db, 'app.privacy.data_collection.enabled')
-        expect(dataCollection[0]?.value).toBe(false)
-      }
-    )
-
-    it('does not treat the legacy popup flag as privacy policy acknowledgement', async () => {
-      const ctx = createTestContext({ localStorage: [{ key: 'privacy-popup-accepted', value: 'true' }] }, dbh.db)
+    it('drops the v1 data-collection consent and analytics client ID', async () => {
+      const ctx = createTestContext(
+        {
+          redux: { settings: { privacyPolicyVersion: '20260531', enableDataCollection: false } },
+          electronStore: { clientId: '91f06c3a-1776-4e98-a76f-18e03e1e6f96' }
+        },
+        dbh.db
+      )
       await migrator.prepare(ctx)
-      await migrator.execute(ctx)
+      const result = await migrator.execute(ctx)
 
-      const policyVersion = await selectByKey(dbh.db, 'app.privacy.policy_version')
-      expect(policyVersion[0]?.value).toBe('')
+      expect(result.success).toBe(true)
+      for (const key of ['app.privacy.policy_version', 'app.privacy.data_collection.enabled', 'app.user.id']) {
+        expect(await selectByKey(dbh.db, key)).toHaveLength(0)
+      }
     })
 
     it('skips items whose source is empty AND default is null', async () => {
