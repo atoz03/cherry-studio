@@ -18,7 +18,6 @@ import type { EntryCleanupSummary } from '@shared/types/file'
 
 import type { FileManagerDeps } from './deps'
 import { cleanupDeletedEntry } from './entry/lifecycle'
-import type { IntakeStore } from './IntakeStore'
 
 const logger = loggerService.withContext('FileManager:entryCleanup')
 
@@ -55,7 +54,6 @@ type CandidateOutcome = { kind: 'deleted'; entry: FileEntry } | { kind: 'refs-re
 
 export async function runEntryCleanup(
   deps: FileManagerDeps,
-  intakeProtection?: Pick<IntakeStore, 'load' | 'isProtected'>,
   retainedEntries: ReadonlyMap<FileEntryId, unknown> = new Map()
 ): Promise<EntryCleanupReport> {
   const startedAt = Date.now()
@@ -76,7 +74,6 @@ export async function runEntryCleanup(
     })
   }
   try {
-    await intakeProtection?.load()
     const batch = deps.fileEntryService.findCleanupCandidates({
       graceMs: ENTRY_CLEANUP_GRACE_MS,
       limit: ENTRY_CLEANUP_BATCH_LIMIT,
@@ -106,11 +103,7 @@ export async function runEntryCleanup(
       try {
         const outcome = deps.fileEntryService.withWriteTx((tx): CandidateOutcome => {
           const row = deps.fileEntryService.findByIdTx(tx, candidate.id)
-          if (
-            row === null ||
-            row.cleanupPolicy !== 'delete_when_unreferenced' ||
-            intakeProtection?.isProtected(candidate.id)
-          ) {
+          if (row === null || row.cleanupPolicy !== 'delete_when_unreferenced') {
             return { kind: 'gone-or-pinned' }
           }
           if (

@@ -46,7 +46,6 @@ import { loggerService } from '@logger'
 import type { FileEntryId, FileEntryOrigin, FileRefSourceType } from '@shared/data/types/file'
 
 import { resolvePhysicalPath } from '../utils/pathResolver'
-import type { IntakeStore } from './IntakeStore'
 
 const logger = loggerService.withContext('FileManager:orphanSweep')
 
@@ -217,7 +216,6 @@ const ABORT_FRACTION = 0.5
 const MAX_FAILED_SAMPLES = 5
 
 export interface RunFileSweepDeps {
-  readonly intakeProtection?: Pick<IntakeStore, 'load' | 'isProtected'>
   readonly fileEntryService: Pick<FileEntryService, 'listAllIds' | 'findById'>
   /** Test seam — defaults to `Date.now`. */
   readonly now?: () => number
@@ -381,7 +379,6 @@ async function runFileSweepInner(
       }
     }
 
-    await deps.intakeProtection?.load()
     const now = (deps.now ?? Date.now)()
     const planned: CandidatePlan[] = []
     let candidatesCount = 0
@@ -406,12 +403,7 @@ async function runFileSweepInner(
       // forever; explicit guard makes the contract clear.
       if (!st.isFile()) continue
       const identity = isUuidFileName(name)
-      if (
-        identity &&
-        (deps.intakeProtection?.isProtected(identity.id) ||
-          isRetainedFile(name, identity.id, idSnapshot, deps.fileEntryService))
-      )
-        continue
+      if (identity && isRetainedFile(name, identity.id, idSnapshot, deps.fileEntryService)) continue
 
       // A tmp-shaped name is residue only after excluding the exact retained blob.
       const isCandidate = isTmpResidueName(name) || Boolean(identity && !idSnapshot.has(identity.id))
@@ -490,11 +482,7 @@ async function runFileSweepInner(
       try {
         const name = path.basename(target.path)
         const identity = isUuidFileName(name)
-        if (
-          identity &&
-          (deps.intakeProtection?.isProtected(identity.id) ||
-            isRetainedFile(name, identity.id, deps.fileEntryService.listAllIds(), deps.fileEntryService))
-        )
+        if (identity && isRetainedFile(name, identity.id, deps.fileEntryService.listAllIds(), deps.fileEntryService))
           continue
         await unlink(target.path)
         actualDeleted++

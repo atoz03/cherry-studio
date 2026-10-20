@@ -322,37 +322,6 @@ describe('runFileSweep (FS-level)', () => {
     }
   )
 
-  it.each([
-    [true, false],
-    [false, false],
-    [true, true],
-    [false, true]
-  ])(
-    'preserves intake-protected files (protected during planning: %s, bypassSafetyThreshold: %s)',
-    async (protectedDuringPlanning, bypassSafetyThreshold) => {
-      const orphanId = '019606a0-0000-7000-8000-00000000ee54'
-      const orphanPath = path.join(filesDir, `${orphanId}.txt`)
-      await writeFile(orphanPath, 'upload')
-      const ancient = (Date.now() - 10 * 60 * 1000) / 1000
-      await utimes(orphanPath, ancient, ancient)
-      let protectionActive = protectedDuringPlanning
-      const intakeProtection = {
-        load: () => Promise.resolve(),
-        isProtected: (id: string) => {
-          if (id !== orphanId) return false
-          const protectedNow = protectionActive
-          protectionActive = true
-          return protectedNow
-        }
-      }
-
-      const report = await runFileSweep({ fileEntryService, intakeProtection }, { bypassSafetyThreshold })
-
-      expect(report).toMatchObject({ outcome: 'completed', actualDeleteCount: 0, actualDeleteBytes: 0 })
-      expect((await stat(orphanPath)).size).toBe(6)
-    }
-  )
-
   it('unlinks atomic-write tmp residue older than 5 minutes', async () => {
     const tmpName = `019606a0-0000-7000-8000-00000000ee53.txt.tmp-22222222-2222-4222-8222-aaaaaaaaaaaa`
     const tmpPath = path.join(filesDir, tmpName)

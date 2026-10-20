@@ -290,7 +290,6 @@ export function buildPathRegistry() {
     'feature.mcp.resource_results.temp': path.join(appTemp, 'mcp-resource-results'),
     'feature.preprocess.temp': path.join(appTemp, 'preprocess'),
     'feature.pdf_translation.temp': path.join(appTemp, 'pdf-translation'),
-    'feature.files.intakes': path.join(appUserDataData, 'FileIntakes'),
     'feature.voice.temp': path.join(
       appTemp,
       'voice',

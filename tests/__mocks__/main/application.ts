@@ -3,7 +3,6 @@ import { vi } from 'vitest'
 import { MockMainCacheServiceExport } from './CacheService'
 import { MockMainDataApiServiceExport } from './DataApiService'
 import { MockMainDbServiceExport } from './DbService'
-import { mockFileIntakeService } from './FileIntakeService'
 import { MockMainFileManagerExport } from './FileManager'
 import { MockMainPreferenceServiceExport } from './PreferenceService'
 
@@ -88,7 +87,6 @@ export const defaultServiceInstances = {
   DataApiService: MockMainDataApiServiceExport.dataApiService,
   DbService: MockMainDbServiceExport.dbService,
   FileManager: MockMainFileManagerExport.fileManager,
-  FileIntakeService: mockFileIntakeService,
   MainWindowService: mockMainWindowService,
   WindowManager: mockWindowManager,
   IpcApiService: mockIpcApiService,
