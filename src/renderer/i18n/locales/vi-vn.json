@@ -5367,6 +5367,8 @@
   "settings.provider.more_endpoints.toggle": "Thêm các điểm cuối",
   "settings.provider.no_models_for_check": "Không có mô hình nào khả dụng để kiểm tra (ví dụ: mô hình chat)",
   "settings.provider.not_checked": "Chưa kiểm tra",
+  "settings.provider.note.label": "Ghi chú",
+  "settings.provider.note.placeholder": "Thêm ghi chú cho nhà cung cấp này",
   "settings.provider.notes.markdown_editor_default_value": "Xem trước khu vực",
   "settings.provider.notes.placeholder": "Nhập nội dung Markdown...",
   "settings.provider.notes.title": "Ghi chú mô hình",

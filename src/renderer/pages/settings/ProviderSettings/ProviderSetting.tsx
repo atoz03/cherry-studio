@@ -7,6 +7,7 @@ import { cn } from '@renderer/utils/style'
 import { isLoginBasedProvider } from '@shared/utils/provider'
 
 import ProviderHeader from './components/ProviderHeader'
+import ProviderNoteField from './components/ProviderNoteField'
 import AuthenticationSection from './ConnectionSettings/AuthenticationSection'
 import type { ProviderApiSetupInitialStep } from './ConnectionSettings/ProviderApiSetupDialog'
 import { ApiKeyProvider } from './hooks/providerSetting/useAuthenticationApiKey'
@@ -55,6 +56,7 @@ function ProviderSettingSections({
             onOpenApiSetup={() => openApiSetup('api-key')}
             onContinueApiSetup={() => openApiSetup('models')}
           />
+          <ProviderNoteField providerId={providerId} />
           <div className="flex shrink-0 flex-col">
             <ModelList
               scrollElement={scrollElement}

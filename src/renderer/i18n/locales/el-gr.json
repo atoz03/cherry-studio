@@ -5367,6 +5367,8 @@
   "settings.provider.more_endpoints.toggle": "Περισσότερα endpoint",
   "settings.provider.no_models_for_check": "Δεν υπάρχουν μοντέλα για έλεγχο (π.χ. μοντέλα συνομιλίας)",
   "settings.provider.not_checked": "Δεν ελέγχεται",
+  "settings.provider.note.label": "Σημείωση",
+  "settings.provider.note.placeholder": "Προσθήκη σημείωσης για αυτόν τον πάροχο",
   "settings.provider.notes.markdown_editor_default_value": "Περιοχή Προεπισκόπησης",
   "settings.provider.notes.placeholder": "Εισάγετε περιεχόμενο σε μορφή Markdown...",
   "settings.provider.notes.title": "Σχόλιο Μοντέλου",

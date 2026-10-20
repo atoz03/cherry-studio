@@ -5367,6 +5367,8 @@
   "settings.provider.more_endpoints.toggle": "Daha Fazla Uç Nokta",
   "settings.provider.no_models_for_check": "Kontrol edilebilecek model yok (ör. sohbet modelleri)",
   "settings.provider.not_checked": "Kontrol Edilmedi",
+  "settings.provider.note.label": "Not",
+  "settings.provider.note.placeholder": "Bu sağlayıcı için not ekleyin",
   "settings.provider.notes.markdown_editor_default_value": "Önizleme alanı",
   "settings.provider.notes.placeholder": "Markdown içeriğini girin...",
   "settings.provider.notes.title": "Model Notları",

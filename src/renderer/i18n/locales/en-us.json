@@ -5367,6 +5367,8 @@
   "settings.provider.more_endpoints.toggle": "More Endpoints",
   "settings.provider.no_models_for_check": "No models available for checking (e.g. chat models)",
   "settings.provider.not_checked": "Not Checked",
+  "settings.provider.note.label": "Note",
+  "settings.provider.note.placeholder": "Add a note for this provider",
   "settings.provider.notes.markdown_editor_default_value": "Preview area",
   "settings.provider.notes.placeholder": "Enter Markdown content...",
   "settings.provider.notes.title": "Model Notes",
