@@ -2566,13 +2566,7 @@ describe('buildClaudeCodeSessionSettings', () => {
     expect(mocks.listLocalSkillFolderNames).not.toHaveBeenCalled()
     expect(settings.mcpServers?.skills).toBeUndefined()
     expect(settings.allowedTools).not.toContain('mcp__skills__search_skills')
-    expect(await listAssistantToolNames(settings)).toEqual([
-      'navigate',
-      'diagnose',
-      'product_info',
-      'apply_setting',
-      'prepare_diagnostic_report'
-    ])
+    expect(await listAssistantToolNames(settings)).toEqual(['navigate', 'diagnose', 'product_info', 'apply_setting'])
   })
 
   it('injects and auto-approves Assistant MCP tools for a local assistant session', async () => {
@@ -2598,7 +2592,6 @@ describe('buildClaudeCodeSessionSettings', () => {
     // Only read-only Assistant tools are pre-approved. Mutations and diagnose use per-call approval.
     expect(settings.allowedTools).toContain('mcp__assistant__navigate')
     expect(settings.allowedTools).toContain('mcp__assistant__product_info')
-    expect(settings.allowedTools).toContain('mcp__assistant__prepare_diagnostic_report')
     expect(settings.allowedTools).toContain('mcp__assistant-files__read_file')
     expect(settings.allowedTools).not.toContain('mcp__assistant__apply_setting')
     expect(settings.allowedTools).not.toContain('mcp__assistant__create_agent')
@@ -2610,7 +2603,6 @@ describe('buildClaudeCodeSessionSettings', () => {
     const snapshotOptions = mocks.createToolPolicySnapshot.mock.calls.at(-1)?.[1]
     expect(snapshotOptions.autoAllowRuntimeNames).toContain('mcp__assistant__navigate')
     expect(snapshotOptions.autoAllowRuntimeNames).toContain('mcp__assistant__product_info')
-    expect(snapshotOptions.autoAllowRuntimeNames).toContain('mcp__assistant__prepare_diagnostic_report')
     expect(snapshotOptions.autoAllowRuntimeNames).not.toContain('mcp__assistant__apply_setting')
     expect(snapshotOptions.autoAllowRuntimeNames).not.toContain('mcp__assistant__create_agent')
     expect(snapshotOptions.autoAllowRuntimeNames).not.toContain('mcp__assistant__diagnose')
@@ -2763,13 +2755,7 @@ describe('buildClaudeCodeSessionSettings', () => {
 
     expect(settings.mcpServers?.assistant).toBeDefined()
     expect(settings.mcpServers?.['assistant-files']).toBeDefined()
-    expect(await listAssistantToolNames(settings)).toEqual([
-      'navigate',
-      'diagnose',
-      'product_info',
-      'apply_setting',
-      'prepare_diagnostic_report'
-    ])
+    expect(await listAssistantToolNames(settings)).toEqual(['navigate', 'diagnose', 'product_info', 'apply_setting'])
     expect(settings.allowedTools).toContain('mcp__assistant__product_info')
     expect(settings.allowedTools).not.toContain('mcp__assistant__diagnose')
     await expect(

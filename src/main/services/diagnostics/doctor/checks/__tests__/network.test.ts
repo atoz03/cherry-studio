@@ -33,7 +33,7 @@ const ok = (data?: unknown) => ({ status: 'ok', durationMs: 3, data })
 const skipped = (why: string) => ({ status: 'skipped', durationMs: 0, skippedBecause: why })
 const failed = (kind: string, code: string, data?: unknown) => ({ status: 'failed', durationMs: 3, kind, code, data })
 const direct = { effective: 'DIRECT', configuredMode: 'none' }
-const ENDPOINT_IDS = ['update', 'registry', 'diagnostics'] as const
+const ENDPOINT_IDS = ['update', 'registry'] as const
 const diagnosis = (endpointId: string, over: Record<string, unknown> = {}) => ({
   endpointId,
   host: `${endpointId}.example`,
@@ -165,8 +165,7 @@ describe('network-endpoint-*', () => {
 
   it.each([
     ['update', checks.endpointUpdate],
-    ['registry', checks.endpointRegistry],
-    ['diagnostics', checks.endpointDiagnostics]
+    ['registry', checks.endpointRegistry]
   ] as const)('%s reports its own endpoint only', async (id, check) => {
     only(id, { http: failed('timeout', 'ERR_TIMED_OUT'), verdict: 'unreachable' })
     const result = await check.run(ctx())

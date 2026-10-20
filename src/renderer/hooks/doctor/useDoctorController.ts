@@ -21,7 +21,7 @@ import {
   type DoctorState,
   type DoctorSubjectRef
 } from '@shared/types/doctor'
-import { doctorCheckTitleKey, type DoctorPanel, doctorScopeKey, doctorStateCacheKey } from '@shared/utils/doctor'
+import { type DoctorPanel, doctorScopeKey, doctorStateCacheKey } from '@shared/utils/doctor'
 
 import { createDoctorSession, type DoctorInteraction, doctorSessionReducer } from './doctorSessionReducer'
 
@@ -30,11 +30,10 @@ const IDLE_DOCTOR_STATE: DoctorState = { status: 'idle' }
 
 interface UseDoctorControllerOptions {
   readonly initialPanel: DoctorPanel
-  readonly initialDescription?: string
   readonly initialRunTier?: DoctorRunTier
   readonly subject: DoctorSubjectRef
   readonly onNavigate: (target: DoctorNavigateTarget) => void
-  readonly onReportProblem?: (description: string) => void
+  readonly onReportProblem?: () => void
 }
 
 function assertNever(value: never): never {
@@ -59,7 +58,6 @@ function fixRequestFor(
 
 export function useDoctorController({
   initialPanel,
-  initialDescription,
   initialRunTier,
   subject,
   onNavigate,
@@ -71,11 +69,7 @@ export function useDoctorController({
   const [sharedCacheReady, setSharedCacheReady] = useState(() => cacheService.isSharedCacheReady())
   const doctorState = cachedDoctorState ?? IDLE_DOCTOR_STATE
   const { appUpdateState } = useAppUpdateState()
-  const [session, dispatch] = useReducer(
-    doctorSessionReducer,
-    { initialPanel, initialDescription },
-    createDoctorSession
-  )
+  const [session, dispatch] = useReducer(doctorSessionReducer, { initialPanel }, createDoctorSession)
   const [now, setNow] = useState(Date.now)
   const [isAutoRunPending, setIsAutoRunPending] = useState(
     initialPanel === 'checks' && (doctorState.status === 'idle' || initialRunTier !== undefined)
@@ -119,8 +113,7 @@ export function useDoctorController({
   const isCloseBlocked =
     session.interaction.kind === 'fixing' ||
     session.interaction.kind === 'action' ||
-    session.interaction.kind === 'bundle-operation' ||
-    session.interaction.kind === 'report-operation'
+    session.interaction.kind === 'bundle-operation'
   const canChangePanel = !isCloseBlocked && session.interaction.kind !== 'confirm-evidence'
 
   const run = useCallback(
@@ -292,29 +285,14 @@ export function useDoctorController({
           )
           return
         case 'report':
-          const reportDescription =
-            session.descriptionDraft.trim() ||
-            t('settings.doctor.report.check_description', {
-              checkId,
-              title: t(doctorCheckTitleKey(checkId))
-            })
-          if (onReportProblem) {
-            onReportProblem(reportDescription)
-            return
-          }
-          if (session.descriptionDraft.trim().length === 0) {
-            dispatch({
-              type: 'set-description',
-              description: reportDescription
-            })
-          }
-          dispatch({ type: 'set-panel', panel: 'report' })
+          if (onReportProblem) onReportProblem()
+          else dispatch({ type: 'set-panel', panel: 'export' })
           return
         default:
           return assertNever(action)
       }
     },
-    [onNavigate, onReportProblem, performAction, performFix, scope, session.descriptionDraft, t, viewModel.isStale]
+    [onNavigate, onReportProblem, performAction, performFix, scope, t, viewModel.isStale]
   )
 
   const openPath = useCallback(
@@ -375,7 +353,7 @@ export function useDoctorController({
     [canChangePanel]
   )
 
-  const setPanelInteraction = useCallback((kind: 'bundle-operation' | 'report-operation', active: boolean) => {
+  const setPanelInteraction = useCallback((kind: 'bundle-operation', active: boolean) => {
     dispatch(active ? { type: 'start-interaction', interaction: { kind } } : { type: 'finish-interaction', kind })
   }, [])
 
@@ -394,7 +372,6 @@ export function useDoctorController({
     openPath,
     run,
     session: { ...session, fixedCheckIds: session.fixedRunId === viewModel.runId ? session.fixedCheckIds : [] },
-    setDescription: (description: string) => dispatch({ type: 'set-description', description }),
     setPanel,
     setPanelInteraction,
     toggleDevTools,

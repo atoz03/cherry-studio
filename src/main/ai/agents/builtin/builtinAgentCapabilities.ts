@@ -65,8 +65,8 @@ const CAPABILITIES_BY_ROLE: Record<BuiltinAgentRole, AgentCapabilities> = {
     // Product-support capabilities intentionally exclude creation of arbitrary Agents. Reusable
     // channel-linked sessions keep the full surface; per-turn guards deny UI-backed tools headlessly.
     hostTools: {
-      tools: ['navigate', 'diagnose', 'product_info', 'apply_setting', 'prepare_diagnostic_report'],
-      toolsInChannelSessions: ['navigate', 'diagnose', 'product_info', 'apply_setting', 'prepare_diagnostic_report'],
+      tools: ['navigate', 'diagnose', 'product_info', 'apply_setting'],
+      toolsInChannelSessions: ['navigate', 'diagnose', 'product_info', 'apply_setting'],
       runtimes: ['claude-code']
     }
   },

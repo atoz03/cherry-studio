@@ -196,7 +196,6 @@ function endpointCheck<Id extends Extract<DoctorCheckId, `network-endpoint-${str
 
 export const endpointUpdate = endpointCheck('network-endpoint-update', 'update')
 export const endpointRegistry = endpointCheck('network-endpoint-registry', 'registry')
-export const endpointDiagnostics = endpointCheck('network-endpoint-diagnostics', 'diagnostics')
 
 function diagnoseProvider(ctx: DoctorContextBase, providerId: string): Promise<EndpointDiagnosis | null> {
   return ctx.share(`network:provider:${providerId}`, (signal) => {

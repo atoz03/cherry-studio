@@ -727,40 +727,7 @@ describe('ErrorDetailContent diagnostics', () => {
     })
   })
 
-  it('shows only problem reporting in the footer and excludes diagnostic results from its prefill', async () => {
-    const user = userEvent.setup()
-    const onOpenDiagnosticReport = vi.fn()
-    mocks.doctorState = completedDoctorState([
-      {
-        id: 'logs-recent-findings',
-        status: 'warn',
-        durationMs: 1,
-        attribution: 'app-bug',
-        detail: { variant: 'findings' },
-        evidence: [{ key: 'request-body', value: 'private Doctor evidence', dataClass: 'consent_required' }],
-        actions: [{ kind: 'report' }]
-      }
-    ])
-    renderErrorDetailContent({
-      diagnosticReport: { location: 'Agent conversation' },
-      error: providerError,
-      onOpenDiagnosticReport
-    })
-
-    expect(screen.getByRole('region', { name: 'Diagnostic result' })).toBeInTheDocument()
-    const reportProblem = screen.getByRole('button', { name: 'Report a problem' })
-    expect(screen.queryByRole('group', { name: 'Error Details' })).not.toBeInTheDocument()
-    await user.click(reportProblem)
-
-    const description = onOpenDiagnosticReport.mock.calls[0][0]
-    expect(description).toContain('Error message: ProviderError: failed')
-    expect(description).toContain('Location: Agent conversation')
-    expect(description).not.toContain('private Doctor evidence')
-    expect(description).not.toContain('private stack')
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
-  })
-
-  it('waits for error details to finish closing before opening report review', async () => {
+  it('waits for error details to finish closing before opening the diagnostic export', async () => {
     vi.useFakeTimers()
     render(<PopupHost />)
 
@@ -785,10 +752,7 @@ describe('ErrorDetailContent diagnostics', () => {
       vi.advanceTimersByTime(1)
     })
     await act(async () => {})
-    expect(mocks.showDoctor).toHaveBeenCalledWith({
-      initialPanel: 'report',
-      initialDescription: expect.stringContaining('Location: Home conversation')
-    })
+    expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'export' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

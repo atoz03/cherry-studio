@@ -10,9 +10,6 @@
 /** Pairing the desktop with the mobile app over LAN/VPN ("Device Connections"). */
 export const FORK_REMOTE_ACCESS_ENABLED = false
 
-/** Uploading diagnostic bundles to upstream's support backend. */
-export const FORK_DIAGNOSTICS_UPLOAD_ENABLED = false
-
 /**
  * Upstream's RC/Beta update channels ("test plan"). The fork publishes one release line on its
  * GitHub Releases, so there is no other channel to join.

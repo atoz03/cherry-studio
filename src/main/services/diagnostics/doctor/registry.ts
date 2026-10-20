@@ -10,7 +10,6 @@ import { recentLogFindings } from './checks/logs'
 import { mcpLaunchCommands, mcpServersConnected } from './checks/mcp'
 import {
   dnsResolution,
-  endpointDiagnostics,
   endpointRegistry,
   endpointUpdate,
   online,
@@ -48,7 +47,6 @@ export const doctorCheckRegistry: DoctorCheckRegistry = {
   'network-proxy-applied': proxyApplied,
   'network-endpoint-update': endpointUpdate,
   'network-endpoint-registry': endpointRegistry,
-  'network-endpoint-diagnostics': endpointDiagnostics,
   'network-provider-endpoint': providerEndpoint,
   'mcp-servers-connected': mcpServersConnected,
   'mcp-launch-commands': mcpLaunchCommands,

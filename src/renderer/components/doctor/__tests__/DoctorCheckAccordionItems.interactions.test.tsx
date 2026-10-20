@@ -72,12 +72,10 @@ function createController(overrides: ControllerOverrides = {}) {
     scope: 'global',
     session: {
       activePanel: 'checks',
-      descriptionDraft: '',
       fixedCheckIds: [],
       interaction: { kind: 'idle' },
       relaunchRequired: false
     },
-    setDescription: vi.fn<DoctorController['setDescription']>(),
     setPanel: vi.fn<DoctorController['setPanel']>(),
     setPanelInteraction: vi.fn<DoctorController['setPanelInteraction']>(),
     toggleDevTools: vi.fn<DoctorController['toggleDevTools']>(),

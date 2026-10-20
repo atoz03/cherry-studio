@@ -188,7 +188,7 @@ export function projectDoctorReport(
   return { ...rest, basics, results, ...(view === 'display' && pendingChecks ? { pendingChecks } : {}) }
 }
 
-export type DoctorPanel = 'checks' | 'export' | 'report'
+export type DoctorPanel = 'checks' | 'export'
 
 /**
  * The dialog is opened from outside the renderer (Help menu, protocol links) by navigating to

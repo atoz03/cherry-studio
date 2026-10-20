@@ -1,6 +1,5 @@
 import type { DoctorAction, DoctorCheckId, DoctorFixRequest, DoctorRunTier } from '@shared/types/doctor'
 import type { DoctorPanel } from '@shared/utils/doctor'
-import { FORK_DIAGNOSTICS_UPLOAD_ENABLED } from '@shared/utils/forkFeatures'
 
 export type DoctorInteraction =
   | { readonly kind: 'idle' }
@@ -15,11 +14,9 @@ export type DoctorInteraction =
   | { readonly kind: 'confirm-check' }
   | { readonly kind: 'cancel' }
   | { readonly kind: 'bundle-operation' }
-  | { readonly kind: 'report-operation' }
 
 export interface DoctorSessionState {
   readonly activePanel: DoctorPanel
-  readonly descriptionDraft: string
   readonly evidenceGrant?: {
     readonly runId: string
     readonly checkIds: readonly DoctorCheckId[]
@@ -32,7 +29,6 @@ export interface DoctorSessionState {
 
 export type DoctorSessionAction =
   | { readonly type: 'set-panel'; readonly panel: DoctorPanel }
-  | { readonly type: 'set-description'; readonly description: string }
   | { readonly type: 'reveal-evidence'; readonly runId: string; readonly checkId: DoctorCheckId }
   | { readonly type: 'mark-check-fixed'; readonly checkId: DoctorCheckId; readonly runId: string }
   | { readonly type: 'mark-relaunch-required' }
@@ -41,21 +37,9 @@ export type DoctorSessionAction =
   | { readonly type: 'start-interaction'; readonly interaction: Exclude<DoctorInteraction, { kind: 'idle' }> }
   | { readonly type: 'finish-interaction'; readonly kind: DoctorInteraction['kind'] }
 
-/** Without the upstream upload, "Report a problem" lands on the local bundle export. */
-function availablePanel(panel: DoctorPanel): DoctorPanel {
-  return panel === 'report' && !FORK_DIAGNOSTICS_UPLOAD_ENABLED ? 'export' : panel
-}
-
-export function createDoctorSession({
-  initialPanel,
-  initialDescription
-}: {
-  readonly initialPanel: DoctorPanel
-  readonly initialDescription?: string
-}): DoctorSessionState {
+export function createDoctorSession({ initialPanel }: { readonly initialPanel: DoctorPanel }): DoctorSessionState {
   return {
-    activePanel: availablePanel(initialPanel),
-    descriptionDraft: initialDescription ?? '',
+    activePanel: initialPanel,
     fixedCheckIds: [],
     relaunchRequired: false,
     interaction: { kind: 'idle' }
@@ -65,9 +49,7 @@ export function createDoctorSession({
 export function doctorSessionReducer(state: DoctorSessionState, action: DoctorSessionAction): DoctorSessionState {
   switch (action.type) {
     case 'set-panel':
-      return { ...state, activePanel: availablePanel(action.panel) }
-    case 'set-description':
-      return { ...state, descriptionDraft: action.description }
+      return { ...state, activePanel: action.panel }
     case 'reveal-evidence': {
       const checkIds = state.evidenceGrant?.runId === action.runId ? state.evidenceGrant.checkIds : []
       return checkIds.includes(action.checkId)

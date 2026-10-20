@@ -383,7 +383,6 @@ export interface MessageListActions {
   exportToJoplin?: (message: MessageExportView) => void | Promise<void>
   exportToSiyuan?: (message: MessageExportView) => void | Promise<void>
   openArtifactFile?: (path: string) => void | Promise<void>
-  openDiagnosticReport?: (description?: string) => void
   resolvePath?: (path: string) => string
   previewInputFile?: (input: MessageInputFilePreview) => void | Promise<void>
   isDirectory?: (path: string) => Promise<boolean>

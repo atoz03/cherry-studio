@@ -10,7 +10,7 @@ interface ErrorDoctorDiagnosticsProps {
   subject: DoctorSubjectRef
   incident?: DoctorAgentIncident
   onNavigate: (target: DoctorNavigateTarget) => void
-  onReportProblem?: (description: string) => void
+  onReportProblem?: () => void
   onCloseBlockedChange?: (blocked: boolean) => void
 }
 

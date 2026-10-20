@@ -44,11 +44,7 @@ import { parseDataUrl } from '@shared/utils/dataUrl'
 import { doctorScopeKey } from '@shared/utils/doctor'
 
 import Scrollbar from '../Scrollbar'
-import {
-  buildDiagnosticReportDescription,
-  type DiagnosticReportConfig,
-  resolveDiagnosticReportLocation
-} from './diagnosticReportDescription'
+import type { DiagnosticReportConfig } from './diagnosticReportDescription'
 import { ErrorBasicInformation } from './ErrorBasicInformation'
 import { ErrorDoctorDiagnostics } from './ErrorDoctorDiagnostics'
 
@@ -60,7 +56,7 @@ interface ErrorDetailContentProps {
   subject?: DoctorSubjectRef
   /** The failed message this error belongs to; binds the AI consultation to it. */
   incident?: DoctorAgentIncident
-  onOpenDiagnosticReport?: (description: string) => void
+  onOpenDiagnosticReport?: () => void
   onDoctorNavigate?: (target: DoctorNavigateTarget) => void
 }
 
@@ -515,21 +511,8 @@ const ErrorDetailContent: React.FC<ErrorDetailContentInternalProps> = ({
   }, [error, t])
 
   const openDiagnosticReport = useCallback(() => {
-    if (doctorCloseBlocked || !diagnosticReport || !onOpenDiagnosticReport) return
-    onOpenDiagnosticReport(
-      buildDiagnosticReportDescription({
-        diagnosisContext,
-        error,
-        localizedErrorMessage,
-        labels: {
-          errorMessage: t('error.message'),
-          location: t('error.diagnostic_report.location'),
-          model: t('error.modelId')
-        },
-        location: resolveDiagnosticReportLocation(t, diagnosticReport.location, i18n.language)
-      })
-    )
-  }, [diagnosticReport, diagnosisContext, doctorCloseBlocked, error, localizedErrorMessage, onOpenDiagnosticReport, t])
+    if (!doctorCloseBlocked) onOpenDiagnosticReport?.()
+  }, [doctorCloseBlocked, onOpenDiagnosticReport])
 
   const showDetails = () => {
     setDetailsOpen(true)
@@ -687,9 +670,9 @@ export function showErrorDetailPopup(params: ErrorDetailPopupParams) {
   void ErrorDetailPopup.show({
     ...params,
     onDoctorNavigate: (target) => finishHandoff(() => openSettingsTab(target)),
-    onOpenDiagnosticReport: (initialDescription) =>
+    onOpenDiagnosticReport: () =>
       finishHandoff(() => {
-        void DoctorPopup.show({ initialPanel: 'report', initialDescription })
+        void DoctorPopup.show({ initialPanel: 'export' })
       })
   })
 }

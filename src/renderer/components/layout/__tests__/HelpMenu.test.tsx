@@ -96,7 +96,7 @@ describe('HelpMenu', () => {
     await waitFor(() => expect(mocks.openReleaseNotes).toHaveBeenCalledOnce())
   })
 
-  it('closes the help menu before opening the report panel', async () => {
+  it('closes the help menu before opening the diagnostic export', async () => {
     let reportEntryWasVisible = true
     mocks.showDoctor.mockImplementationOnce(() => {
       reportEntryWasVisible = screen.queryByRole('button', { name: 'Report a problem' }) !== null
@@ -107,7 +107,7 @@ describe('HelpMenu', () => {
 
     await user.click(screen.getByRole('button', { name: 'Report a problem' }))
 
-    await waitFor(() => expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'report' }))
+    await waitFor(() => expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'export' }))
     expect(reportEntryWasVisible).toBe(false)
     expect(mocks.openFeedback).not.toHaveBeenCalled()
   })

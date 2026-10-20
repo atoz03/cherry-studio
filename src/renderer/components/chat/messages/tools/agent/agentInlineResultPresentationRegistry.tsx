@@ -5,8 +5,6 @@ import type { CherryMessagePart } from '@shared/data/types/message'
 
 import { getCreateAgentResult, isCreateAgentResultPart } from './createAgentResult'
 import { CreateAgentToolInline } from './CreateAgentTool'
-import { getPrepareDiagnosticReportResult, isPrepareDiagnosticReportResultPart } from './prepareDiagnosticReportResult'
-import { PrepareDiagnosticReportTool } from './PrepareDiagnosticReportTool'
 
 interface AgentInlineResultPresentation {
   readonly isResultPart: (part: CherryMessagePart) => boolean
@@ -14,13 +12,6 @@ interface AgentInlineResultPresentation {
 }
 
 const AGENT_INLINE_RESULT_PRESENTATIONS = [
-  {
-    isResultPart: isPrepareDiagnosticReportResultPart,
-    renderResult: (toolResponse) => {
-      const result = getPrepareDiagnosticReportResult(toolResponse)
-      return result ? <PrepareDiagnosticReportTool result={result} /> : undefined
-    }
-  },
   {
     isResultPart: isCreateAgentResultPart,
     renderResult: (toolResponse) => {

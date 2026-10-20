@@ -132,9 +132,9 @@ describe('Doctor scope ownership', () => {
     expect(result.current.session.fixedCheckIds).toEqual([])
   })
 
-  it.each(['report', 'export'] as const)('does not start a health check when opening %s', (initialPanel) => {
+  it('does not start a health check when opening the export panel', () => {
     const { result } = renderHook(() =>
-      useDoctorController({ initialPanel, subject: { kind: 'global' }, onNavigate: vi.fn() })
+      useDoctorController({ initialPanel: 'export', subject: { kind: 'global' }, onNavigate: vi.fn() })
     )
     expect(result.current.isAutoRunPending).toBe(false)
     expect(request).not.toHaveBeenCalled()

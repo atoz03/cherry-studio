@@ -112,11 +112,11 @@ describe('AboutSettings diagnostics entry', () => {
   })
 
   it('opens an externally requested Doctor panel and consumes only that query', async () => {
-    mocks.search = { doctor: 'report', focusId: 'support' }
+    mocks.search = { doctor: 'export', focusId: 'support' }
 
     await renderAboutSettings()
 
-    await waitFor(() => expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'report' }))
+    await waitFor(() => expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'export' }))
     expect(mocks.navigate).toHaveBeenCalledWith({
       to: '/settings/about',
       search: expect.any(Function),
@@ -126,7 +126,7 @@ describe('AboutSettings diagnostics entry', () => {
     const updateSearch = mocks.navigate.mock.calls[0][0].search as (
       previous: Record<string, unknown>
     ) => Record<string, unknown>
-    expect(updateSearch({ doctor: 'report', focusId: 'support' })).toEqual({ focusId: 'support' })
+    expect(updateSearch({ doctor: 'export', focusId: 'support' })).toEqual({ focusId: 'support' })
   })
 
   it('opens the feedback channel chooser without bypassing it', async () => {

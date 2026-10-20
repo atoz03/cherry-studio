@@ -14,7 +14,6 @@ import type { AbsoluteFilePath } from '@shared/types/file'
 import AgentChat from '../AgentChat'
 
 const ipcRequestMock = vi.hoisted(() => vi.fn())
-const showDoctorMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@renderer/ipc', () => ({
   ipcApi: { on: vi.fn(() => vi.fn()), request: ipcRequestMock },
@@ -48,7 +47,7 @@ vi.mock('@renderer/components/chat/shell/ConversationCenterState', () => ({
 }))
 
 vi.mock('@renderer/components/doctor', () => ({
-  DoctorPopup: { show: (...args: unknown[]) => showDoctorMock(...args) }
+  DoctorPopup: { show: vi.fn() }
 }))
 
 vi.mock('@renderer/components/chat/shell/ConversationShell', () => ({
@@ -550,16 +549,10 @@ vi.mock('@renderer/utils/agentSession', () => ({
   buildAgentSessionTopicId: (sessionId: string) => `agent-session:${sessionId}`
 }))
 
-vi.mock('react-i18next', async (importOriginal) => {
-  const translations: Record<string, string> = {
-    'agent.builtin.cherry_support.diagnostics.prepared': 'Cherry Support prepared an editable description.',
-    'agent.builtin.cherry_support.diagnostics.review': 'Report a problem'
-  }
-  return {
-    ...(await importOriginal<typeof ReactI18next>()),
-    useTranslation: () => ({ t: (key: string) => translations[key] ?? key })
-  }
-})
+vi.mock('react-i18next', async (importOriginal) => ({
+  ...(await importOriginal<typeof ReactI18next>()),
+  useTranslation: () => ({ t: (key: string) => key })
+}))
 
 vi.mock('../components/AgentChatNavbar', () => ({
   AgentChatNavbar: ({ tools }: { tools?: ReactNode }) => <div data-testid="agent-chat-navbar">{tools}</div>
@@ -605,14 +598,12 @@ vi.mock('../components/AgentSessionMessages', async () => {
     sessionId,
     openAgentToolFlow,
     openArtifactFile,
-    previewInputFile,
-    openDiagnosticReport
+    previewInputFile
   }: {
     sessionId: string
     openAgentToolFlow?: (input: any) => void
     openArtifactFile?: (path: string) => void
     previewInputFile?: (input: InputFilePreview) => void
-    openDiagnosticReport?: (description?: string) => void
   }) => {
     const [messageState, setMessageState] = React.useState('')
 
@@ -623,16 +614,6 @@ vi.mock('../components/AgentSessionMessages', async () => {
           value={messageState}
           onChange={(event) => setMessageState(event.target.value)}
         />
-        {openDiagnosticReport ? (
-          <>
-            <button type="button" onClick={() => openDiagnosticReport('Inline draft from this message')}>
-              Open inline diagnostic draft
-            </button>
-            <button type="button" onClick={() => openDiagnosticReport(`Draft for ${sessionId}`)}>
-              Open session diagnostic draft
-            </button>
-          </>
-        ) : null}
         <button
           type="button"
           onClick={() =>
@@ -724,7 +705,6 @@ describe('AgentChat artifact pane', () => {
   }
 
   beforeEach(() => {
-    showDoctorMock.mockReset()
     ipcRequestMock.mockReset()
     ipcRequestMock.mockImplementation((route: string) =>
       route === 'file.get_metadata'
@@ -772,31 +752,6 @@ describe('AgentChat artifact pane', () => {
         }
       }
     })
-  })
-
-  it('opens Support diagnostic drafts only from inline result actions', async () => {
-    const user = userEvent.setup()
-    const supportBootstrap = createConversationBootstrap()
-    supportBootstrap.resources.agent = {
-      id: 'agent-1',
-      model: 'provider::model-1',
-      configuration: { builtin_role: BUILTIN_AGENT_ROLE.SUPPORT }
-    } as unknown as typeof supportBootstrap.resources.agent
-    supportBootstrap.resources.model = undefined
-
-    const view = renderAgentChat({ conversationBootstrap: supportBootstrap })
-
-    expect(screen.queryByRole('button', { name: 'Report a problem' })).not.toBeInTheDocument()
-    expect(showDoctorMock).not.toHaveBeenCalled()
-
-    await user.click(screen.getByRole('button', { name: 'Open inline diagnostic draft' }))
-    expect(showDoctorMock).toHaveBeenCalledWith({
-      initialPanel: 'report',
-      initialDescription: 'Inline draft from this message'
-    })
-
-    rerenderAgentChat(view.rerender)
-    expect(screen.queryByRole('button', { name: 'Open inline diagnostic draft' })).not.toBeInTheDocument()
   })
 
   it('preserves message subtree state while Support capability resolves', async () => {

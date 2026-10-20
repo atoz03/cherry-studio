@@ -27,7 +27,6 @@ import {
   type AgentComposerLaunchOptions,
   MissingAgentHomeComposer
 } from '@renderer/components/composer/variants/AgentComposer'
-import { DoctorPopup } from '@renderer/components/doctor'
 import { useCache, useSharedCache } from '@renderer/data/hooks/useCache'
 import { useUpdateAgent } from '@renderer/hooks/agent/useAgent'
 import { useAgentModelFilter } from '@renderer/hooks/agent/useAgentModelFilter'
@@ -41,7 +40,6 @@ import { getAgentAvatarFromConfiguration } from '@renderer/utils/agent'
 import { buildAgentSessionTopicId } from '@renderer/utils/agentSession'
 import { cn } from '@renderer/utils/style'
 import { BROWSER_TOOL_GROUP } from '@shared/ai/browserTools'
-import { BUILTIN_AGENT_ROLE } from '@shared/ai/builtinAgent'
 import type { AgentSessionEntity } from '@shared/data/api/schemas/agentSessions'
 import type { CherryMessagePart, CherryUIMessage } from '@shared/data/types/message'
 import type { Model } from '@shared/data/types/model'
@@ -201,10 +199,6 @@ const AgentChat = ({
   const visibleWorkspaceId = sessionSnapshot?.workspaceId ?? null
   const visibleWorkspace = sessionSnapshot?.workspace ?? null
   const activeAgent = conversationBootstrap.resources.agent
-  const isSupportAgent = activeAgent?.configuration?.builtin_role === BUILTIN_AGENT_ROLE.SUPPORT
-  const isAssistantAgent = activeAgent?.configuration?.builtin_role === BUILTIN_AGENT_ROLE.ASSISTANT
-  // Assistant now exposes prepare_diagnostic_report, so it needs the same review dialog as Support.
-  const canReviewDiagnosticReport = isSupportAgent || isAssistantAgent
   const isActiveAgentLoading = conversationBootstrap.resources.agentLoading
   const activeModel = conversationBootstrap.resources.model
   const isActiveModelLoading = conversationBootstrap.resources.modelLoading
@@ -263,13 +257,6 @@ const AgentChat = ({
     sessionId: runtimeSessionId,
     uiMessages: runtimeUiMessages
   } = runtime
-  const openDiagnosticReport = useCallback(
-    (description = '') => {
-      if (!currentSessionId) return
-      void DoctorPopup.show({ initialPanel: 'report', initialDescription: description })
-    },
-    [currentSessionId]
-  )
   const isEmptyConversation = Boolean(
     sessionSnapshot &&
     sessionMessagesEnabled &&
@@ -501,7 +488,6 @@ const AgentChat = ({
         onOpenCitationsPanel={handleOpenCitationsPanel}
         onCreateEmptySession={sessionAgentId && onCreateEmptySession ? handleCreateEmptySession : undefined}
         composerLaunchOptions={composerLaunchOptions}
-        openDiagnosticReport={canReviewDiagnosticReport ? openDiagnosticReport : undefined}
       />
     )
   }
@@ -602,7 +588,6 @@ interface AgentChatSessionCenterProps {
   onOpenCitationsPanel: (payload: { citations: Citation[] }) => void
   onCreateEmptySession?: () => void | Promise<unknown>
   composerLaunchOptions?: AgentComposerLaunchOptions
-  openDiagnosticReport?: (description?: string) => void
 }
 
 const AgentChatSessionCenter = ({
@@ -621,8 +606,7 @@ const AgentChatSessionCenter = ({
   agentChanging,
   onOpenCitationsPanel,
   onCreateEmptySession,
-  composerLaunchOptions,
-  openDiagnosticReport
+  composerLaunchOptions
 }: AgentChatSessionCenterProps) => {
   const composer = (
     <div className="flex w-full flex-col">
@@ -667,7 +651,6 @@ const AgentChatSessionCenter = ({
       loadOlder={runtime.loadOlder}
       selectAllPagination={runtime.selectAllPagination}
       onOpenCitationsPanel={onOpenCitationsPanel}
-      openDiagnosticReport={openDiagnosticReport}
       deleteMessage={runtime.deleteMessage}
       startEditing={runtime.startEditing}
       editBusy={runtime.editBusy}

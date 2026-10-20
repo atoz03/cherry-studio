@@ -100,7 +100,6 @@ export const DOCTOR_CHECK_IDS = [
   'network-proxy-applied',
   'network-endpoint-update',
   'network-endpoint-registry',
-  'network-endpoint-diagnostics',
   'network-provider-endpoint',
   'mcp-servers-connected',
   'mcp-launch-commands',
@@ -299,14 +298,6 @@ export const DOCTOR_CHECK_CATALOG = {
     requires: ['network-online']
   },
   'network-endpoint-registry': {
-    domain: 'network',
-    tier: 'live',
-    scope: 'global',
-    fixes: [],
-    details: ENDPOINT_DETAILS,
-    requires: ['network-online']
-  },
-  'network-endpoint-diagnostics': {
     domain: 'network',
     tier: 'live',
     scope: 'global',

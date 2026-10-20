@@ -18,11 +18,6 @@ import { ErrorCode as DataApiErrorCode, isDataApiError } from '@shared/data/api/
 import { ThemeMode } from '@shared/data/preference/preferenceTypes'
 import { parseUniqueModelId, type UniqueModelId, UniqueModelIdSchema } from '@shared/data/types/model'
 import type { DoctorRunTier } from '@shared/types/doctor'
-import {
-  DIAGNOSTIC_DESCRIPTION_MAX_BYTES,
-  diagnosticDescriptionByteLength,
-  normalizeDiagnosticDescription
-} from '@shared/utils/diagnostics'
 import { projectDoctorReport } from '@shared/utils/doctor'
 import { isAllowedNavigationPath } from '@shared/utils/navigationPath'
 import { isExternalCliProvider } from '@shared/utils/provider'
@@ -316,33 +311,6 @@ async function createAgent(
     const msg = errorMessage(error)
     logger.error('create_agent failed', { error: msg, name })
     throw new Error(`Failed to create agent: ${msg}`)
-  }
-}
-
-const PrepareDiagnosticReportInputSchema = z.strictObject({
-  description: z
-    .string()
-    .describe('Editable report description. Maximum 4096 UTF-8 bytes after line endings are normalized to CRLF.')
-})
-
-const PrepareDiagnosticReportOutputSchema = z.object({
-  ok: z.literal(true),
-  description: z.string()
-})
-
-function prepareDiagnosticReport(args: z.infer<typeof PrepareDiagnosticReportInputSchema>): CallToolResult {
-  const description = normalizeDiagnosticDescription(args.description.trim())
-  if (!description) throw new Error('description must not be blank')
-  if (diagnosticDescriptionByteLength(description) > DIAGNOSTIC_DESCRIPTION_MAX_BYTES) {
-    throw new Error(
-      `description must not exceed ${DIAGNOSTIC_DESCRIPTION_MAX_BYTES} UTF-8 bytes after CRLF normalization`
-    )
-  }
-
-  const output = { ok: true as const, description }
-  return {
-    content: [{ type: 'text', text: JSON.stringify(output) }],
-    structuredContent: output
   }
 }
 
@@ -754,17 +722,6 @@ The tool returns the new agent details, and Cherry Studio presents a Go to chat 
         outputSchema: CreateAgentOutputSchema
       },
       async (args) => createAgent(args, defaultModel)
-    ),
-  prepare_diagnostic_report: (server) =>
-    server.registerTool(
-      'prepare_diagnostic_report',
-      {
-        description:
-          'Prepare an editable diagnostic report description for Cherry Studio to present as a user-clickable review action. This tool only prepares draft data; it DOES NOT open UI, acknowledge user consent, collect diagnostics, write files, or submit a report.',
-        inputSchema: PrepareDiagnosticReportInputSchema,
-        outputSchema: PrepareDiagnosticReportOutputSchema
-      },
-      async (args) => prepareDiagnosticReport(args)
     )
 }
 
