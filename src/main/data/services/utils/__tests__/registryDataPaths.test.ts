@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The override is used only when its manifest and both remote-safe data files
-// exist and this app falls inside the manifest compatibility range.
+// exist and the fork's upstream base version (2.1.8) falls inside the manifest
+// compatibility range; the fork's own 3.x app version must not matter.
 const { existsSyncMock, readFileSyncMock } = vi.hoisted(() => ({
   existsSyncMock: vi.fn(),
   readFileSyncMock: vi.fn()
 }))
 vi.mock('node:fs', () => ({ existsSync: existsSyncMock, readFileSync: readFileSyncMock }))
-vi.mock('electron', () => ({ app: { getVersion: () => '2.0.0' } }))
+vi.mock('electron', () => ({ app: { getVersion: () => '3.0.0' } }))
 
 // Unified application mock: getPath returns `/mock/${key}/${filename}`.
 vi.mock('@application', async () => {
@@ -38,7 +39,7 @@ const FILES = { 'models.json': 'a', 'provider-models.json': 'c' }
 // Track the live wire schema: a snapshot is only accepted on the current version.
 const VALID_MANIFEST = JSON.stringify({
   minAppVersion: '1.0.0',
-  sourceAppVersion: '2.0.0',
+  sourceAppVersion: '2.2.0',
   revision: 1,
   schemaVersion: REGISTRY_SCHEMA_VERSION,
   files: FILES
@@ -86,13 +87,13 @@ describe('registryDataPaths.resolveRegistryPaths', () => {
 
   it('ignores data that requires a newer application', () => {
     existsSyncMock.mockImplementation(completeOverride)
-    readFileSyncMock.mockReturnValue(JSON.stringify({ ...JSON.parse(VALID_MANIFEST), minAppVersion: '2.1.0' }))
+    readFileSyncMock.mockReturnValue(JSON.stringify({ ...JSON.parse(VALID_MANIFEST), minAppVersion: '2.2.0' }))
     expect(resolveRegistryPaths()).toEqual(bundledPaths)
   })
 
   it('ignores a stale snapshot after an application upgrade', () => {
     existsSyncMock.mockImplementation(completeOverride)
-    readFileSyncMock.mockReturnValue(JSON.stringify({ ...JSON.parse(VALID_MANIFEST), sourceAppVersion: '1.9.0' }))
+    readFileSyncMock.mockReturnValue(JSON.stringify({ ...JSON.parse(VALID_MANIFEST), sourceAppVersion: '2.1.7' }))
     expect(resolveRegistryPaths()).toEqual(bundledPaths)
   })
 

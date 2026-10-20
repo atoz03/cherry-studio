@@ -20,6 +20,7 @@ import { writeProviderRegistrySnapshot } from '@main/services/providerRegistrySn
 import { regionService } from '@main/services/RegionService'
 import { generateUserAgent } from '@main/utils/systemInfo'
 import type { DataApiDataChangeEffect } from '@shared/data/api/types'
+import { UPSTREAM_BASE_VERSION } from '@shared/utils/forkRelease'
 
 const logger = loggerService.withContext('ProviderRegistryUpdaterService')
 
@@ -164,7 +165,7 @@ export class ProviderRegistryUpdaterService extends BaseService {
     if (manifestBody === null) return null
     const manifest = this.parseManifest(manifestBody)
     if (!manifest) return null
-    if (!isCatalogManifestCompatible(manifest, app.getVersion())) {
+    if (!isCatalogManifestCompatible(manifest, UPSTREAM_BASE_VERSION)) {
       logger.warn('registry update: manifest is not compatible with this application version, skipping')
       return null
     }

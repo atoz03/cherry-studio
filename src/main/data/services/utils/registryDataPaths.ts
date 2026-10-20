@@ -1,7 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
 
-import { app } from 'electron'
-
 import { application } from '@application'
 import {
   type CatalogManifest,
@@ -10,6 +8,7 @@ import {
   type RegistryPaths,
   REMOTE_REGISTRY_FILES
 } from '@cherrystudio/provider-registry/node'
+import { UPSTREAM_BASE_VERSION } from '@shared/utils/forkRelease'
 
 /**
  * Completion marker written last after both remote-safe model metadata files.
@@ -30,7 +29,7 @@ export function readActiveOverrideManifest(): CatalogManifest | null {
   }
   try {
     const manifest = CatalogManifestSchema.parse(JSON.parse(readFileSync(manifestPath, 'utf-8')))
-    if (!isCatalogManifestCompatible(manifest, app.getVersion())) return null
+    if (!isCatalogManifestCompatible(manifest, UPSTREAM_BASE_VERSION)) return null
     for (const file of REMOTE_REGISTRY_FILES) {
       const data = JSON.parse(
         readFileSync(application.getPath('feature.provider_registry.override', file), 'utf-8')

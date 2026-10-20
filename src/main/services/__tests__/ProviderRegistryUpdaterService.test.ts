@@ -58,7 +58,7 @@ vi.mock('@cherrystudio/provider-registry/node', async () => {
   }
 })
 vi.mock('electron', () => ({
-  app: { isPackaged: true, getVersion: () => '1.0.0' },
+  app: { isPackaged: true, getVersion: () => '3.0.0' },
   net: { fetch: netFetchMock }
 }))
 
@@ -89,7 +89,7 @@ function mockRemote(
 ) {
   const {
     minAppVersion = '1.0.0',
-    sourceAppVersion = '2.0.0',
+    sourceAppVersion = '2.2.0',
     revision = 2,
     manifest,
     dataVersion = 'v2',
@@ -138,7 +138,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
     expect(Object.keys(appliedFiles).sort()).toEqual(['models.json', 'provider-models.json'])
     const manifest = JSON.parse(manifestBody)
     expect(manifest.minAppVersion).toBe('1.0.0')
-    expect(manifest.sourceAppVersion).toBe('2.0.0')
+    expect(manifest.sourceAppVersion).toBe('2.2.0')
     expect(manifest.revision).toBe(2)
     expect(manifest.files['models.json']).toBe('v2')
     expect(netFetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/providers.json'), expect.anything())
@@ -185,7 +185,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
         ? response(
             JSON.stringify({
               minAppVersion: '1.0.0',
-              sourceAppVersion: '2.0.0',
+              sourceAppVersion: '2.2.0',
               revision: 2,
               schemaVersion: REGISTRY_SCHEMA_VERSION,
               files
@@ -206,7 +206,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
         return response(
           JSON.stringify({
             minAppVersion: '1.0.0',
-            sourceAppVersion: '2.0.0',
+            sourceAppVersion: '2.2.0',
             revision: 2,
             schemaVersion: REGISTRY_SCHEMA_VERSION,
             files
@@ -223,7 +223,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
   })
 
   it('rejects a snapshot older than the application bundle', async () => {
-    mockRemote({ sourceAppVersion: '0.9.0', dataVersion: 'v2' })
+    mockRemote({ sourceAppVersion: '2.1.7', dataVersion: 'v2' })
 
     await service.check()
 
@@ -233,7 +233,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
   })
 
   it('rejects data that requires a newer application', async () => {
-    mockRemote({ minAppVersion: '1.1.0', dataVersion: 'v2' })
+    mockRemote({ minAppVersion: '2.2.0', dataVersion: 'v2' })
 
     await service.check()
 
@@ -246,7 +246,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
     mockRemote({
       manifest: JSON.stringify({
         minAppVersion: 'not-a-version',
-        sourceAppVersion: '2.0.0',
+        sourceAppVersion: '2.2.0',
         revision: 2,
         schemaVersion: REGISTRY_SCHEMA_VERSION,
         files
@@ -264,7 +264,7 @@ describe('ProviderRegistryUpdaterService.check', () => {
     mockRemote({
       manifest: JSON.stringify({
         minAppVersion: '1.0.0',
-        sourceAppVersion: '2.0.0',
+        sourceAppVersion: '2.2.0',
         revision: 2,
         schemaVersion: REGISTRY_SCHEMA_VERSION + 1,
         files

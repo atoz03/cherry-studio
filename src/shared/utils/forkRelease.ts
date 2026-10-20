@@ -7,6 +7,13 @@
 export const FORK_RELEASE_OWNER = 'atoz03'
 export const FORK_RELEASE_REPO = 'cherry-studio'
 
+/**
+ * The upstream Cherry Studio release this fork branched from. The fork numbers its own releases
+ * from 3.0.0, so data upstream publishes for its app versions (the model catalog's
+ * `minAppVersion` / `sourceAppVersion`) is matched against this instead of `app.getVersion()`.
+ */
+export const UPSTREAM_BASE_VERSION = '2.1.8'
+
 /** The fork's repository page: the app's homepage in About, OAuth client metadata and user agents. */
 export const FORK_REPO_URL = `https://github.com/${FORK_RELEASE_OWNER}/${FORK_RELEASE_REPO}`
 
