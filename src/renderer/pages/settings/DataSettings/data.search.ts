@@ -1,3 +1,5 @@
+import { FORK_DATA_COLLECTION_ENABLED } from '@shared/utils/forkFeatures'
+
 import type { SettingsSearchEntry } from '../settingsSearch/types'
 
 // Data settings switches its panels via component state, not sub-routes, so
@@ -246,4 +248,4 @@ export const entries: SettingsSearchEntry[] = [
     panel: 'siyuan',
     groupKey: 'settings.data.siyuan.title'
   }
-]
+].filter(({ anchorId }) => FORK_DATA_COLLECTION_ENABLED || anchorId !== 'data-privacy-mode')

@@ -8,6 +8,12 @@ import { LATEST_PRIVACY_POLICY_VERSION } from '@shared/utils/constants'
 const toastErrorMock = vi.fn()
 const defaultUsePreferenceImplementation = mockUsePreference.getMockImplementation()
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_DATA_COLLECTION_ENABLED: true
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key })
 }))

@@ -42,6 +42,7 @@ import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, isManagedCherryProviderId } from '@sh
 import type { Model, UniqueModelId } from '@shared/data/types/model'
 import type { CherryCloudStatus } from '@shared/ipc/schemas/cherryCloud'
 import { LATEST_PRIVACY_POLICY_VERSION } from '@shared/utils/constants'
+import { FORK_DATA_COLLECTION_ENABLED } from '@shared/utils/forkFeatures'
 import { defaultLanguage } from '@shared/utils/languages'
 import { isNonChatModel } from '@shared/utils/model'
 
@@ -182,6 +183,8 @@ export default function OnboardingPage({
   }
 
   const persistPrivacyChoice = useCallback(async (): Promise<boolean> => {
+    // Nothing collects data: leave consent unrecorded so enabling a collector later asks first.
+    if (!FORK_DATA_COLLECTION_ENABLED) return true
     setIsUpdatingPrivacy(true)
     try {
       if (privacyAccepted && policyVersion === LATEST_PRIVACY_POLICY_VERSION) {
@@ -568,7 +571,7 @@ export default function OnboardingPage({
             )}
           </div>
 
-          {step === 'welcome' && (
+          {FORK_DATA_COLLECTION_ENABLED && step === 'welcome' && (
             <div className="nodrag flex shrink-0 justify-center px-6 py-3">
               <div className="flex max-w-full items-center gap-2 text-center text-muted-foreground text-xs leading-relaxed">
                 <Checkbox
