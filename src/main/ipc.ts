@@ -17,7 +17,6 @@ import { fileStorage as fileManager } from './services/FileStorage'
 import FileService from './services/FileSystemService'
 import { legacyBackupManager as backupManager } from './services/LegacyBackupManager'
 import * as NutstoreService from './services/nutstore/NutstoreService'
-import { decrypt } from './utils/aes'
 import { getHostname } from './utils/system'
 import { decompress } from './utils/zip'
 
@@ -140,11 +139,6 @@ export async function registerIpc() {
   // fs
   handleGuarded(IpcChannel.Fs_Read, FileService.readFile.bind(FileService))
   handleGuarded(IpcChannel.Fs_ReadText, FileService.readTextFileWithAutoEncoding.bind(FileService))
-
-  // aes
-  handleGuarded(IpcChannel.Aes_Decrypt, (_, encryptedData: string, iv: string, secretKey: string) =>
-    decrypt(encryptedData, iv, secretKey)
-  )
 
   //copilot
   handleGuarded(IpcChannel.Copilot_GetAuthMessage, copilotService.getAuthMessage.bind(copilotService))

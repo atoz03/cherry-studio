@@ -7,7 +7,7 @@ import { GROK_CLI_PROVIDER_ID } from '@shared/data/presets/grokCli'
 
 import { OAuthServiceError } from '../../errors'
 import { PkceOAuthClient } from '../PkceOAuthClient'
-import type { OAuthRuntimeProviderContext, OAuthRuntimeProviderDefinition } from '../types'
+import type { OAuthRuntimeProviderDefinition } from '../types'
 
 const GROK_CONFIG = {
   CLIENT_ID: 'b1a00492-073a-47ea-816f-4c329264a828',
@@ -56,15 +56,13 @@ async function discoverGrok(signal?: AbortSignal): Promise<Discovery> {
 export const grokOAuthProvider = {
   providerId: GROK_CLI_PROVIDER_ID,
   clientId: GROK_CONFIG.CLIENT_ID,
-  // OAuth is the only credential; logout/token loss disables the provider.
-  clearDisablesProvider: true,
   transport: {
     hosts: [GROK_CONFIG.CALLBACK_HOST],
     port: GROK_CONFIG.CALLBACK_PORT,
     path: GROK_CONFIG.CALLBACK_PATH,
     redirectUri: GROK_CONFIG.REDIRECT_URI
   },
-  createClient: async (context?: OAuthRuntimeProviderContext) => {
+  createClient: async (context?: { signal?: AbortSignal }) => {
     const discovery = await discoverGrok(context?.signal)
     const nonce = randomBytes(16).toString('hex')
     return new PkceOAuthClient({

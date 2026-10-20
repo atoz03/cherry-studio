@@ -1,6 +1,6 @@
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router'
-import { ArrowLeft, Check, KeyRound, Languages, LogIn } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Check, KeyRound, Languages } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -18,12 +18,11 @@ import { useMultiplePreferences, usePreference } from '@data/hooks/usePreference
 import AppLogo from '@renderer/assets/images/logo.png'
 import { WindowControls } from '@renderer/components/WindowControls'
 import { useDefaultModel, useModels } from '@renderer/hooks/useModel'
-import { useProvider, useProviders } from '@renderer/hooks/useProvider'
+import { useProviders } from '@renderer/hooks/useProvider'
 import { appLanguageOptions, isAppLanguage } from '@renderer/i18n/languages'
 import i18n from '@renderer/i18n/resolver'
 import ModelSettings from '@renderer/pages/settings/ModelSettings/ModelSettings'
-import { ProviderSettingsPage, useProviderModelSync } from '@renderer/pages/settings/ProviderSettings'
-import { oauthWithCherryIn } from '@renderer/services/oauth'
+import { ProviderSettingsPage } from '@renderer/pages/settings/ProviderSettings'
 import { toast } from '@renderer/services/toast'
 import { isWin } from '@renderer/utils/platform'
 import { isProtectedBuiltinAgentRole } from '@shared/ai/builtinAgent'
@@ -36,8 +35,6 @@ import { isNonChatModel } from '@shared/utils/model'
 type OnboardingStep = 'welcome' | 'provider' | 'select-model'
 type OnboardingCompletionStatus = Exclude<OnboardingProviderSetupStatus, 'pending'>
 
-const CHERRYIN_OAUTH_SERVER = 'https://open.cherryin.ai'
-const CHERRYIN_LOGIN_LOADING_TIMEOUT_MS = 10_000
 const PESSIMISTIC_PREFERENCE_OPTIONS = { optimistic: false } as const
 const isOnboardingModel = (model: Model) => !isManagedCherryAiProviderId(model.providerId) && !isNonChatModel(model)
 const ONBOARDING_PREFERENCE_KEYS = {
@@ -61,16 +58,11 @@ export default function OnboardingPage() {
     ONBOARDING_PREFERENCE_KEYS,
     PESSIMISTIC_PREFERENCE_OPTIONS
   )
-  const { addApiKey, updateProvider } = useProvider('cherryin')
-  const { syncProviderModels } = useProviderModelSync('cherryin')
   const { providers: enabledProviders, isLoading: isProvidersLoading } = useProviders({ enabled: true })
   const { models: enabledModels, isLoading: isModelsLoading } = useModels({ enabled: true })
   const { defaultModel, quickModel, translateModel } = useDefaultModel()
   const [step, setStep] = useState<OnboardingStep>('welcome')
-  const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
-  const loginAttemptRef = useRef(0)
-  const loginLoadingTimeoutRef = useRef<number | null>(null)
   const eligibleProviderIds = new Set(
     enabledProviders.filter((provider) => !isManagedCherryAiProviderId(provider.id)).map((provider) => provider.id)
   )
@@ -158,72 +150,6 @@ export default function OnboardingPage() {
     [defaultModel, t, updateOnboardingPreferences, updateSeededResourceModels]
   )
 
-  useEffect(
-    () => () => {
-      if (loginLoadingTimeoutRef.current !== null) {
-        window.clearTimeout(loginLoadingTimeoutRef.current)
-      }
-    },
-    []
-  )
-
-  const handleCherryInLogin = useCallback(async () => {
-    const attemptId = ++loginAttemptRef.current
-
-    if (loginLoadingTimeoutRef.current !== null) {
-      window.clearTimeout(loginLoadingTimeoutRef.current)
-    }
-
-    setIsLoggingIn(true)
-    loginLoadingTimeoutRef.current = window.setTimeout(() => {
-      if (loginAttemptRef.current === attemptId) {
-        loginLoadingTimeoutRef.current = null
-        setIsLoggingIn(false)
-      }
-    }, CHERRYIN_LOGIN_LOADING_TIMEOUT_MS)
-
-    try {
-      await oauthWithCherryIn(
-        async (apiKeys) => {
-          if (loginAttemptRef.current !== attemptId) return
-
-          const keys = apiKeys
-            .split(',')
-            .map((key) => key.trim())
-            .filter(Boolean)
-
-          await Promise.all(keys.map((key) => addApiKey(key, 'OAuth')))
-          await updateProvider({ isEnabled: true })
-        },
-        { oauthServer: CHERRYIN_OAUTH_SERVER }
-      )
-      if (loginAttemptRef.current !== attemptId) return
-
-      const cherryInModels = await syncProviderModels()
-      if (loginAttemptRef.current !== attemptId) return
-
-      if (!cherryInModels.some((model) => model.isEnabled)) {
-        toast.error(t('onboarding.provider_setup.missing_model'))
-        setStep('provider')
-        return
-      }
-      toast.success(t('onboarding.toast.connected'))
-      setStep('select-model')
-    } catch {
-      if (loginAttemptRef.current === attemptId) {
-        toast.error(t('settings.provider.oauth.error'))
-      }
-    } finally {
-      if (loginAttemptRef.current === attemptId) {
-        if (loginLoadingTimeoutRef.current !== null) {
-          window.clearTimeout(loginLoadingTimeoutRef.current)
-          loginLoadingTimeoutRef.current = null
-        }
-        setIsLoggingIn(false)
-      }
-    }
-  }, [addApiKey, syncProviderModels, t, updateProvider])
-
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-sidebar text-foreground">
       <div
@@ -278,19 +204,9 @@ export default function OnboardingPage() {
                       type="button"
                       size="lg"
                       className="h-11 w-full rounded-xl"
-                      loading={isLoggingIn}
-                      onClick={() => void handleCherryInLogin()}>
-                      {!isLoggingIn && <LogIn size={16} />}
-                      {t('onboarding.welcome.login_cherryin')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="lg"
-                      className="h-11 w-full rounded-xl"
                       onClick={() => setStep('provider')}>
                       <KeyRound size={16} />
-                      {t('onboarding.welcome.other_provider')}
+                      {t('onboarding.provider_setup.title')}
                     </Button>
                   </div>
                   <p className="mt-4 mb-0 text-center text-muted-foreground text-xs">

@@ -14,7 +14,7 @@ import { oauthHandlers } from '../oauth'
 
 const runtimeService = {
   signIn: vi.fn(
-    (_senderId: string | null, providerId: string): Promise<{ accountId: string | null; apiKeys?: string }> =>
+    (_senderId: string | null, providerId: string): Promise<{ accountId: string | null }> =>
       Promise.resolve({ accountId: `${providerId}-account` })
   ),
   joinActiveSignIn: vi.fn(() => Promise.resolve({ status: 'completed', account: { accountId: 'acc-1' } })),
@@ -48,12 +48,12 @@ const signInObservation = { providerId: 'codex', requestId: 'request-1' }
 
 describe('oauthHandlers', () => {
   it('returns the account and asks MainWindowService to raise the main window after sign-in', async () => {
-    runtimeService.signIn.mockResolvedValueOnce({ accountId: 'codex-account', apiKeys: 'must-not-cross' })
+    runtimeService.signIn.mockResolvedValueOnce({ accountId: 'codex-account' })
 
     await expect(oauthHandlers['oauth.sign_in'](signInObservation, ctx)).resolves.toEqual({
       accountId: 'codex-account'
     })
-    expect(runtimeService.signIn).toHaveBeenCalledWith('w1', 'codex', 'request-1', {})
+    expect(runtimeService.signIn).toHaveBeenCalledWith('w1', 'codex', 'request-1')
     expect(mainWindowService.showMainWindow).toHaveBeenCalledOnce()
   })
 

@@ -143,11 +143,9 @@ export function canManageProvider(provider: Provider): boolean {
  * supplies one handler per id (a missing handler is a compile error there), and
  * `isProviderSupportAuth` gates whether the button renders.
  */
-export const API_KEY_OAUTH_PROVIDER_IDS = ['302ai', 'silicon', 'aihubmix', 'ppio', 'aionly', 'tokendance'] as const
+export const API_KEY_OAUTH_PROVIDER_IDS = ['302ai', 'silicon', 'aionly', 'tokendance'] as const
 
 export function isProviderSupportAuth(provider: Pick<Provider, 'id'>): boolean {
-  // Their OAuth needs a client secret that only upstream's release CI has; API keys still work.
-  if (provider.id === 'aihubmix' || provider.id === 'ppio') return false
   return (API_KEY_OAUTH_PROVIDER_IDS as readonly string[]).includes(provider.id)
 }
 

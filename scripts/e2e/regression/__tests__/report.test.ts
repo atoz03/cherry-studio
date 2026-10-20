@@ -51,7 +51,7 @@ describe('regression report gate', () => {
     expect(markdown).toContain('# Cherry Studio End-to-End Regression Report')
     expect(markdown).toContain('> **Overall verdict: ⛔ Development tests blocked**')
     expect(markdown).toContain(
-      '| M-01 | Sign in to CherryIN and chat | ⛔ Blocked | Task did not finish before the final report | 0 |'
+      '| M-01 | Chat with CherryIN | ⛔ Blocked | Task did not finish before the final report | 0 |'
     )
     expect(markdown).toContain('Task did not finish before the final report')
     expect(markdown).not.toMatch(/[\u3400-\u9fff]/)

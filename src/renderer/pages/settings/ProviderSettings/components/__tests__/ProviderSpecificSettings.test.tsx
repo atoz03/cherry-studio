@@ -31,10 +31,6 @@ vi.mock('@renderer/pages/settings/ProviderSettings/ProviderSpecific/ProviderOaut
   }
 })
 
-vi.mock('@renderer/pages/settings/ProviderSettings/ProviderSpecific/CherryInOauth', () => ({
-  default: ({ providerId }: any) => <div>{`cherryin-oauth-${providerId}`}</div>
-}))
-
 vi.mock('@renderer/pages/settings/ProviderSettings/ProviderSpecific/DmxapiSettings', () => ({
   default: ({ providerId }: any) => <div>{`dmxapi-settings-${providerId}`}</div>
 }))
@@ -100,12 +96,6 @@ describe('ProviderSpecificSettings', () => {
   })
 
   it.each([
-    {
-      providerId: 'cherryin',
-      placement: 'beforeAuth' as const,
-      meta: { isCherryIN: true, isDmxapi: false },
-      expectedText: 'cherryin-oauth-cherryin'
-    },
     {
       providerId: 'dmxapi',
       placement: 'beforeAuth' as const,

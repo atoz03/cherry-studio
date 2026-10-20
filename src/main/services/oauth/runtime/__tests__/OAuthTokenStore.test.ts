@@ -72,19 +72,12 @@ describe('ProviderAuthConfigOAuthTokenStore', () => {
 
   it('clear({ expectedRefreshToken }) skips when a re-login replaced the session', async () => {
     providerServiceMock.getAuthConfig.mockReturnValue({ type: 'oauth', clientId: 'client-1', refreshToken: 'r-new' })
-    await store.clear('codex', { disableProvider: true, expectedRefreshToken: 'r-old' })
+    await store.clear('codex', { expectedRefreshToken: 'r-old' })
     expect(providerServiceMock.update).not.toHaveBeenCalled()
   })
 
-  it('clear() drops tokens but does NOT disable the provider by default (preserves a manual API key)', async () => {
-    providerServiceMock.getAuthConfig.mockReturnValue(null)
-    await store.clear('cherryin')
-    expect(providerServiceMock.update).toHaveBeenCalledWith('cherryin', { authConfig: { type: 'api-key' } })
-    expect(providerServiceMock.update.mock.calls[0][1]).not.toHaveProperty('isEnabled')
-  })
-
-  it('clear({ disableProvider: true }) also disables the provider (OAuth-only providers)', async () => {
-    await store.clear('codex', { disableProvider: true })
+  it('clear() drops the tokens and disables the provider', async () => {
+    await store.clear('codex')
     expect(providerServiceMock.update).toHaveBeenCalledWith('codex', {
       authConfig: { type: 'api-key' },
       isEnabled: false

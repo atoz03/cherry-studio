@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import '@data/services/ProviderRegistryService'
 import { userProviderTable } from '@data/db/schemas/userProvider'
 import { BaseService } from '@main/core/lifecycle'
+import { OPENAI_CODEX_PROVIDER_ID } from '@shared/data/presets/codex'
 
 import { OAuthSignInCancelledError } from '../../errors'
 import { LoopbackCallbackTransport } from '../LoopbackCallbackTransport'
@@ -15,12 +16,12 @@ import type * as ProviderDefinitions from '../providerDefinitions'
 
 vi.mock('../providerDefinitions', async (importOriginal) => {
   const actual = await importOriginal<typeof ProviderDefinitions>()
-  const cherryin = actual.oauthProviderDefinitions.cherryin
+  const codex = actual.oauthProviderDefinitions['openai-codex']
   return {
     ...actual,
     oauthProviderDefinitions: {
       ...actual.oauthProviderDefinitions,
-      cherryin: { ...cherryin, transport: { ...cherryin.transport, port: 0 } }
+      'openai-codex': { ...codex, transport: { ...codex.transport, hosts: ['127.0.0.1'], port: 0 } }
     }
   }
 })
@@ -40,14 +41,16 @@ describe('OAuth login with a real callback server and token store', () => {
   beforeEach(() => {
     BaseService.resetInstances()
     service = new TestOAuthRuntimeService()
-    dbh.db.insert(userProviderTable).values({ providerId: 'cherryin', name: 'CherryIN', orderKey: 'a0' }).run()
+    dbh.db
+      .insert(userProviderTable)
+      .values({ providerId: OPENAI_CODEX_PROVIDER_ID, name: 'OpenAI Codex', orderKey: 'a0' })
+      .run()
     vi.mocked(shell.openExternal).mockReset().mockResolvedValue()
     vi.mocked(net.fetch)
       .mockReset()
       .mockImplementation(async (input) => {
         const path = new URL(String(input)).pathname
-        if (path === '/oauth2/token') return Response.json(tokenData)
-        if (path === '/api/v1/oauth/tokens') return Response.json(['private-key'])
+        if (path === '/oauth/token') return Response.json(tokenData)
         throw new Error(`Unexpected OAuth request: ${path}`)
       })
     callbackWait = vi.spyOn(LoopbackCallbackTransport.prototype, 'waitForAuthorizationCode')
@@ -64,7 +67,7 @@ describe('OAuth login with a real callback server and token store', () => {
     const transport = callbackWait.mock.contexts[browserCall] as { activeServers: Server[] }
     const address = transport.activeServers[0].address()
     if (!address || typeof address === 'string') throw new Error('Callback server is not listening')
-    const callback = new URL(`http://127.0.0.1:${address.port}/oauth/callback`)
+    const callback = new URL(`http://127.0.0.1:${address.port}/auth/callback`)
     callback.searchParams.set('state', authUrl.searchParams.get('state')!)
     callback.searchParams.set('code', 'test-code')
     const response = await fetch(callback)
@@ -72,18 +75,18 @@ describe('OAuth login with a real callback server and token store', () => {
     expect(response.status).toBe(200)
   }
 
-  it('delivers API keys only to the initiating window and account information to observers', async () => {
-    const login = service.signIn('window-a', 'cherryin', 'owner')
+  it('shares one login with repeated callers and observers, then persists the tokens', async () => {
+    const login = service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'owner')
     void login.catch(() => {})
-    const repeated = service.signIn('window-a', 'cherryin', 'repeated')
-    const observer = service.joinActiveSignIn('window-b', 'cherryin', 'observer')
+    const repeated = service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'repeated')
+    const observer = service.joinActiveSignIn('window-b', OPENAI_CODEX_PROVIDER_ID, 'observer')
     void observer.catch(() => {})
-    await expect(service.signIn('window-b', 'cherryin', 'other')).rejects.toThrow(/another window/)
+    await expect(service.signIn('window-b', OPENAI_CODEX_PROVIDER_ID, 'other')).rejects.toThrow(/another window/)
 
     await authorize()
 
-    await expect(login).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
-    await expect(repeated).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
+    await expect(login).resolves.toEqual({ accountId: null })
+    await expect(repeated).resolves.toEqual({ accountId: null })
     await expect(observer).resolves.toEqual({ status: 'completed', account: { accountId: null } })
     expect(dbh.db.select().from(userProviderTable).get()).toMatchObject({
       isEnabled: true,
@@ -91,23 +94,10 @@ describe('OAuth login with a real callback server and token store', () => {
     })
   })
 
-  it('rejects a second CherryIN login to a different server without interrupting the first', async () => {
-    const login = service.signIn('window-a', 'cherryin', 'owner', { apiHost: 'https://open.cherryin.ai' })
-    void login.catch(() => {})
-    await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledOnce())
-
-    await expect(
-      service.signIn('window-a', 'cherryin', 'other', { apiHost: 'https://open.cherryin.dev' })
-    ).rejects.toThrow(/another server/)
-
-    await authorize()
-    await expect(login).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
-  })
-
   it('rejects callers without a managed window before starting or observing a login', async () => {
-    await expect(service.signIn(null, 'cherryin', 'unknown')).rejects.toThrow(/managed window/)
-    await expect(service.joinActiveSignIn(null, 'cherryin', 'unknown')).rejects.toThrow(/managed window/)
-    await expect(service.cancelSignIn(null, 'cherryin', 'unknown')).rejects.toThrow(/managed window/)
+    await expect(service.signIn(null, OPENAI_CODEX_PROVIDER_ID, 'unknown')).rejects.toThrow(/managed window/)
+    await expect(service.joinActiveSignIn(null, OPENAI_CODEX_PROVIDER_ID, 'unknown')).rejects.toThrow(/managed window/)
+    await expect(service.cancelSignIn(null, OPENAI_CODEX_PROVIDER_ID, 'unknown')).rejects.toThrow(/managed window/)
     expect(shell.openExternal).not.toHaveBeenCalled()
     expect(dbh.db.select().from(userProviderTable).get()?.authConfig).toBeNull()
   })
@@ -116,26 +106,30 @@ describe('OAuth login with a real callback server and token store', () => {
     'allows a registered %s to cancel without trusting another window’s request id',
     async (windowId) => {
       let outcome: unknown = 'pending'
-      const login = service.signIn('window-a', 'cherryin', 'owner').catch((error: unknown) => {
+      const login = service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'owner').catch((error: unknown) => {
         outcome = error
         return error
       })
       await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledOnce())
-      await service.cancelSignIn('window-b', 'cherryin', 'owner')
+      await service.cancelSignIn('window-b', OPENAI_CODEX_PROVIDER_ID, 'owner')
       expect(outcome).toBe('pending')
 
-      const remounted = service.joinActiveSignIn('window-a', 'cherryin', 'remounted').catch((error: unknown) => error)
-      const observer = service.joinActiveSignIn('window-b', 'cherryin', 'owner').catch((error: unknown) => error)
-      await service.cancelSignIn(windowId, 'cherryin', windowId === 'window-a' ? 'remounted' : 'owner')
+      const remounted = service
+        .joinActiveSignIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'remounted')
+        .catch((error: unknown) => error)
+      const observer = service
+        .joinActiveSignIn('window-b', OPENAI_CODEX_PROVIDER_ID, 'owner')
+        .catch((error: unknown) => error)
+      await service.cancelSignIn(windowId, OPENAI_CODEX_PROVIDER_ID, windowId === 'window-a' ? 'remounted' : 'owner')
       for (const result of await Promise.all([login, remounted, observer])) {
         expect(result).toBeInstanceOf(OAuthSignInCancelledError)
       }
 
-      const retry = service.signIn('window-a', 'cherryin', 'retry')
+      const retry = service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'retry')
       void retry.catch(() => {})
-      await service.cancelSignIn('window-a', 'cherryin', 'owner')
+      await service.cancelSignIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'owner')
       await authorize(1)
-      await expect(retry).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
+      await expect(retry).resolves.toEqual({ accountId: null })
     }
   )
 
@@ -144,50 +138,16 @@ describe('OAuth login with a real callback server and token store', () => {
     vi.spyOn(AbortSignal, 'timeout').mockReturnValueOnce(staleTimeout.signal)
     const browserError = new Error('Browser launch failed')
     vi.mocked(shell.openExternal).mockRejectedValueOnce(browserError)
-    await expect(service.signIn('window-a', 'cherryin', 'failed')).rejects.toHaveProperty('cause', browserError)
+    await expect(service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'failed')).rejects.toHaveProperty(
+      'cause',
+      browserError
+    )
 
-    const retry = service.signIn('window-a', 'cherryin', 'retry')
+    const retry = service.signIn('window-a', OPENAI_CODEX_PROVIDER_ID, 'retry')
     void retry.catch(() => {})
     await vi.waitFor(() => expect(shell.openExternal).toHaveBeenCalledTimes(2))
     staleTimeout.abort()
     await authorize(1)
-    await expect(retry).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
-  })
-
-  it('retains persisted tokens after an API-key timeout and allows another login', async () => {
-    const timers = new Map<AbortSignal, AbortController>()
-    let keyTimeout: AbortController | undefined
-    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
-      const timer = new AbortController()
-      timers.set(timer.signal, timer)
-      return timer.signal
-    })
-    vi.mocked(net.fetch)
-      .mockResolvedValueOnce(Response.json(tokenData))
-      .mockImplementationOnce(
-        (_url, options) =>
-          new Promise<Response>((_resolve, reject) => {
-            const signal = options?.signal
-            if (signal) keyTimeout = timers.get(signal)
-            signal?.addEventListener('abort', () => reject(signal.reason), { once: true })
-          })
-      )
-    const login = service.signIn('window-a', 'cherryin', 'timeout')
-    void login.catch(() => {})
-    await authorize()
-    await vi.waitFor(() => expect(keyTimeout).toBeDefined())
-    expect(dbh.db.select().from(userProviderTable).get()?.authConfig).toMatchObject({ accessToken: 'private-token' })
-    const timeoutError = new DOMException('API-key request timed out', 'TimeoutError')
-    keyTimeout!.abort(timeoutError)
-    await expect(login).rejects.toHaveProperty('cause', timeoutError)
-    expect(dbh.db.select().from(userProviderTable).get()?.authConfig).toMatchObject({
-      accessToken: 'private-token',
-      refreshToken: 'private-refresh'
-    })
-
-    const retry = service.signIn('window-a', 'cherryin', 'retry')
-    void retry.catch(() => {})
-    await authorize(1)
-    await expect(retry).resolves.toEqual({ accountId: null, apiKeys: 'private-key' })
+    await expect(retry).resolves.toEqual({ accountId: null })
   })
 })

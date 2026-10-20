@@ -1,16 +1,29 @@
 import { application } from '@application'
+import { OAuthSignInCancelledError } from '@main/services/oauth/errors'
 import { authorizeTokenDanceApiKey } from '@main/services/tokenDanceOAuth'
 import { isClaudeCodeProviderId } from '@shared/data/presets/claudeCode'
+import { IpcError } from '@shared/ipc/errors/IpcError'
+import { oauthErrorCodes } from '@shared/ipc/errors/oauth'
 import type { oauthRequestSchemas } from '@shared/ipc/schemas/oauth'
 import type { IpcHandlersFor } from '@shared/ipc/types'
 
-import { mapOAuthSignInCancellation, runOAuthSignIn } from './oauthSignIn'
-
 const runtime = () => application.get('OAuthRuntimeService')
+
+async function mapOAuthSignInCancellation<T>(request: Promise<T>): Promise<T> {
+  try {
+    return await request
+  } catch (error) {
+    if (error instanceof OAuthSignInCancelledError) {
+      throw new IpcError(oauthErrorCodes.SIGN_IN_CANCELLED, error.message)
+    }
+    throw error
+  }
+}
 
 export const oauthHandlers: IpcHandlersFor<typeof oauthRequestSchemas> = {
   'oauth.sign_in': async ({ providerId, requestId }, ctx) => {
-    const { accountId } = await runOAuthSignIn(ctx.senderId, providerId, requestId)
+    const { accountId } = await mapOAuthSignInCancellation(runtime().signIn(ctx.senderId, providerId, requestId))
+    if (ctx.senderId) application.get('MainWindowService').showMainWindow()
     return { accountId }
   },
   'oauth.sign_in.attach': ({ providerId, requestId }, ctx) =>

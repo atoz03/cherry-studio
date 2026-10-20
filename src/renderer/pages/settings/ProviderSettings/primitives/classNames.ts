@@ -455,32 +455,16 @@ export const oauthCardClasses = {
   loginFooterDivider: 'text-xs text-foreground-tertiary',
   /** CherryIN portal link — matches scoped caption + primary link treatment. */
   externalLink: 'mt-1 inline-block text-xs leading-tight text-link',
-  /** Logged-in CherryIN: mock CherryIN account section — one row, no stat grid. */
-  shellLoggedIn: 'w-full min-w-0 overflow-hidden rounded-xl border border-border-subtle px-3 py-2.5',
   loggedInRow: 'flex w-full min-w-0 flex-wrap items-center justify-between gap-3',
   profileMeta: 'flex min-w-0 flex-1 items-center gap-3',
   /** Avatar: 32px round avatar, primary fill, initials (/ CherryIN row). */
   avatarSm:
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground',
   nameBlock: 'min-w-0',
-  nameRow: 'flex flex-wrap items-center gap-1.5',
   name: 'truncate text-[15px] leading-[1.2] font-semibold tracking-tight text-foreground',
   /** Logged-in title line — `text-xs` in structured. */
   loggedInName: 'truncate text-xs leading-tight text-foreground',
   loggedInEmail: 'mt-0.5 truncate text-xs leading-[1.35] text-foreground-tertiary',
-  badge:
-    'inline-flex items-center rounded border border-warning-border bg-warning-subtle px-1 py-[0.5px] text-[10px] leading-tight text-warning-subtle-foreground',
-  loggedInActions: 'flex shrink-0 flex-wrap items-center justify-end gap-2',
-  inlineBalanceBlock: 'text-right',
-  inlineBalanceLabel: 'text-xs text-muted-foreground',
-  inlineBalanceValue: 'text-sm leading-tight text-foreground tabular-nums',
-  balanceValueSkeleton: 'inline-block w-20',
-  /** CherryIN top-up CTA — solid primary background, white label (compact inline size). */
-  topupPrimaryButton: 'h-auto min-h-0 px-2.5 py-[3px] text-xs shadow-none',
-  logoutCompact:
-    'h-auto min-h-0 rounded-md px-1.5 py-[3px] text-xs text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground',
-  serviceAttribution: 'mt-2.5 border-t border-border-subtle pt-2.5 text-xs text-foreground-tertiary',
-  serviceLink: 'text-muted-foreground transition-colors hover:text-foreground',
   actionsRow: 'flex flex-wrap items-center gap-2',
   footer: 'mt-4 text-[12px] leading-[1.35] text-foreground-tertiary'
 } as const

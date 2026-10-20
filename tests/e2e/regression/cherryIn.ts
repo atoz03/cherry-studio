@@ -1,48 +1,30 @@
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
-import { completeCherryInOauth } from '../../../scripts/e2e/regression/cherryInOauth'
-import {
-  captureCherryInAuthorizationUrl,
-  sendCherryInCallbackToOwnedApp
-} from '../../../scripts/e2e/regression/debugBridge'
 import type { RegressionApp } from './RegressionApp'
 import { openSettingsSection } from './settings'
 
-export async function ensureCherryInSignedIn(app: RegressionApp, page: Page): Promise<void> {
+const REGRESSION_KEY_LABEL = 'Regression'
+
+export async function ensureCherryInApiKey(app: RegressionApp, page: Page): Promise<void> {
+  const status = await page.evaluate(
+    async ({ key, label }) => {
+      const request = (method: 'GET' | 'POST' | 'PATCH', path: string, body?: unknown) =>
+        window.api.dataApi.request({ id: `regression-cherryin-${method}-${Date.now()}`, method, path, body })
+      const response = await request('GET', '/providers/cherryin/api-keys')
+      const keys = (response.data as { keys?: Array<{ label?: string }> } | undefined)?.keys ?? []
+      if (!keys.some((entry) => entry.label === label)) {
+        await request('POST', '/providers/cherryin/api-keys', { key, label })
+      }
+      return (await request('PATCH', '/providers/cherryin', { isEnabled: true })).status
+    },
+    { key: app.config.cherryIn.apiKey, label: REGRESSION_KEY_LABEL }
+  )
+  expect(status).toBe(200)
   await openSettingsSection(page, 'Model Provider')
-  await page.getByTestId('provider-list-item-cherryin').click()
-  const authorize = page.getByRole('button', { name: 'Authorize with CherryIN', exact: true })
-  const logout = page.getByRole('button', { name: 'Logout', exact: true })
-  await expect(authorize.or(logout).first()).toBeVisible({ timeout: 60_000 })
-  if (await authorize.isVisible().catch(() => false)) {
-    const authorizationUrl = await captureCherryInAuthorizationUrl(app.record, () => authorize.click())
-    const callback = await completeCherryInOauth(authorizationUrl, {
-      account: app.config.cherryIn.account,
-      password: app.config.cherryIn.password
-    })
-    await sendCherryInCallbackToOwnedApp(app.record, callback)
-    await expect
-      .poll(
-        () =>
-          page.evaluate(async () => {
-            const response = await window.api.dataApi.request({
-              id: `regression-cherryin-${Date.now()}`,
-              method: 'GET',
-              path: '/providers/cherryin/api-keys'
-            })
-            const data = response.data as { keys?: Array<{ label?: string }> } | undefined
-            return data?.keys?.some((key) => key.label === 'OAuth') ?? false
-          }),
-        { timeout: 60_000 }
-      )
-      .toBe(true)
-    await openSettingsSection(page, 'Model Provider')
-    const cherryIn = page.getByTestId('provider-list-item-cherryin')
-    await cherryIn.click()
-    await expect(cherryIn).toHaveAttribute('data-selected', 'true')
-  }
-  await expect(logout).toBeVisible({ timeout: 3 * 60_000 })
+  const cherryIn = page.getByTestId('provider-list-item-cherryin')
+  await cherryIn.click()
+  await expect(cherryIn).toHaveAttribute('data-selected', 'true')
 }
 
 export async function addCherryInModel(page: Page, model: string, tab?: string): Promise<void> {

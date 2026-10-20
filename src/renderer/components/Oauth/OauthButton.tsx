@@ -3,14 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@cherrystudio/ui'
 import { getProviderLabelKey } from '@renderer/i18n/label'
-import {
-  oauthWith302AI,
-  oauthWithAihubmix,
-  oauthWithAiOnly,
-  oauthWithPPIO,
-  oauthWithSiliconFlow,
-  oauthWithTokenDance
-} from '@renderer/services/oauth'
+import { oauthWith302AI, oauthWithAiOnly, oauthWithSiliconFlow, oauthWithTokenDance } from '@renderer/services/oauth'
 import { toast } from '@renderer/services/toast'
 import type { API_KEY_OAUTH_PROVIDER_IDS } from '@shared/utils/provider'
 
@@ -25,8 +18,6 @@ const API_KEY_OAUTH_LAUNCHERS: Record<
   (onSuccess: (key: string) => void) => void
 > = {
   silicon: oauthWithSiliconFlow,
-  aihubmix: oauthWithAihubmix,
-  ppio: oauthWithPPIO,
   '302ai': oauthWith302AI,
   aionly: oauthWithAiOnly,
   tokendance: oauthWithTokenDance

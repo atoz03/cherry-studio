@@ -7,7 +7,7 @@ or before wiring a new OAuth consumer through it.
 ## Scope & boundary
 
 This runtime drives the PKCE authorization-code flow for providers whose
-credential the app itself holds and refreshes: **Codex, Grok CLI, CherryIN**. It
+credential the app itself holds and refreshes: **Codex and Grok CLI**. It
 owns the flow (authorize → callback → token exchange → persist → refresh) plus
 the provider's enablement: a successful sign-in flips the provider `isEnabled`
 on, and logout flips it off (and resets `authConfig` to `api-key`).
@@ -29,7 +29,7 @@ create a leaky mega-abstraction:
 | GitHub Copilot | `src/main/services/CopilotService.ts` | Device flow (RFC 8628) — no redirect/callback; encrypted-file storage. |
 | Nutstore | `src/main/services/nutstore/` | Proprietary SSO with custom encryption — not standard OAuth. |
 | Feishu / WeChat | `src/main/ai/channels/adapters/` | Proprietary device/binary protocols — not OAuth. |
-| Silicon / PPIO / 302 / AIHubMix / AIOnly | `src/renderer/utils/oauth.ts` | One-shot popup that returns an **API key** (no token session / refresh). |
+| Silicon / 302 / AIOnly | `src/renderer/services/oauth.ts` | One-shot popup that returns an **API key** (no token session / refresh). |
 
 **Do not** route any of the above through this runtime. If you think you need to,
 re-read the table.
@@ -45,7 +45,7 @@ Three pieces, all keyed by `providerId`:
   rather than taking by injection — the `OAuthTokenStore` interface is the seam
   a future consumer would inject through (see "Extending").
 - **`LoopbackCallbackTransport`** — receives authorization codes through a
-  localhost HTTP server for Codex, Grok and CherryIN.
+  localhost HTTP server for Codex and Grok.
 - **`providers/<id>.ts`** — one file per login provider: its client/urls/scope/
   transport plus optional behavior hooks. **`providerDefinitions.ts`** is the
   registry that wires each definition onto its provider id.
@@ -62,14 +62,11 @@ Adding the **OAuth flow** is one file in `providers/<id>.ts`, registered in
 fields and hooks:
 
 - declarative: `clientId`, `transport` (loopback hosts, port, path and redirect URI),
-  client urls, `scope`, `clearDisablesProvider`, `extraAuthParams`.
+  client urls, `scope`, `extraAuthParams`.
 - `createClient(context)` — build the `PkceOAuthClient`. Async when the provider
   needs OIDC discovery first (Grok). Host-pin discovered endpoints.
 - `extractAccountId(accessToken)` — pull an account id out of the token (Codex's
   JWT claim). Omit if the provider has no account concept.
-- `afterPersistTokens(tokenData, context)` — post-exchange side effect, run
-  *after* the tokens are persisted so a failure here never discards a valid token
-  (CherryIN fetches the user's API keys here). Omit for vanilla providers.
 
 But a provider is more than its OAuth flow. End-to-end, a new login-based
 provider also touches:
@@ -81,8 +78,7 @@ provider also touches:
    it — `['oauth']` / `['external-cli']` are login-based, anything including
    `'api-key'` is not.
 3. **Settings UI** — an entry in `providerSpecificSettingsRegistry.tsx`. Loopback
-   providers reuse the shared `LoginOauthPanel` (pass `i18nNs`, `showAccountId`);
-   CherryIN retains its bespoke panel for API keys and balance.
+   providers reuse the shared `LoginOauthPanel` (pass `i18nNs`, `showAccountId`).
 4. **i18n** — `settings.provider.<ns>.*` keys; complete every locale and validation step in the [i18n workflow](../../../../../docs/references/i18n/README.md#translation-completion-in-pull-requests).
 5. **Chat runtime** — `src/main/ai/provider/config.ts` (`buildXxxConfig` /
    `buildXxxFetch`) + per-provider request shaping. This is a *separate axis*
@@ -100,7 +96,7 @@ worth doing until a real second consumer appears (YAGNI):
   `extractAccountId` → `accountIdClaim: { jwtPath, field }`; Grok discovery →
   `discovery: { url, allowedHostSuffix }`; the nonce → a `requiresNonce` flag.
   After that a vanilla loopback PKCE provider is a pure-data entry with zero
-  OAuth code; only exotic behavior (CherryIN's side effect) stays a hook.
+  OAuth code.
 
 - **General OAuth (don't, yet).** The flow engine (transports + `PkceOAuthClient`
   + orchestration) is entity-agnostic; only the token store is provider-tied.
@@ -110,13 +106,9 @@ worth doing until a real second consumer appears (YAGNI):
   (non-SDK) OAuth consumer needs the shared refresh/expiry/secure-storage path.
   MCP is not that consumer — it is SDK-driven and rightly owns its own flow.
 
-## CherryIN HTTP callback
+## Sign-in contract
 
-CherryIN uses `http://127.0.0.1:29873/oauth/callback`. Register this exact URI in
-Hydra before releasing the client. The listener must bind before the browser opens.
-`cherryin.sign_in` returns provisioned API keys only to the initiating window after
-token storage; access and refresh tokens remain in the main process. Other
-windows may observe completion through `oauth.sign_in.attach`, which returns only
-the account id. Cancellation requires a request registered by the calling window.
-API-key retrieval has a 30-second timeout; failure retains the stored OAuth tokens
-and releases the login so the user can retry.
+The callback listener must bind before the browser opens. `oauth.sign_in` returns
+only the account id; access and refresh tokens remain in the main process. Other
+windows may observe completion through `oauth.sign_in.attach`. Cancellation
+requires a request registered by the calling window.

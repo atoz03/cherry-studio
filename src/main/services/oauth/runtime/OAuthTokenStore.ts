@@ -49,10 +49,7 @@ export class ProviderAuthConfigOAuthTokenStore implements OAuthTokenStore {
     providerService.update(providerId, { authConfig })
   }
 
-  async clear(
-    providerId: string,
-    options?: { disableProvider?: boolean; expectedRefreshToken?: string }
-  ): Promise<void> {
+  async clear(providerId: string, options?: { expectedRefreshToken?: string }): Promise<void> {
     // Conditional clear (terminal refresh failure): skip if this is no longer
     // the session that failed — a re-login during the failed refresh must
     // survive. Same synchronous read-then-write atomicity as `set`.
@@ -60,13 +57,7 @@ export class ProviderAuthConfigOAuthTokenStore implements OAuthTokenStore {
       const current = providerService.getAuthConfig(providerId)
       if (current?.type !== 'oauth' || current.refreshToken !== options.expectedRefreshToken) return
     }
-    // Reset auth back to api-key mode (drops the OAuth tokens). Only flip
-    // `isEnabled` when the caller owns the provider's enablement — see the
-    // interface doc: disabling a provider that also holds a manual API key would
-    // silently kill that key too.
-    providerService.update(providerId, {
-      authConfig: { type: 'api-key' },
-      ...(options?.disableProvider ? { isEnabled: false } : {})
-    })
+    // Reset auth back to api-key mode (drops the OAuth tokens).
+    providerService.update(providerId, { authConfig: { type: 'api-key' }, isEnabled: false })
   }
 }
