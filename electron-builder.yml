@@ -65,7 +65,14 @@ files:
   - "!node_modules/rollup-plugin-visualizer"
   - "!node_modules/js-tiktoken"
   - "!node_modules/@tavily/core/node_modules/js-tiktoken"
-  - "!node_modules/pdf-parse/lib/pdf.js/{v1.9.426,v1.10.88,v2.0.550}"
+  # main imports pdf-parse's ESM build, whose worker comes from pdfjs-dist/legacy/build/pdf.worker.mjs
+  - "!node_modules/pdf-parse/{bin,dist/node,dist/pdf-parse/cjs,dist/pdf-parse/web,dist/worker/cjs}/**"
+  - "!node_modules/pdf-parse/dist/{pdf-parse/esm,worker}/pdf.worker.mjs"
+  # renderer bundles its own pdf.js; at runtime only pdf-parse's legacy build and the cmaps/fonts IPC read this
+  - "!node_modules/pdfjs-dist/{build,web,image_decoders,types,wasm,iccs,legacy/web,legacy/image_decoders}/**"
+  - "!node_modules/pdfjs-dist/legacy/build/{pdf.min.mjs,pdf.worker.min.mjs,pdf.sandbox.mjs,pdf.sandbox.min.mjs}"
+  - "!node_modules/{canvas,nan,@mapbox/node-pre-gyp}/**" # unpdf's optional canvas@2 is never built or loaded
+  - "!migrations" # shipped once as extraResources, where the migrator reads it
   - "!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}"
   - "!**/node_modules/better-sqlite3/{bin,deps,src}/**"
   - "!**/node_modules/better-sqlite3/build/{Debug,Release/obj}/**"
@@ -112,6 +119,9 @@ extraResources:
     to: "voice-audio/NOTICE.txt"
   - from: "migrations/sqlite-drizzle"
     to: "migrations/sqlite-drizzle"
+    filter: # drizzle's migrator reads only meta/_journal.json and the .sql files
+      - "**/*"
+      - "!meta/*_snapshot.json"
   - from: "packages/provider-registry/data"
     to: "provider-registry"
 win:
