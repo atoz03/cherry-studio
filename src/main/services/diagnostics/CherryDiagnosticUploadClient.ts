@@ -14,6 +14,7 @@ import {
   diagnosticReportUrl,
   normalizeDiagnosticDescription
 } from '@shared/utils/diagnostics'
+import { FORK_DIAGNOSTICS_UPLOAD_ENABLED } from '@shared/utils/forkFeatures'
 
 export const DIAGNOSTIC_UPLOAD_URL = DIAGNOSTIC_REPORT_BASE_URL
 
@@ -166,6 +167,7 @@ function rejectedResult(response: Response, fileSha256: string, body?: Buffer): 
 
 export class CherryDiagnosticUploadClient {
   async fetchStatus(reportId: string): Promise<DiagnosticProcessingStatus> {
+    if (!FORK_DIAGNOSTICS_UPLOAD_ENABLED) throw new Error('Diagnostic upload is disabled in this build')
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), STATUS_TIMEOUT_MS)
     try {
@@ -195,6 +197,7 @@ export class CherryDiagnosticUploadClient {
   }
 
   async upload(input: CherryDiagnosticUploadInput): Promise<CherryDiagnosticUploadResult> {
+    if (!FORK_DIAGNOSTICS_UPLOAD_ENABLED) return rejected('service_unavailable')
     if (!isZipPath(input.fileName)) return rejected('invalid_archive')
 
     let snapshot: ReadableFileSnapshot | undefined

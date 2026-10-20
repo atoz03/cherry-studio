@@ -22,6 +22,12 @@ const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn()
 }))
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_DIAGNOSTICS_UPLOAD_ENABLED: true
+}))
+
 vi.mock('@data/CacheService', () => ({
   cacheService: {
     isSharedCacheReady: () => mocks.cacheReady,

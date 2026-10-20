@@ -1,5 +1,6 @@
 import type { DoctorAction, DoctorCheckId, DoctorFixRequest, DoctorRunTier } from '@shared/types/doctor'
 import type { DoctorPanel } from '@shared/utils/doctor'
+import { FORK_DIAGNOSTICS_UPLOAD_ENABLED } from '@shared/utils/forkFeatures'
 
 export type DoctorInteraction =
   | { readonly kind: 'idle' }
@@ -40,6 +41,11 @@ export type DoctorSessionAction =
   | { readonly type: 'start-interaction'; readonly interaction: Exclude<DoctorInteraction, { kind: 'idle' }> }
   | { readonly type: 'finish-interaction'; readonly kind: DoctorInteraction['kind'] }
 
+/** Without the upstream upload, "Report a problem" lands on the local bundle export. */
+function availablePanel(panel: DoctorPanel): DoctorPanel {
+  return panel === 'report' && !FORK_DIAGNOSTICS_UPLOAD_ENABLED ? 'export' : panel
+}
+
 export function createDoctorSession({
   initialPanel,
   initialDescription
@@ -48,7 +54,7 @@ export function createDoctorSession({
   readonly initialDescription?: string
 }): DoctorSessionState {
   return {
-    activePanel: initialPanel,
+    activePanel: availablePanel(initialPanel),
     descriptionDraft: initialDescription ?? '',
     fixedCheckIds: [],
     relaunchRequired: false,
@@ -59,7 +65,7 @@ export function createDoctorSession({
 export function doctorSessionReducer(state: DoctorSessionState, action: DoctorSessionAction): DoctorSessionState {
   switch (action.type) {
     case 'set-panel':
-      return { ...state, activePanel: action.panel }
+      return { ...state, activePanel: availablePanel(action.panel) }
     case 'set-description':
       return { ...state, descriptionDraft: action.description }
     case 'reveal-evidence': {
