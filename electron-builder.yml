@@ -85,6 +85,11 @@ files:
   - "!node_modules/sherpa-onnx-{darwin,linux,win}-*/**" # binaries are downloaded on first use; only the JS wrapper ships
   - "!node_modules/@cherrystudio/system-speech/{native,windows,src,tests,scripts}/**"
   - "!node_modules/@cherrystudio/system-speech/dist/native/**" # target helper is copied once through platform packaging
+  # Fork: remote access is switched off (src/shared/utils/forkFeatures.ts), so its Noise/libp2p transport never loads.
+  # No other production dependency uses these packages; @cherrystudio/remote-protocol stays (shared types).
+  - "!**/node_modules/@cherrystudio/remote-transport/**"
+  - "!**/node_modules/{@libp2p,@chainsafe,@multiformats,@noble}/**"
+  - "!**/node_modules/{multiformats,uint8arrays,uint8arraylist,protons-runtime,cborg}/**"
   - "!**/*.{h,iobj,ipdb,tlog,recipe,vcxproj,vcxproj.filters,Makefile,*.Makefile}" # filter .node build files
   - "resources/**/*" # include all files in resources, and unpack them from asar for runtime access
   - "!resources/devtools/**" # dev-only extensions are loaded from source in development
