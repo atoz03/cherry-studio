@@ -108,10 +108,6 @@ export function buildPathRegistry() {
       'selection-panel.node'
     ),
 
-    'feature.remote_access.identity_file': path.join(appUserDataRuntime, 'remote-identity.enc'),
-    // Plaintext fallback (0600) used only when no OS key store is available
-    'feature.remote_access.plain_identity_file': path.join(appUserDataRuntime, 'remote-identity.key'),
-
     'feature.computer_use.runtime': app.isPackaged
       ? path.join(
           appExtraResources,
@@ -294,7 +290,6 @@ export function buildPathRegistry() {
     'feature.mcp.resource_results.temp': path.join(appTemp, 'mcp-resource-results'),
     'feature.preprocess.temp': path.join(appTemp, 'preprocess'),
     'feature.pdf_translation.temp': path.join(appTemp, 'pdf-translation'),
-    'feature.files.intakes': path.join(appUserDataData, 'FileIntakes'),
     'feature.voice.temp': path.join(
       appTemp,
       'voice',

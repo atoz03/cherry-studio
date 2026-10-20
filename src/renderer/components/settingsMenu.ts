@@ -12,7 +12,6 @@ import {
   Globe,
   HardDrive,
   Info,
-  MonitorSmartphone,
   MousePointer2,
   Package,
   Palette,
@@ -34,7 +33,6 @@ import { GatewayIcon } from '@renderer/components/icons/GatewayIcon'
 import { McpLogo } from '@renderer/components/icons/SvgIcon'
 import { getAppEdition } from '@renderer/utils/appEdition'
 import { isSettingsPath } from '@shared/data/types/settingsPath'
-import { FORK_REMOTE_ACCESS_ENABLED } from '@shared/utils/forkFeatures'
 
 /** Resolve the section label without changing the default settings tab title. */
 export function getSettingsSectionTitleKey(url: string): string | undefined {
@@ -170,12 +168,6 @@ export const settingsMenu: readonly SettingsMenuEntry[] = [
     groupKey: 'settings.menuGroups.automation'
   },
   {
-    route: '/settings/device-connections',
-    titleKey: 'deviceConnections.title',
-    icon: createElement(MonitorSmartphone),
-    groupKey: 'settings.menuGroups.automation'
-  },
-  {
     route: '/settings/scheduled-tasks',
     titleKey: 'settings.scheduledTasks.title',
     icon: createElement(CalendarClock),
@@ -217,5 +209,4 @@ export const settingsMenu: readonly SettingsMenuEntry[] = [
     icon: createElement(Info),
     groupKey: 'settings.menuGroups.system'
   }
-  // Fork: Device Connections ships switched off (see `forkFeatures.ts`).
-].filter(({ route }) => FORK_REMOTE_ACCESS_ENABLED || route !== '/settings/device-connections')
+]

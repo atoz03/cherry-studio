@@ -14,11 +14,6 @@ const { isMacTransparentWindowMock, navigateMock } = vi.hoisted(() => ({
   navigateMock: vi.fn()
 }))
 
-// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
-vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FORK_REMOTE_ACCESS_ENABLED: true
-}))
 vi.mock('@renderer/ipc', () => ({ ipcApi: { request: vi.fn().mockResolvedValue(undefined) } }))
 
 vi.mock('@cherrystudio/ui', async (importOriginal) => ({
@@ -78,7 +73,6 @@ vi.mock('react-i18next', () => ({
     t: (key: string) =>
       ({
         'agent.settings.toolsMcp.mcp.tab': 'MCP',
-        'deviceConnections.title': '设备互联',
         'selection.name': '划词助手',
         'settings.appearance.title': '外观',
         'settings.voice.title': '语音',
@@ -172,16 +166,6 @@ describe('SettingsPage', () => {
     expect(navigateMock).toHaveBeenCalledWith({ to: '/settings/local-models' })
   })
 
-  it('exposes device connections as its own settings destination without developer mode', () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.developer_mode.enabled', false)
-    render(<SettingsPage />)
-
-    const deviceConnectionsItem = screen.getByRole('button', { name: '设备互联' })
-    fireEvent.click(deviceConnectionsItem)
-
-    expect(navigateMock).toHaveBeenCalledWith({ to: '/settings/device-connections' })
-  })
-
   it('exposes Voice as a searchable personal settings destination', () => {
     render(<SettingsPage />)
 
@@ -230,7 +214,7 @@ describe('SettingsPage', () => {
     expect(screen.getByText('效率')).toBeInTheDocument()
     expect(screen.queryByText('快捷入口')).not.toBeInTheDocument()
 
-    const efficiencyItems = ['频道', '设备互联', '定时任务', '快捷键', '快捷助手', '划词助手', '截图'].map((name) =>
+    const efficiencyItems = ['频道', '定时任务', '快捷键', '快捷助手', '划词助手', '截图'].map((name) =>
       screen.getByRole('button', { name })
     )
     const menuItems = screen.getAllByTestId('menu-item')

@@ -25,7 +25,6 @@ import type { AgentSessionMessageSchemas } from './agentSessionMessages'
 import type { AgentSessionSchemas } from './agentSessions'
 import type { AgentWorkspaceSchemas } from './agentWorkspaces'
 import type { AiUsageRecordSchemas } from './aiUsageRecords'
-import type { ApiGatewayPairedDeviceSchemas } from './apiGatewayPairedDevices'
 import type { ArchiveSchemas } from './archives'
 import type { AssistantSchemas } from './assistants'
 import type { BrowserVisitSchemas } from './browserVisits'
@@ -63,7 +62,6 @@ import type { TranslateSchemas } from './translate'
  */
 export type ApiSchemas = AssertValidSchemas<
   BrowserVisitSchemas &
-    ApiGatewayPairedDeviceSchemas &
     TopicSchemas &
     MessageSchemas &
     TemporaryChatSchemas &

@@ -152,7 +152,7 @@ the grace window, registry-driven ref absence, and an in-transaction recheck.
 
 The filesystem orphan sweep retains count/byte proportion thresholds by default. Cache Cleanup
 explicitly bypasses those thresholds for preview and execution while retaining the five-minute
-freshness gate, ownership rechecks, intake protection, and pending-restore guards.
+freshness gate, ownership rechecks, and pending-restore guards.
 
 ### 5.4 Per-Candidate Protocol
 

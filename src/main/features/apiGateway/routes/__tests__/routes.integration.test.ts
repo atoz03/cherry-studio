@@ -611,46 +611,6 @@ describe('API gateway routes (integration)', () => {
       expect(body.error.message).toBe('rate limited')
     })
   })
-
-  describe('LAN exposure (non-loopback peer)', () => {
-    beforeEach(() => {
-      mockPreferenceGet.mockImplementation((key) => (key === 'feature.api_gateway.host' ? '0.0.0.0' : 'test-key'))
-    })
-
-    // srvx surfaces the socket peer as `request.ip`; forge it to act as a LAN client.
-    const fromLan = (request: Request): Request => {
-      Object.defineProperty(request, 'ip', { value: '192.168.1.50', configurable: true })
-      return request
-    }
-    const postFromLan = (path: string, body: unknown, headers: Record<string, string> = AUTH) =>
-      app.handle(
-        fromLan(new Request(`http://localhost${path}`, { method: 'POST', headers, body: JSON.stringify(body) }))
-      )
-    const getFromLan = (path: string, headers: Record<string, string> = AUTH) =>
-      app.handle(fromLan(new Request(`http://localhost${path}`, { method: 'GET', headers })))
-
-    it('blocks a LAN client from the generation routes', async () => {
-      const { status, body } = await read(await postFromLan('/v1/chat/completions', { model: 'openai:gpt-4o' }))
-      expect(status).toBe(403)
-      expect(body.error).toContain('not reachable over the LAN')
-    })
-
-    it('blocks a LAN client from the MCP proxy and knowledge routes', async () => {
-      expect((await read(await postFromLan('/v1/mcps/x/mcp', {}))).status).toBe(403)
-      expect((await read(await getFromLan('/v1/knowledge-bases'))).status).toBe(403)
-    })
-
-    it('keeps loopback callers served after LAN access is revoked on a live listener', async () => {
-      mockPreferenceGet.mockImplementation((key) => (key === 'feature.api_gateway.host' ? '127.0.0.1' : 'test-key'))
-
-      expect((await getFromLan('/v1/models')).status).toBe(403)
-      const localResponse = await post(app, '/v1/chat/completions', {
-        model: 'openai:gpt-4o',
-        messages: [{ role: 'user', content: 'Hello' }]
-      })
-      expect(localResponse.status).toBe(200)
-    })
-  })
 })
 
 describe('internal consumer authorization', () => {
