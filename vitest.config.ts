@@ -30,7 +30,10 @@ export default defineConfig({
       {
         extends: true,
         plugins: mainConfig.plugins,
-        define: { __CLAUDE_CODE_BINARY_MANIFEST__: mainConfig.define.__CLAUDE_CODE_BINARY_MANIFEST__ },
+        define: {
+          __CLAUDE_CODE_BINARY_MANIFEST__: mainConfig.define.__CLAUDE_CODE_BINARY_MANIFEST__,
+          __ON_DEMAND_BINARIES__: mainConfig.define.__ON_DEMAND_BINARIES__
+        },
         resolve: {
           alias: [...mainConfig.resolve.alias, { find: '@renderer', replacement: resolve('src/renderer') }]
         },

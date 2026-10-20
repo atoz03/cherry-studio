@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockExecFileAsync, mockFs, mockFsp } = vi.hoisted(() => ({
+const { mockEnsureOnDemandBinary, mockExecFileAsync, mockFs, mockFsp } = vi.hoisted(() => ({
+  mockEnsureOnDemandBinary: vi.fn(),
   mockExecFileAsync: vi.fn(),
-  mockFs: { existsSync: vi.fn<(candidate: string) => boolean>(), constants: { F_OK: 0 } },
+  mockFs: { constants: { F_OK: 0 } },
   mockFsp: { readdir: vi.fn(), access: vi.fn() }
 }))
 
@@ -19,6 +20,7 @@ vi.mock('node:util', async (importOriginal) => {
   return { ...(actual as object), promisify: () => mockExecFileAsync }
 })
 vi.mock('@main/services/RegionService', () => ({ regionService: { detectIsInChina: vi.fn() } }))
+vi.mock('../onDemandBinaries', () => ({ ensureOnDemandBinary: mockEnsureOnDemandBinary }))
 
 const { findToolEnvironment, installToolDependencies } = await import('../pipDependencies')
 
@@ -29,7 +31,7 @@ const UV_BIN = '/mock/cherry.bin/uv'
 describe('managed pipx dependencies', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockFs.existsSync.mockImplementation((candidate) => candidate === UV_BIN)
+    mockEnsureOnDemandBinary.mockResolvedValue(UV_BIN)
     mockFsp.readdir.mockResolvedValue(['bin', 'babeldoc-stream'])
     mockFsp.access.mockImplementation(async (candidate: string) => {
       if (candidate !== `${ENVIRONMENT}/pyvenv.cfg`) throw new Error('ENOENT')
@@ -93,11 +95,12 @@ describe('managed pipx dependencies', () => {
     await expect(result).rejects.not.toThrow('password')
   })
 
-  it('reports a missing bundled uv', async () => {
-    mockFs.existsSync.mockReturnValue(false)
+  it('reports a uv that could not be downloaded', async () => {
+    mockEnsureOnDemandBinary.mockRejectedValue(new Error("Couldn't download uv 0.11.16"))
     await expect(
       installToolDependencies({ installPath: INSTALL_PATH, dependencies: ['bitstring<5'], env: {} })
-    ).rejects.toThrow('Bundled uv is not available')
+    ).rejects.toThrow("Couldn't download uv 0.11.16")
+    expect(mockEnsureOnDemandBinary).toHaveBeenCalledWith('uv')
     expect(mockExecFileAsync).not.toHaveBeenCalled()
   })
 })

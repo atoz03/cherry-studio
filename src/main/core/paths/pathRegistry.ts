@@ -172,6 +172,8 @@ export function buildPathRegistry() {
     // the same copy — the user's real ~/.rustup is never read or written.
     'feature.binary.data.isolated.rustup': path.join(appUserDataToolchainMise, 'rustup'),
     'feature.binary.data.isolated.cargo': path.join(appUserDataToolchainMise, 'cargo'),
+    // Windows MinGit, the git fallback downloaded on first need (binaryManager/onDemandBinaries.ts).
+    'feature.binary.mingit': path.join(appUserDataToolchain, 'mingit'),
 
     // DeepSeek Harness
     'feature.deepseek_harness.workspace': path.join(appUserDataData, 'DeepSeekHarness', 'Workspace'),
@@ -440,7 +442,9 @@ const NO_ENSURE = [
   // the concrete session directory later, keeping database writes filesystem-free.
   'feature.agents.system_workspaces',
   // Claude Code owns materialization of its transcript store.
-  'feature.agents.claude.projects'
+  'feature.agents.claude.projects',
+  // Probed on every shell-env capture; only the MinGit download creates it.
+  'feature.binary.mingit'
 ] as const satisfies readonly NoEnsureEntry[]
 
 /** Whether Application.getPath() should auto-create the directory for this key. */

@@ -4252,7 +4252,7 @@
   "settings.dependencies.runtimeDependencyHint": "Runtime for npm/pip tools",
   "settings.dependencies.searchFailed": "Search failed, check logs",
   "settings.dependencies.searchRegistry": "Search mise registry...",
-  "settings.dependencies.source.bundled": "bundled",
+  "settings.dependencies.source.bundled": "built-in",
   "settings.dependencies.source.system": "System",
   "settings.dependencies.title": "Dependencies",
   "settings.dependencies.tools.babeldoc-stream": "Layout-preserving PDF translation engine. Layout model assets are downloaded on the first translation.",

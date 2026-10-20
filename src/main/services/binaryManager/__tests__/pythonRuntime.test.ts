@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockExecFileAsync, mockFs, mockFsp } = vi.hoisted(() => ({
+const { mockEnsureOnDemandBinary, mockExecFileAsync, mockFsp } = vi.hoisted(() => ({
+  mockEnsureOnDemandBinary: vi.fn(),
   mockExecFileAsync: vi.fn(),
-  mockFs: { existsSync: vi.fn<(candidate: string) => boolean>() },
   mockFsp: { mkdir: vi.fn(async () => {}) }
 }))
 
@@ -11,7 +11,7 @@ vi.mock('@application', async () => {
   return mockApplicationFactory({})
 })
 
-vi.mock('fs', () => ({ default: mockFs }))
+vi.mock('../onDemandBinaries', () => ({ ensureOnDemandBinary: mockEnsureOnDemandBinary }))
 
 vi.mock('node:fs/promises', () => ({ default: mockFsp }))
 
@@ -47,7 +47,7 @@ describe('provideManagedPython', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockExecFileAsync.mockReset()
-    mockFs.existsSync.mockReset().mockImplementation((candidate: string) => candidate === UV_BIN)
+    mockEnsureOnDemandBinary.mockReset().mockResolvedValue(UV_BIN)
     mockFsp.mkdir.mockReset().mockResolvedValue(undefined)
     vi.mocked(regionService.isInChina).mockReset().mockResolvedValue(false)
     vi.mocked(regionService.detectIsInChina).mockReset().mockResolvedValue(false)

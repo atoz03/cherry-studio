@@ -455,6 +455,18 @@ const TOOLS = [
   }
 ]
 
+// Fork: the app also fetches these pins itself when its copy is missing
+// (src/main/services/binaryManager/onDemandBinaries.ts); electron.vite.config.ts
+// injects onDemandBinaryManifest() into the main bundle.
+const ON_DEMAND_TOOL_NAMES = new Set(['mise', 'bun', 'uv', 'mingit'])
+const ON_DEMAND_TOOLS = TOOLS.filter((tool) => ON_DEMAND_TOOL_NAMES.has(tool.name))
+
+function onDemandBinaryManifest() {
+  return Object.fromEntries(
+    ON_DEMAND_TOOLS.map(({ name, version, versionFile, packages }) => [name, { version, versionFile, packages }])
+  )
+}
+
 // ── Core logic ───────────────────────────────────────────────────────
 
 function verifyHash(filePath, expected) {
@@ -804,6 +816,7 @@ module.exports = {
   downloadTool,
   extract,
   materialize,
+  onDemandBinaryManifest,
   sweepUnreferencedVersions,
   verifyBundledBinaries,
   TOOLS
