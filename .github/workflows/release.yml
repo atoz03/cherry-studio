@@ -2,6 +2,8 @@ name: Release
 
 # Fork release pipeline: builds the global edition on a version tag push and publishes the
 # installers plus electron-updater manifests (latest*.yml) to this repository's GitHub Release.
+# electron-builder runs with `--publish never`: its `publish: github` config only names the update
+# feed, and the Release step below is the single uploader.
 on:
   push:
     tags:
@@ -93,7 +95,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get install -y rpm libevdev-dev libxtst-dev libx11-dev libxfixes-dev libwayland-dev
-          pnpm build:linux
+          pnpm build:linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=8192
@@ -112,7 +114,7 @@ jobs:
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          pnpm build:mac
+          pnpm build:mac --publish never
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -124,7 +126,7 @@ jobs:
 
       - name: Build Windows
         if: runner.os == 'Windows'
-        run: pnpm build:win
+        run: pnpm build:win --publish never
         env:
           ELECTRON_BUILDER_7Z_FILTER: BCJ
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
