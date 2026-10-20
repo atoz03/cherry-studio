@@ -116,6 +116,19 @@ server still not listed when that wait ends contributes no tools to that
 session and appears on the next one — the Claude Agent SDK snapshots the tool
 list per session, so this cannot be made live mid-session.
 
+### Idle stdio servers stop
+
+`McpRuntimeService` wraps every stdio connection in `IdleStoppingMcpConnection`:
+once a server has had no request in flight and no resource observation open for
+10 minutes, its process is closed and its status becomes `idle`. The next
+request (including the health probe the runtime runs before reusing a
+connection) starts a fresh process; a failed restart reports `error` and goes
+through the normal connect backoff. Server metadata (version, capabilities,
+instructions) and the cached tool list stay readable while stopped. Remote and
+in-process servers are never stopped. A server that keeps session state only in
+memory (a REPL kernel, a browser without a persistent profile) loses it after an
+idle stop.
+
 ## Meta-tools
 
 `src/main/ai/tools/adapters/aiSdk/meta/` defines four tools that turn the

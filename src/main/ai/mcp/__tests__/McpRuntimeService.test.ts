@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 
 import { SdkError, SdkErrorCode, SseError, UnauthorizedError } from '@modelcontextprotocol/client'
 import { MockMainCacheServiceUtils } from '@test-mocks/main/CacheService'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { BaseService } from '@main/core/lifecycle'
 import type { McpServer } from '@shared/data/types/mcpServer'
@@ -864,6 +864,64 @@ describe('redactSensitive (mcp-services-3)', () => {
     a.b = b // a -> b -> a cycle
     expect(() => redactSensitive(a)).not.toThrow()
     expect(redactSensitive(a)).toMatchObject({ name: 'a', b: { name: 'b', a: '[Circular]' } })
+  })
+})
+
+describe('McpRuntimeService idle stdio servers', () => {
+  const IDLE_MS = 10 * 60_000
+  const tools = [{ name: 'read', inputSchema: { type: 'object' } }]
+  const fakeConnection = () => ({
+    era: 'modern',
+    serverVersion: '1.0.0',
+    listTools: vi.fn(async () => tools),
+    health: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined)
+  })
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    BaseService.resetInstances()
+    MockMainCacheServiceUtils.resetMocks()
+    connectionFactoryMocks.createExternal.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stops a local server after ten idle minutes and starts it again for the next request', async () => {
+    const server = { id: 'server-1', name: 'local', isActive: true, command: 'npx', args: [] } as unknown as McpServer
+    getByIdMock.mockReturnValue(server)
+    const first = fakeConnection()
+    const second = fakeConnection()
+    connectionFactoryMocks.createExternal.mockResolvedValueOnce(first).mockResolvedValueOnce(second)
+    const service = new McpRuntimeService()
+
+    await service.listTools(server.id)
+    await vi.advanceTimersByTimeAsync(IDLE_MS)
+
+    expect(first.close).toHaveBeenCalledTimes(1)
+    expect(MockMainCacheServiceUtils.getSharedCacheValue('mcp.status.server-1')?.state).toBe('idle')
+    expect(await service.getServerVersion(server.id, false)).toBe('1.0.0')
+
+    await expect(service.listTools(server.id)).resolves.toEqual(tools)
+    expect(connectionFactoryMocks.createExternal).toHaveBeenCalledTimes(2)
+    expect(second.listTools).toHaveBeenCalledTimes(1)
+    expect(MockMainCacheServiceUtils.getSharedCacheValue('mcp.status.server-1')?.state).toBe('connected')
+  })
+
+  it('keeps a remote server connected however long it is idle', async () => {
+    const server = { id: 'server-2', name: 'remote', isActive: true, baseUrl: 'https://a.example/mcp' } as McpServer
+    getByIdMock.mockReturnValue(server)
+    const connection = fakeConnection()
+    connectionFactoryMocks.createExternal.mockResolvedValueOnce(connection)
+    const service = new McpRuntimeService()
+
+    await service.listTools(server.id)
+    await vi.advanceTimersByTimeAsync(IDLE_MS * 6)
+
+    expect(connection.close).not.toHaveBeenCalled()
+    expect(MockMainCacheServiceUtils.getSharedCacheValue('mcp.status.server-2')?.state).toBe('connected')
   })
 })
 
