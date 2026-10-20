@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Startup and tray",
   "settings.general.spell_check.label": "Spell Check",
   "settings.general.spell_check.languages": "Use spell check for",
+  "settings.general.tab_keep_alive.tip": "Background tabs beyond this number are unloaded, least recently used first, and reload when you return to them. Lower values use less memory.",
+  "settings.general.tab_keep_alive.title": "Tabs kept loaded",
   "settings.general.test_plan.beta_version": "Beta Version (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Features may change at any time, bugs are more, upgrade quickly",
   "settings.general.test_plan.rc_version": "Preview Version (RC)",

@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Başlangıç ve sistem tepsisi",
   "settings.general.spell_check.label": "Yazım Denetimi",
   "settings.general.spell_check.languages": "Yazım denetiminin kullanılacağı diller",
+  "settings.general.tab_keep_alive.tip": "Bu sayının üzerindeki arka plan sekmeleri, en uzun süredir kullanılmayandan başlayarak kaldırılır ve geri döndüğünüzde yeniden yüklenir. Düşük değerler daha az bellek kullanır.",
+  "settings.general.tab_keep_alive.title": "Yüklü tutulan sekmeler",
   "settings.general.test_plan.beta_version": "Beta Sürümü (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Özellikler herhangi bir zamanda değişebilir, daha fazla hata bulunabilir ve sık güncelleme gerekebilir",
   "settings.general.test_plan.rc_version": "Önizleme Sürümü (RC)",

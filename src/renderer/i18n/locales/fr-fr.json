@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Démarrage et zone de notification",
   "settings.general.spell_check.label": "Vérification orthographique",
   "settings.general.spell_check.languages": "Langues de vérification orthographique",
+  "settings.general.tab_keep_alive.tip": "Au-delà de ce nombre, les onglets en arrière-plan les moins récemment utilisés sont déchargés, puis rechargés lorsque vous y revenez. Une valeur plus basse utilise moins de mémoire.",
+  "settings.general.tab_keep_alive.title": "Onglets gardés chargés",
   "settings.general.test_plan.beta_version": "Version Bêta (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Les fonctionnalités peuvent changer à tout moment, davantage de bogues, mises à jour fréquentes",
   "settings.general.test_plan.rc_version": "Version de prévisualisation (RC)",

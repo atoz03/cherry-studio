@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "启动与托盘",
   "settings.general.spell_check.label": "拼写检查",
   "settings.general.spell_check.languages": "拼写检查语言",
+  "settings.general.tab_keep_alive.tip": "超出此数量时，最久未使用的后台标签页会被卸载，切回时重新加载。数值越小，占用内存越少。",
+  "settings.general.tab_keep_alive.title": "保持加载的标签页数",
   "settings.general.test_plan.beta_version": "测试版 (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "功能可能随时变化，bug 较多，升级较快",
   "settings.general.test_plan.rc_version": "预览版 (RC)",

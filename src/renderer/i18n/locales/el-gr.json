@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Εκκίνηση και περιοχή ειδοποιήσεων",
   "settings.general.spell_check.label": "Έλεγχος Ορθογραφίας",
   "settings.general.spell_check.languages": "Γλώσσες Ελέγχου Ορθογραφίας",
+  "settings.general.tab_keep_alive.tip": "Οι καρτέλες παρασκηνίου πέρα από αυτόν τον αριθμό εκφορτώνονται, ξεκινώντας από τις λιγότερο πρόσφατα χρησιμοποιημένες, και φορτώνονται ξανά όταν επιστρέψετε σε αυτές. Μικρότερες τιμές χρησιμοποιούν λιγότερη μνήμη.",
+  "settings.general.tab_keep_alive.title": "Καρτέλες που μένουν φορτωμένες",
   "settings.general.test_plan.beta_version": "Έκδοση Βήτα (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Οι λειτουργίες μπορεί να αλλάζουν ανά πάσα στιγμή, υπάρχουν πολλά σφάλματα, η ενημέρωση είναι γρήγορη",
   "settings.general.test_plan.rc_version": "Έκδοση Προεπισκόπησης (RC)",

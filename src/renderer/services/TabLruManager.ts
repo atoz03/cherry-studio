@@ -7,7 +7,7 @@ const logger = loggerService.withContext('TabLRU')
  * Tab LRU limits configuration
  *
  * Controls when inactive tabs should be hibernated to save memory.
- * TODO: 后续可从偏好设置注入
+ * The main and detached windows take softCap from the `ui.tab.keep_alive_limit` preference.
  */
 export const TAB_LIMITS = {
   /**

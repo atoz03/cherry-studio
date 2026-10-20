@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Запуск и системный трей",
   "settings.general.spell_check.label": "Проверка орфографии",
   "settings.general.spell_check.languages": "Языки проверки орфографии",
+  "settings.general.tab_keep_alive.tip": "Фоновые вкладки сверх этого числа выгружаются, начиная с давно не использованных, и загружаются снова, когда вы к ним возвращаетесь. Чем меньше значение, тем меньше расход памяти.",
+  "settings.general.tab_keep_alive.title": "Загруженные вкладки",
   "settings.general.test_plan.beta_version": "Тестовая версия (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Функции могут меняться в любое время, ошибки больше, обновление происходит быстрее",
   "settings.general.test_plan.rc_version": "Предварительная версия (RC)",

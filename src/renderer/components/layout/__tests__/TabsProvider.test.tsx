@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
+import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect, useRef } from 'react'
@@ -434,6 +435,7 @@ function TransientMiniAppPinner() {
 
 beforeEach(() => {
   currentLanguage = 'en'
+  MockUsePreferenceUtils.setPreferenceValue('ui.tab.keep_alive_limit', TAB_LIMITS.softCap)
   pinnedTabsValue = [PINNED_FILES_TAB]
   normalTabsValue = []
   activeTabIdValue = ''
@@ -1076,5 +1078,34 @@ describe('migratePinnedTabs', () => {
     const { tabs, changed } = migratePinnedTabs(input)
     expect(changed).toBe(false)
     expect(tabs).toEqual(input)
+  })
+})
+
+describe('TabsProvider keep-alive limit (fork)', () => {
+  function renderSeeded() {
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB} includePinnedTabs={false}>
+        <BatchCloseControls />
+      </TabsProvider>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Seed tabs' }))
+  }
+
+  it('unloads background tabs beyond the user limit, keeping the active tab loaded', async () => {
+    MockUsePreferenceUtils.setPreferenceValue('ui.tab.keep_alive_limit', 2)
+    renderSeeded()
+    fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
+
+    await waitFor(() => expect(screen.getByTestId('dormant-ids').textContent?.split(',')).toHaveLength(2))
+    expect(screen.getByTestId('tab-ids')).toHaveTextContent('home,b,c,d')
+    expect(screen.getByTestId('dormant-ids').textContent).not.toContain('c')
+  })
+
+  it('keeps every tab loaded while the count stays within the limit', async () => {
+    renderSeeded()
+    fireEvent.click(screen.getByRole('button', { name: 'Activate C' }))
+
+    await waitFor(() => expect(screen.getByTestId('active-tab-id')).toHaveTextContent('c'))
+    expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^$/)
   })
 })

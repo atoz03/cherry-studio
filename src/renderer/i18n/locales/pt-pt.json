@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Arranque e área de notificação",
   "settings.general.spell_check.label": "Verificação Ortográfica",
   "settings.general.spell_check.languages": "Idiomas da Verificação Ortográfica",
+  "settings.general.tab_keep_alive.tip": "Os separadores em segundo plano acima deste número são descarregados, começando pelos usados há mais tempo, e voltam a carregar quando regressa a eles. Valores mais baixos usam menos memória.",
+  "settings.general.tab_keep_alive.title": "Separadores mantidos carregados",
   "settings.general.test_plan.beta_version": "Versão Beta",
   "settings.general.test_plan.beta_version_tooltip": "Funcionalidades podem mudar a qualquer momento, mais bugs, atualizações frequentes",
   "settings.general.test_plan.rc_version": "Versão de Pré-visualização (RC)",

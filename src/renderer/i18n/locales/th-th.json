@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "การเริ่มระบบและถาดระบบ",
   "settings.general.spell_check.label": "ตรวจสอบการสะกด",
   "settings.general.spell_check.languages": "ใช้ตรวจสอบการสะกดสำหรับ",
+  "settings.general.tab_keep_alive.tip": "แท็บเบื้องหลังที่เกินจำนวนนี้จะถูกยกเลิกการโหลด โดยเริ่มจากแท็บที่ไม่ได้ใช้นานที่สุด และจะโหลดใหม่เมื่อคุณกลับไปที่แท็บนั้น ค่าที่น้อยลงใช้หน่วยความจำน้อยลง",
+  "settings.general.tab_keep_alive.title": "จำนวนแท็บที่โหลดค้างไว้",
   "settings.general.test_plan.beta_version": "เวอร์ชันเบต้า (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "ฟีเจอร์อาจเปลี่ยนแปลงได้ตลอดเวลา มีบั๊กมากกว่า อัปเกรดเร็ว",
   "settings.general.test_plan.rc_version": "เวอร์ชันพรีวิว (RC)",

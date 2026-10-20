@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "起動とシステムトレイ",
   "settings.general.spell_check.label": "スペルチェック",
   "settings.general.spell_check.languages": "スペルチェック言語",
+  "settings.general.tab_keep_alive.tip": "この数を超えると、最も長く使われていないバックグラウンドタブから解放され、戻ったときに再読み込みされます。値を小さくするとメモリ使用量が減ります。",
+  "settings.general.tab_keep_alive.title": "読み込んだままにするタブ数",
   "settings.general.test_plan.beta_version": "ベータ版(Beta)",
   "settings.general.test_plan.beta_version_tooltip": "機能が変更される可能性があります。バグが多く、迅速にアップグレードされます。",
   "settings.general.test_plan.rc_version": "プレビュー版(RC)",

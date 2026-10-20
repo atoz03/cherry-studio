@@ -34,6 +34,12 @@ export const entries: SettingsSearchEntry[] = [
     groupKey: 'settings.general.sections.runtime'
   },
   {
+    anchorId: 'tab-keep-alive',
+    titleKey: 'settings.general.tab_keep_alive.title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['tabs', 'memory', '标签页', '内存']
+  },
+  {
     anchorId: 'proxy-mode',
     titleKey: 'settings.proxy.mode.title',
     groupKey: 'settings.general.sections.network',

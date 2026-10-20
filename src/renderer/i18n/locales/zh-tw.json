@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "啟動與系統匣",
   "settings.general.spell_check.label": "拼寫檢查",
   "settings.general.spell_check.languages": "拼寫檢查語言",
+  "settings.general.tab_keep_alive.tip": "超出此數量時，最久未使用的背景分頁會被卸載，切回時重新載入。數值越小，佔用記憶體越少。",
+  "settings.general.tab_keep_alive.title": "保持載入的分頁數",
   "settings.general.test_plan.beta_version": "測試版本 (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "功能可能會隨時變化，錯誤較多，升級較快",
   "settings.general.test_plan.rc_version": "預覽版本 (RC)",

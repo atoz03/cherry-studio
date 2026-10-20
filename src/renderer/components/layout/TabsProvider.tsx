@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslation } from 'react-i18next'
 import { v4 as uuid } from 'uuid'
 
+import { usePreference } from '@data/hooks/usePreference'
 import { loggerService } from '@logger'
 import { AgentBrowserRuntimeHost } from '@renderer/components/AgentBrowserRuntimeHost'
 import { usePersistCache } from '@renderer/data/hooks/useCache'
@@ -17,7 +18,7 @@ import {
   useConversationNavigationOwner
 } from '@renderer/hooks/tab'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
-import { TabLruManager } from '@renderer/services/TabLruManager'
+import { TAB_LIMITS, TabLruManager } from '@renderer/services/TabLruManager'
 import { getDefaultRouteTitle, isPageTitledRoute, isTopLevelRoute } from '@renderer/utils/routeTitle'
 import type { Tab, TabSavedState } from '@shared/data/cache/cacheValueTypes'
 
@@ -297,11 +298,8 @@ export function TabsProvider({
     setPersistedActiveTabId(activeTabId)
   }, [includePinnedTabs, activeTabId, setPersistedActiveTabId])
 
-  // LRU manager (singleton)
-  const lruManagerRef = useRef<TabLruManager | null>(null)
-  if (!lruManagerRef.current) {
-    lruManagerRef.current = new TabLruManager()
-  }
+  const [keepAliveLimit] = usePreference('ui.tab.keep_alive_limit')
+  const lruManager = useMemo(() => new TabLruManager({ ...TAB_LIMITS, softCap: keepAliveLimit }), [keepAliveLimit])
 
   // Merge tabs: pinned + normal (route titles follow current i18n language)
   const tabs = useMemo(() => {
@@ -316,15 +314,18 @@ export function TabsProvider({
     projectedTabsRef.current = tabs
   }, [tabs])
 
-  const applyTabLimit = useCallback((nextTabs: Tab[], nextActiveTabId: string) => {
-    const awake = nextTabs.map((tab) =>
-      tab.id === nextActiveTabId && tab.isDormant ? { ...tab, isDormant: false } : tab
-    )
-    const hibernatedIds = new Set(lruManagerRef.current!.checkAndGetDormantCandidates(awake, nextActiveTabId))
-    const prepared = awake.map((tab) => hibernateTab(tab, hibernatedIds))
-    projectedTabsRef.current = prepared
-    return prepared
-  }, [])
+  const applyTabLimit = useCallback(
+    (nextTabs: Tab[], nextActiveTabId: string) => {
+      const awake = nextTabs.map((tab) =>
+        tab.id === nextActiveTabId && tab.isDormant ? { ...tab, isDormant: false } : tab
+      )
+      const hibernatedIds = new Set(lruManager.checkAndGetDormantCandidates(awake, nextActiveTabId))
+      const prepared = awake.map((tab) => hibernateTab(tab, hibernatedIds))
+      projectedTabsRef.current = prepared
+      return prepared
+    },
+    [lruManager]
+  )
 
   const commitTabs = useCallback(
     (nextTabs: Tab[], primaryId: string) => {

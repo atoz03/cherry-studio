@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Khởi động và khay hệ thống",
   "settings.general.spell_check.label": "Kiểm tra chính tả",
   "settings.general.spell_check.languages": "Sử dụng kiểm tra chính tả cho",
+  "settings.general.tab_keep_alive.tip": "Các tab nền vượt quá số này sẽ bị giải phóng, bắt đầu từ tab lâu không dùng nhất, và được tải lại khi bạn quay lại. Giá trị thấp hơn dùng ít bộ nhớ hơn.",
+  "settings.general.tab_keep_alive.title": "Số tab giữ tải",
   "settings.general.test_plan.beta_version": "Phiên bản Beta (Beta)",
   "settings.general.test_plan.beta_version_tooltip": "Các tính năng có thể thay đổi bất cứ lúc nào, lỗi nhiều hơn, hãy nâng cấp nhanh chóng",
   "settings.general.test_plan.rc_version": "Phiên bản Xem trước (RC)",

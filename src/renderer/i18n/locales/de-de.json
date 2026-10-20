@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Start und Infobereich",
   "settings.general.spell_check.label": "Rechtschreibprüfung",
   "settings.general.spell_check.languages": "Rechtschreibprüfungssprache",
+  "settings.general.tab_keep_alive.tip": "Hintergrund-Tabs über dieser Anzahl werden entladen, die am längsten ungenutzten zuerst, und beim Zurückkehren neu geladen. Niedrigere Werte verbrauchen weniger Speicher.",
+  "settings.general.tab_keep_alive.title": "Geladene Tabs",
   "settings.general.test_plan.beta_version": "Beta-Version",
   "settings.general.test_plan.beta_version_tooltip": "Funktionen können sich jederzeit ändern, Fehler sind häufig, Updates sind schnell",
   "settings.general.test_plan.rc_version": "Vorschauversion (RC)",

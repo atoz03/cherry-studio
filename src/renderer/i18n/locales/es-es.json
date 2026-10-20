@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Inicio y bandeja del sistema",
   "settings.general.spell_check.label": "Verificación ortográfica",
   "settings.general.spell_check.languages": "Idiomas de verificación ortográfica",
+  "settings.general.tab_keep_alive.tip": "Las pestañas en segundo plano que superen este número se descargan, empezando por las usadas hace más tiempo, y se vuelven a cargar al regresar a ellas. Los valores más bajos usan menos memoria.",
+  "settings.general.tab_keep_alive.title": "Pestañas cargadas",
   "settings.general.test_plan.beta_version": "Versión beta",
   "settings.general.test_plan.beta_version_tooltip": "Las funciones pueden cambiar en cualquier momento, hay más errores y las actualizaciones son más frecuentes",
   "settings.general.test_plan.rc_version": "Versión preliminar (RC)",

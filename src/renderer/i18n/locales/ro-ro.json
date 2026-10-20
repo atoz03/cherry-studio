@@ -4657,6 +4657,8 @@
   "settings.general.sections.startup": "Pornire și zona de notificări",
   "settings.general.spell_check.label": "Verificare ortografică",
   "settings.general.spell_check.languages": "Folosește verificarea ortografică pentru",
+  "settings.general.tab_keep_alive.tip": "Filele din fundal peste acest număr sunt descărcate, începând cu cele folosite cel mai demult, și se reîncarcă atunci când reveniți la ele. Valorile mai mici folosesc mai puțină memorie.",
+  "settings.general.tab_keep_alive.title": "File păstrate încărcate",
   "settings.general.test_plan.beta_version": "Versiune Beta",
   "settings.general.test_plan.beta_version_tooltip": "Funcțiile se pot schimba oricând, mai multe bug-uri, actualizare rapidă",
   "settings.general.test_plan.rc_version": "Versiune Previzualizare (RC)",
