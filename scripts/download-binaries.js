@@ -1,6 +1,7 @@
 /**
- * Downloads bundled binaries (mise, bun, uv, ripgrep, and Windows MinGit) for the
- * target platform during build.
+ * Downloads bundled binaries (ripgrep) for the target platform during build, and
+ * pins the tools the app downloads itself on first use (mise, bun, uv, and
+ * Windows MinGit — see ON_DEMAND_TOOL_NAMES).
  * Called from before-pack.js (and the dev script) to bundle binaries into resources/binaries/.
  *
  * Usage:
@@ -36,9 +37,7 @@ const UNREFERENCED_CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000
 
 // What a developer loses when an optional tool fails to download.
 const IMPACT = {
-  uv: 'Python tooling and Dependencies presets',
-  rg: 'in-app search',
-  mingit: 'the bundled git fallback (system git still works)'
+  rg: 'in-app search'
 }
 const STAGING_DIR = STAGING_PREFIX + crypto.createHash('sha256').update(REPO_ROOT).digest('hex').slice(0, 8)
 
@@ -455,16 +454,25 @@ const TOOLS = [
   }
 ]
 
-// Fork: the app also fetches these pins itself when its copy is missing
+// Fork: never bundled. The app fetches these pins itself on first use
 // (src/main/services/binaryManager/onDemandBinaries.ts); electron.vite.config.ts
 // injects onDemandBinaryManifest() into the main bundle.
 const ON_DEMAND_TOOL_NAMES = new Set(['mise', 'bun', 'uv', 'mingit'])
+const BUNDLED_TOOLS = TOOLS.filter((tool) => !ON_DEMAND_TOOL_NAMES.has(tool.name))
 const ON_DEMAND_TOOLS = TOOLS.filter((tool) => ON_DEMAND_TOOL_NAMES.has(tool.name))
 
 function onDemandBinaryManifest() {
   return Object.fromEntries(
     ON_DEMAND_TOOLS.map(({ name, version, versionFile, packages }) => [name, { version, versionFile, packages }])
   )
+}
+
+/** Every path the given on-demand tools may occupy in a bundle dir, across platforms. */
+function onDemandBundleEntries(tools = ON_DEMAND_TOOLS) {
+  return tools.flatMap((tool) => [
+    tool.versionFile,
+    ...Object.values(tool.packages).flatMap((pkg) => (pkg.dir ? [pkg.dir] : pkg.binaries))
+  ])
 }
 
 // ── Core logic ───────────────────────────────────────────────────────
@@ -691,7 +699,8 @@ function main() {
   const cacheRoot = packaging ? null : resolveSharedCacheRoot()
   const failed = []
 
-  for (const tool of TOOLS) {
+  pruneOnDemandTools(bundleDir)
+  for (const tool of BUNDLED_TOOLS) {
     const outputDir = cacheRoot ? cachedVersionDir(cacheRoot, platformKey, tool) : bundleDir
     try {
       downloadTool(tool, platformKey, outputDir, { versionFile: cacheRoot ? null : tool.versionFile })
@@ -709,7 +718,7 @@ function main() {
     return
   }
 
-  const stats = materialize(TOOLS, platformKey, cacheRoot, bundleDir)
+  const stats = materialize(BUNDLED_TOOLS, platformKey, cacheRoot, bundleDir)
   let reclaimed = 0
   try {
     reclaimed = sweepUnreferencedVersions(cacheRoot, UNREFERENCED_CACHE_TTL_MS)
@@ -722,6 +731,11 @@ function main() {
   const how =
     stats.copied > 0 ? `${stats.linked} linked, ${stats.copied} copied (hard links unavailable)` : 'hard-linked'
   report(failed, `Bundle ${how} from ${downloadDir}${reclaimed ? `, reclaimed ${reclaimed} unused version(s)` : ''}`)
+}
+
+/** A bundle assembled before these tools went on-demand still holds them; they must not ship. */
+function pruneOnDemandTools(bundleDir) {
+  for (const entry of onDemandBundleEntries()) fs.rmSync(path.join(bundleDir, entry), { recursive: true, force: true })
 }
 
 /** Retired trees exist only between two renames; anything left is debris. */
@@ -766,7 +780,7 @@ function report(failed, summary) {
  */
 function verifyBundledBinaries(platform, arch, options = {}) {
   // `tools` / `resourcesDir` injectable for tests; production callers pass none.
-  const { tools = TOOLS, resourcesDir = BINARIES_ROOT } = options
+  const { tools = BUNDLED_TOOLS, resourcesDir = BINARIES_ROOT } = options
   const platformKey = `${platform}-${arch}`
   const outputDir = path.join(resourcesDir, platformKey)
   const problems = []
@@ -797,9 +811,13 @@ function verifyBundledBinaries(platform, arch, options = {}) {
   // electron-builder packs resources/ wholesale, so an interrupted download
   // would otherwise ship its partial archives inside the app.
   if (fs.existsSync(outputDir)) {
+    const shipped = new Set(tools.map((tool) => tool.name))
+    const onDemandEntries = new Set(onDemandBundleEntries(ON_DEMAND_TOOLS.filter((tool) => !shipped.has(tool.name))))
     for (const entry of fs.readdirSync(outputDir)) {
       if (entry.startsWith(STAGING_PREFIX) || entry.startsWith(RETIRED_PREFIX)) {
         problems.push(`${path.join(platformKey, entry)} (download debris that would be packaged)`)
+      } else if (onDemandEntries.has(entry)) {
+        problems.push(`${path.join(platformKey, entry)} (downloaded by the app on first use; must not be packaged)`)
       }
     }
   }
@@ -817,8 +835,10 @@ module.exports = {
   extract,
   materialize,
   onDemandBinaryManifest,
+  pruneOnDemandTools,
   sweepUnreferencedVersions,
   verifyBundledBinaries,
+  BUNDLED_TOOLS,
   TOOLS
 }
 

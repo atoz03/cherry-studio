@@ -13,9 +13,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // CJS build script — vitest interops the module.exports fine.
 import {
+  BUNDLED_TOOLS,
   cachedVersionDir,
   extract,
   materialize,
+  onDemandBinaryManifest,
+  pruneOnDemandTools,
   sweepUnreferencedVersions,
   TOOLS,
   verifyBundledBinaries
@@ -159,6 +162,72 @@ describe('verifyBundledBinaries – isWindowsOnly skip rule', () => {
     const resourcesDir = makeResourcesDir(platformKey, ['mise.exe'])
 
     expect(() => verifyBundledBinaries('win32', arch, { tools: [mise], resourcesDir })).toThrow(/mise-shim\.exe/)
+  })
+})
+
+describe('fork: tools the app downloads on first use', () => {
+  const rg = TOOLS.find((tool) => tool.name === 'rg')!
+
+  function makeBundle(files: Record<string, string>): string {
+    const resourcesDir = makeTmpDir('dl-on-demand-')
+    for (const [file, content] of Object.entries(files)) {
+      fs.mkdirSync(path.dirname(path.join(resourcesDir, 'linux-x64', file)), { recursive: true })
+      fs.writeFileSync(path.join(resourcesDir, 'linux-x64', file), content)
+    }
+    return resourcesDir
+  }
+
+  it('bundles ripgrep only', () => {
+    expect(BUNDLED_TOOLS.map((tool) => tool.name)).toEqual(['rg'])
+  })
+
+  it('accepts a release bundle that carries ripgrep alone', () => {
+    const resourcesDir = makeBundle({ rg: '', [rg.versionFile]: rg.version })
+
+    expect(() => verifyBundledBinaries('linux', 'x64', { resourcesDir })).not.toThrow()
+  })
+
+  it('rejects a release bundle that still carries a tool the app downloads itself', () => {
+    const resourcesDir = makeBundle({ rg: '', [rg.versionFile]: rg.version, bun: '', '.bun-version': '1.0.0' })
+
+    expect(() => verifyBundledBinaries('linux', 'x64', { resourcesDir })).toThrow(
+      /linux-x64[\\/]bun \(downloaded by the app on first use/
+    )
+  })
+
+  it('prunes what an older checkout bundled, keeping everything else', () => {
+    const resourcesDir = makeBundle({
+      rg: 'rg',
+      [rg.versionFile]: rg.version,
+      'selection-panel.node': 'addon',
+      mise: '',
+      '.mise-version': '',
+      uv: '',
+      uvx: '',
+      '.uv-version': '',
+      'git/cmd/git.exe': ''
+    })
+
+    pruneOnDemandTools(path.join(resourcesDir, 'linux-x64'))
+
+    expect(fs.readdirSync(path.join(resourcesDir, 'linux-x64')).sort()).toEqual(
+      [rg.versionFile, 'rg', 'selection-panel.node'].sort()
+    )
+  })
+
+  it('hands the app a checksum-pinned download for every tool it no longer bundles', () => {
+    const manifest = onDemandBinaryManifest()
+
+    expect(Object.keys(manifest).sort()).toEqual(['bun', 'mingit', 'mise', 'uv'])
+    for (const tool of Object.values(manifest) as Array<{
+      packages: Record<string, { url: string; sha256: string }>
+    }>) {
+      for (const pkg of Object.values(tool.packages)) {
+        expect(pkg.url).toMatch(/^https:\/\//)
+        expect(pkg.sha256).toMatch(/^[0-9a-f]{64}$/)
+      }
+    }
+    expect(Object.keys(manifest.mingit.packages).every((key) => key.startsWith('win32-'))).toBe(true)
   })
 })
 
