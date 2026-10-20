@@ -195,19 +195,28 @@ describe('McpCatalogService', () => {
     expect(runtimeService.setServerStatus).toHaveBeenCalledWith('server-1', 'error', error)
   })
 
-  it('prewarms active server tools into shared cache', async () => {
+  it('connects no server when the app becomes ready', async () => {
     listServers.mockReturnValue({ items: [server()], total: 1, page: 1 })
     listTools.mockResolvedValue([sdkTool('search')])
 
     const service = new McpCatalogService()
-    await (service as unknown as { prewarmActiveServerTools(): Promise<void> }).prewarmActiveServerTools()
+    await service._doInit()
+    await service._doAllReady()
+    await new Promise((resolve) => setImmediate(resolve))
 
-    expect(listServers).toHaveBeenCalledWith({ isActive: true })
-    expect(runtimeService.listTools).toHaveBeenCalledWith('server-1', 'use')
-    expect(cacheService.setShared).toHaveBeenCalledWith(
-      'mcp.tools.server-1',
-      expect.arrayContaining([expect.objectContaining({ name: 'search' })])
-    )
+    expect(runtimeService.listTools).not.toHaveBeenCalled()
+    expect(service.hasToolsSnapshot('server-1')).toBe(false)
+  })
+
+  it('reports a snapshot once a server was listed, even when it listed nothing', async () => {
+    getById.mockReturnValue(server())
+    listTools.mockRejectedValue(new Error('connection failed'))
+    const service = new McpCatalogService()
+
+    await service.warmToolsCache('server-1')
+
+    expect(service.hasToolsSnapshot('server-1')).toBe(true)
+    expect(service.listTools('server-1')).toEqual([])
   })
 
   it('listTools reads enabled tools from the shared cache without connecting', async () => {
@@ -361,27 +370,6 @@ describe('McpCatalogService', () => {
     onToolListChanged({ serverId: 'server-1', tools: [sdkTool('new-tool')] })
     expect(service.listTools('server-1').map((tool) => tool.name)).toEqual(['new-tool'])
     expect(runtimeService.listTools).not.toHaveBeenCalled()
-  })
-
-  it('backs off after a failed prewarm', async () => {
-    vi.useFakeTimers()
-    try {
-      vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
-      listServers.mockReturnValue({ items: [server()], total: 1, page: 1 })
-      getById.mockReturnValue(server())
-      listTools.mockRejectedValue(new Error('connection failed'))
-      const service = new McpCatalogService()
-
-      await (service as unknown as { prewarmActiveServerTools(): Promise<void> }).prewarmActiveServerTools()
-      await service.warmToolsCache('server-1')
-      expect(runtimeService.listTools).toHaveBeenCalledTimes(1)
-
-      await vi.advanceTimersByTimeAsync(30 * 1000)
-      await service.warmToolsCache('server-1')
-      expect(runtimeService.listTools).toHaveBeenCalledTimes(2)
-    } finally {
-      vi.useRealTimers()
-    }
   })
 
   it('warmToolsCache single-flights concurrent refreshes for the same server', async () => {

@@ -4757,6 +4757,7 @@
   "settings.mcp.runtimeStatus.connecting": "Σύνδεση",
   "settings.mcp.runtimeStatus.disabled": "Απενεργοποιημένο",
   "settings.mcp.runtimeStatus.error": "Σφάλμα",
+  "settings.mcp.runtimeStatus.idle": "Σε αδράνεια",
   "settings.mcp.runtimeStatus.unavailable": "Μη διαθέσιμο",
   "settings.mcp.search.placeholder": "Αναζήτηση MCP διακομιστών...",
   "settings.mcp.search.tooltip": "Αναζήτηση MCP διακομιστών",

@@ -4757,6 +4757,7 @@
   "settings.mcp.runtimeStatus.connecting": "Conectare",
   "settings.mcp.runtimeStatus.disabled": "Dezactivat",
   "settings.mcp.runtimeStatus.error": "Eroare",
+  "settings.mcp.runtimeStatus.idle": "Inactiv",
   "settings.mcp.runtimeStatus.unavailable": "Indisponibil",
   "settings.mcp.search.placeholder": "Caută servere MCP...",
   "settings.mcp.search.tooltip": "Caută servere MCP",

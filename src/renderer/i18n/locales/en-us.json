@@ -4757,6 +4757,7 @@
   "settings.mcp.runtimeStatus.connecting": "Connecting",
   "settings.mcp.runtimeStatus.disabled": "Disabled",
   "settings.mcp.runtimeStatus.error": "Error",
+  "settings.mcp.runtimeStatus.idle": "Idle",
   "settings.mcp.runtimeStatus.unavailable": "Unavailable",
   "settings.mcp.search.placeholder": "Search MCP servers...",
   "settings.mcp.search.tooltip": "Search MCP servers",

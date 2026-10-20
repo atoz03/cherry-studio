@@ -42,7 +42,7 @@ function getStatusBadgeClassName(state: McpRuntimeStatus['state']) {
 }
 
 function getServerState(server: McpServer, status: McpRuntimeStatus | undefined): McpRuntimeStatus['state'] {
-  return server.isActive ? (status?.state ?? 'connecting') : 'disabled'
+  return server.isActive ? (status?.state ?? 'idle') : 'disabled'
 }
 
 export function McpServerCatalogGrid({

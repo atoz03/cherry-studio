@@ -311,7 +311,7 @@ const ActiveDot = ({
   $state,
   className,
   ...props
-}: React.ComponentPropsWithoutRef<'div'> & { $state: 'disabled' | 'connecting' | 'connected' | 'error' }) => (
+}: React.ComponentPropsWithoutRef<'div'> & { $state: 'disabled' | 'idle' | 'connecting' | 'connected' | 'error' }) => (
   <div
     className={cn(
       'size-1.5 shrink-0 rounded-full',
@@ -319,6 +319,7 @@ const ActiveDot = ({
       $state === 'connecting' && 'bg-warning',
       $state === 'error' && 'bg-error',
       $state === 'disabled' && 'bg-muted-foreground/30',
+      $state === 'idle' && 'bg-muted-foreground',
       className
     )}
     {...props}

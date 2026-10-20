@@ -4757,6 +4757,7 @@
   "settings.mcp.runtimeStatus.connecting": "A ligar",
   "settings.mcp.runtimeStatus.disabled": "Desativado",
   "settings.mcp.runtimeStatus.error": "Erro",
+  "settings.mcp.runtimeStatus.idle": "Em espera",
   "settings.mcp.runtimeStatus.unavailable": "Indisponível",
   "settings.mcp.search.placeholder": "Buscar servidores MCP...",
   "settings.mcp.search.tooltip": "Buscar servidores MCP",

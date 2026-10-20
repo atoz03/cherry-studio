@@ -33,7 +33,8 @@ const MCP_RUNTIME_STATUS_LABEL_KEYS: Record<McpRuntimeStatus['state'], string> =
   connected: 'settings.mcp.runtimeStatus.connected',
   connecting: 'settings.mcp.runtimeStatus.connecting',
   disabled: 'settings.mcp.runtimeStatus.disabled',
-  error: 'settings.mcp.runtimeStatus.error'
+  error: 'settings.mcp.runtimeStatus.error',
+  idle: 'settings.mcp.runtimeStatus.idle'
 }
 const MCP_MODE_LABEL_KEYS: Record<McpMode, string> = {
   auto: 'library.config.tools.mode.auto.label',
@@ -85,7 +86,7 @@ function createMcpStatusItem(
   status: McpRuntimeStatus | undefined,
   t: TFunction
 ): QuickPanelListItem {
-  const state = server?.isActive ? (status?.state ?? 'connecting') : 'disabled'
+  const state = server?.isActive ? (status?.state ?? 'idle') : 'disabled'
   const description = getMcpStatusLabel(t, state)
 
   return {

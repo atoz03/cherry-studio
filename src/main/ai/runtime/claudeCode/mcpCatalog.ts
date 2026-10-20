@@ -101,6 +101,9 @@ function addMcpToolMetadataAliases(
 // warmed-but-empty cache after its retry window (see `warmToolsCache`), letting a previously-dead
 // server recover without reconnecting it on every session build.
 const MCP_WARM_TIMEOUT_MS = 100
+// Servers connect on first use, so a server not listed since launch has to start before its tools
+// exist; wait for it like the chat path does, still capped so a hung server cannot stall the session.
+const MCP_COLD_WARM_TIMEOUT_MS = 10_000
 
 export interface McpWarmResult {
   // False when the bounded race hit the cap with the refresh still in flight.
@@ -114,16 +117,13 @@ export async function warmAgentMcpToolCaches(agent: AgentEntity): Promise<McpWar
   if (!mcpIds?.length) return { completedInTime: true, warm: Promise.resolve() }
 
   const mcpService = application.get('McpCatalogService')
-  const warm = Promise.allSettled(
-    mcpIds.flatMap((mcpId) => {
-      const server = mcpServerService.findByIdOrName(mcpId)
-      return server ? [mcpService.warmToolsCache(server.id)] : []
-    })
-  )
+  const serverIds = mcpIds.flatMap((mcpId) => mcpServerService.findByIdOrName(mcpId)?.id ?? [])
+  const cold = serverIds.some((serverId) => !mcpService.hasToolsSnapshot(serverId))
+  const warm = Promise.allSettled(serverIds.map((serverId) => mcpService.warmToolsCache(serverId)))
 
   let timer: ReturnType<typeof setTimeout> | undefined
   const timeout = new Promise<boolean>((resolve) => {
-    timer = setTimeout(() => resolve(false), MCP_WARM_TIMEOUT_MS)
+    timer = setTimeout(() => resolve(false), cold ? MCP_COLD_WARM_TIMEOUT_MS : MCP_WARM_TIMEOUT_MS)
     timer.unref?.()
   })
 

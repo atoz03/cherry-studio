@@ -36,7 +36,8 @@ export type CacheActiveSearches = Record<string, WebSearchStatus>
 export type CacheMcpTool = McpTool
 
 export type McpRuntimeStatus = {
-  state: 'disabled' | 'connecting' | 'connected' | 'error'
+  /** `idle`: enabled but not running, either never needed since launch or stopped after inactivity. */
+  state: 'disabled' | 'idle' | 'connecting' | 'connected' | 'error'
   lastCheckedAt: number
   lastError?: string
   /** Set while `connecting` waits for the user to finish OAuth in the browser. */
