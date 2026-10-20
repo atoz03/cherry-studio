@@ -16,9 +16,12 @@ export function useReportFirstFrame(ready = true): void {
   useEffect(() => {
     if (!ready || reported.current) return
     reported.current = true
-    // Effects run after the commit; the next animation frame paints it.
-    requestAnimationFrame(() => {
-      void ipcApi.request('window.report_first_frame')
-    })
+    // The first animation frame paints the commit; reporting from the next one means the window
+    // already holds that frame when main shows it.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        void ipcApi.request('window.report_first_frame')
+      })
+    )
   }, [ready])
 }

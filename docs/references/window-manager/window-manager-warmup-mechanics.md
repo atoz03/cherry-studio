@@ -158,7 +158,7 @@ Pooled windows that are **visually sensitive** to showing stale content or empty
 
 A type without a pre-warmed standby builds its window on first use, so `open()` can return a window whose UI has not rendered yet; showing it at once leaves it blank while its renderer process starts. `ready-to-show` does not close that gap: it fires on the document's first paint, before entries that `await prepareWindow()` have mounted React (measured on Linux: a detached SubWindow sat blank for about 0.17 s after it).
 
-So the UI reports its own first frame. The renderer calls `useReportFirstFrame(ready)` from a component only that window renders; one animation frame after the shell commits with `ready` true, it sends the `window.report_first_frame` IpcApi request. WindowManager tracks every window it creates until that report (`firstFrame.ts`), and consumers with `showMode: 'manual'` show through `revealOnFirstFrame(window, reveal)`:
+So the UI reports its own first frame. The renderer calls `useReportFirstFrame(ready)` from a component only that window renders; once the frame that paints the shell's commit with `ready` true is out (two animation frames), it sends the `window.report_first_frame` IpcApi request. WindowManager tracks every window it creates until that report (`firstFrame.ts`), and consumers with `showMode: 'manual'` show through `revealOnFirstFrame(window, reveal)`:
 
 - An already rendered window (pool recycle, live singleton) runs `reveal` synchronously.
 - A fresh window runs `reveal` on its first-frame report, or after `FIRST_FRAME_TIMEOUT_MS` if the report never comes, so it cannot stay hidden. The returned function cancels a pending reveal; a window destroyed first is never revealed.

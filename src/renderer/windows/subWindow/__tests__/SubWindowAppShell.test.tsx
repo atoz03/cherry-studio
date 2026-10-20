@@ -163,7 +163,8 @@ describe('SubWindowAppShell', () => {
   it('reports its first frame only once the detached tab is attached', async () => {
     const frames: FrameRequestCallback[] = []
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback))
-    const runFrames = () => frames.splice(0).forEach((callback) => callback(0))
+    // Two passes: the hook reports from the second animation frame after the commit.
+    const runFrames = () => [0, 1].forEach(() => frames.splice(0).forEach((callback) => callback(0)))
     shellTabs = []
 
     const { rerenderShell } = await renderSubWindowAppShell()

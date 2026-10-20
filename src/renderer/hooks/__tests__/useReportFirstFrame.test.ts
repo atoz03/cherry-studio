@@ -25,12 +25,14 @@ const runFrames = () => {
 }
 
 describe('useReportFirstFrame', () => {
-  it('reports on the animation frame after the first commit, not before', () => {
+  it('reports once the frame that paints the first commit is out, not before', () => {
     renderHook(() => useReportFirstFrame())
     expect(mocks.request).not.toHaveBeenCalled()
 
     runFrames()
+    expect(mocks.request).not.toHaveBeenCalled()
 
+    runFrames()
     expect(mocks.request).toHaveBeenCalledExactlyOnceWith('window.report_first_frame')
   })
 
@@ -41,8 +43,10 @@ describe('useReportFirstFrame', () => {
 
     rerender({ ready: true })
     runFrames()
+    runFrames()
     rerender({ ready: false })
     rerender({ ready: true })
+    runFrames()
     runFrames()
 
     expect(mocks.request).toHaveBeenCalledTimes(1)
