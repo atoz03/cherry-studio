@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "Η εξουσιοδότηση στο πρόγραμμα περιήγησης δεν ολοκληρώθηκε.",
   "settings.mcp.oauth.required": "Απαιτείται σύνδεση.",
   "settings.title": "Ρυθμίσεις",
+  "skill.library_source.name": "Βιβλιοθήκη δεξιοτήτων",
   "tray.computer_use.active": "Σε έλεγχο",
   "tray.computer_use.all_apps": "Όλες οι εφαρμογές",
   "tray.computer_use.allow": "Νέα άδεια ελέγχου",

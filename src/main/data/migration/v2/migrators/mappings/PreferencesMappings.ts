@@ -1,6 +1,6 @@
 /**
  * Auto-generated preference mappings from classification.json
- * Generated at: 2026-09-14T04:01:57.969Z
+ * Generated at: 2026-10-19T15:57:55.766Z
  *
  * This file contains pure mapping relationships without default values.
  * Default values are managed in src/shared/data/preferences.ts
@@ -21,6 +21,10 @@ export const ELECTRON_STORE_MAPPINGS = [
   {
     "originalKey": "clientId",
     "targetKey": "app.user.id"
+  },
+  {
+    "originalKey": "skillsLibraryPath",
+    "targetKey": "feature.skills.library_path"
   }
 ] as const
 
@@ -806,12 +810,12 @@ export const LOCALSTORAGE_MAPPINGS: ReadonlyArray<{ originalKey: string; targetK
 
 /**
  * 映射统计:
- * - ElectronStore项: 2
+ * - ElectronStore项: 3
  * - Redux Store项: 176
  * - Redux分类: settings, selectionStore, llm, nutstore, preprocess, translate, websearch, ocr, note
  * - DexieSettings项: 5
  * - localStorage项: 0
- * - 总配置项: 183
+ * - 总配置项: 184
  *
  * 使用说明:
  * 1. ElectronStore读取: configManager.get(mapping.originalKey)

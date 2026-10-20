@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "การอนุญาตยังไม่เสร็จสมบูรณ์ในเบราว์เซอร์",
   "settings.mcp.oauth.required": "ต้องลงชื่อเข้าใช้",
   "settings.title": "การตั้งค่า",
+  "skill.library_source.name": "คลังสกิล",
   "tray.computer_use.active": "กำลังควบคุม",
   "tray.computer_use.all_apps": "ทุกแอปพลิเคชัน",
   "tray.computer_use.allow": "อนุญาตให้ควบคุมอีกครั้ง",

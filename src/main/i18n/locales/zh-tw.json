@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "瀏覽器中的授權未完成。",
   "settings.mcp.oauth.required": "需要登入授權。",
   "settings.title": "設定",
+  "skill.library_source.name": "技能庫",
   "tray.computer_use.active": "正在控制",
   "tray.computer_use.all_apps": "所有應用程式",
   "tray.computer_use.allow": "重新允許控制",

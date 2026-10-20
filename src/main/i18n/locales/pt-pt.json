@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "A autorização no navegador não foi concluída.",
   "settings.mcp.oauth.required": "É necessário iniciar sessão.",
   "settings.title": "Configurações",
+  "skill.library_source.name": "Biblioteca de competências",
   "tray.computer_use.active": "A controlar",
   "tray.computer_use.all_apps": "Todas as aplicações",
   "tray.computer_use.allow": "Permitir novamente o controlo",

@@ -7,6 +7,8 @@ import { SettingsContentBody } from '@renderer/components/SettingsPrimitives'
 import { useSkillLauncher } from '@renderer/hooks/useSkillLauncher'
 import type { ResourceItem } from '@renderer/types/resourceCatalog'
 
+import { SkillsLibraryPathSetting } from './SkillsLibraryPathSetting'
+
 type SkillScopeTab = 'all' | 'system' | 'builtin'
 
 export function SkillsSettings() {
@@ -30,6 +32,7 @@ export function SkillsSettings() {
             resourceType="skill"
             variant="settings"
             title={t('settings.skills.title')}
+            description={<SkillsLibraryPathSetting />}
             className="min-h-0 flex-1"
             onOpenSkill={(skill) =>
               void navigate({ to: '/settings/skills/$skillId', params: { skillId: skill.id }, search: { scope } })

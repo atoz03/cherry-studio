@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "Tarayıcıdaki yetkilendirme tamamlanmadı.",
   "settings.mcp.oauth.required": "Oturum açmanız gerekiyor.",
   "settings.title": "Ayarlar",
+  "skill.library_source.name": "Beceri kitaplığı",
   "tray.computer_use.active": "Kontrol ediliyor",
   "tray.computer_use.all_apps": "Tüm uygulamalar",
   "tray.computer_use.allow": "Kontrole yeniden izin ver",

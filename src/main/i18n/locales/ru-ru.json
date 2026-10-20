@@ -176,6 +176,7 @@
   "settings.mcp.oauth.not_completed": "Авторизация в браузере не завершена.",
   "settings.mcp.oauth.required": "Требуется вход.",
   "settings.title": "Настройки",
+  "skill.library_source.name": "Библиотека навыков",
   "tray.computer_use.active": "Управление",
   "tray.computer_use.all_apps": "Все приложения",
   "tray.computer_use.allow": "Снова разрешить управление",
