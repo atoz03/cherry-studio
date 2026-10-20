@@ -265,10 +265,9 @@ describe('WINDOW_TYPE_REGISTRY Print window — domain-loaded print surface', ()
   })
 })
 
-// Regression guard for issue #18186: a warm-created standby SubWindow is always
-// resident (pooled + standbySize:1 + warmup:'eager'). If it does not opt out of
-// Dock contribution, windowContributesToDock() returns true for it and the Dock
-// icon can never be hidden on close-to-tray / tray-on-launch.
+// Regression guard for issue #18186: the macOS Dock icon follows the Main window on
+// close-to-tray / tray-on-launch. A SubWindow that contributed to the Dock would keep
+// the icon alive while it exists (originally an always-resident hidden standby).
 describe('WINDOW_TYPE_REGISTRY SubWindow — must not keep the Dock icon alive', () => {
   it('opts out of macOS Dock contribution (macShowInDock: false)', () => {
     const metadata = WINDOW_TYPE_REGISTRY[WindowType.SubWindow]

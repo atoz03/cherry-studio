@@ -5,6 +5,7 @@ import { loggerService } from '@logger'
 import { BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isLinux, isMac, isWin } from '@main/core/platform'
 import { validateSender } from '@main/core/security/validateSender'
+import { isAwaitingFirstPaint, revealWhenPainted } from '@main/core/window/firstPaint'
 import { syncTitleBarOverlayWithTheme } from '@main/core/window/titleBarOverlay'
 import type { WindowOptions } from '@main/core/window/types'
 import { WindowType } from '@main/core/window/types'
@@ -59,7 +60,7 @@ export class SubWindowService extends BaseService {
     this.registerIpcHandlers()
     this.registerZoomTracking()
     if (isWin || isLinux) {
-      // Registry gives Windows and Linux sub-windows WCO; covers pre-warmed standbys like registerZoomTracking.
+      // Registry gives Windows and Linux sub-windows WCO; synced per window like registerZoomTracking.
       this.registerDisposable(
         application
           .get('WindowManager')
@@ -71,9 +72,8 @@ export class SubWindowService extends BaseService {
   /**
    * electron#10572 workaround, mirroring MainWindowService.setupWindowEvents: a window's
    * zoom can snap back to its webPreferences-cached value on resize. Attached via
-   * onWindowCreatedByType so pre-warmed pool standbys are covered too — attaching at the
-   * open() call site would miss them (destroy-on-close pool: each BrowserWindow instance
-   * is opened exactly once, so the listeners never accumulate).
+   * onWindowCreatedByType, which fires exactly once per BrowserWindow instance (each
+   * sub window is created fresh and destroyed on close, so listeners never accumulate).
    */
   private registerZoomTracking() {
     const preferenceService = application.get('PreferenceService')
@@ -111,7 +111,9 @@ export class SubWindowService extends BaseService {
         const x = Math.round(payload.x)
         const y = Math.round(payload.y)
         this.moveWindow(win, x, y)
-        if (!win.isVisible()) {
+        // A just-detached window stays hidden until its first paint; createWindow reveals it then,
+        // at the latest position set here.
+        if (!win.isVisible() && !isAwaitingFirstPaint(win)) {
           win.show()
         }
         // Only apply opacity when the sub window is dragging its own tab (preparing to reattach).
@@ -222,18 +224,13 @@ export class SubWindowService extends BaseService {
       return windowId
     }
 
-    // open() may pop a pre-warmed standby whose webPreferences carry the Electron default
-    // zoom (1.0) — the value injected above only reaches freshly constructed windows.
-    // Re-apply so a detached tab never opens at 100% while app.zoom_factor is e.g. 130%.
-    win.webContents.setZoomFactor(zoomFactor)
-
     this.tabIdToWindowId.set(tabId, windowId)
 
-    // Direct opens show here; positioned drag detaches are shown by detachTab after creation.
-    // Pooled standbys have already fired ready-to-show, so neither path waits for it.
-    if (!hasPosition && !win.isDestroyed()) {
-      win.show()
-    }
+    // Fresh window (no standby): reveal it on its first paint, not while its renderer is starting.
+    // A drag detach keeps moving it through Tab_MoveWindow meanwhile, so it appears at the cursor.
+    revealWhenPainted(win, () => {
+      if (!win.isDestroyed()) win.show()
+    })
 
     if (USE_CONTENT_BOUNDS_MOVE) {
       this.trackWindowSize(win)
@@ -257,8 +254,7 @@ export class SubWindowService extends BaseService {
   }
 
   public detachTab(payload: Parameters<SubWindowService['createWindow']>[0]): void {
-    const windowId = this.createWindow(payload)
-    application.get('WindowManager').getWindow(windowId)?.show()
+    this.createWindow(payload)
   }
 
   public attachTab(tab: Tab, senderId: WindowId | null): void {

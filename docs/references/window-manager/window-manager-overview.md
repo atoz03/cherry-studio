@@ -107,7 +107,7 @@ Both axes are independently enabled via config. `open()` pops an idle window (se
 **Use for**: frequently opened windows where creation cost is high (selection actions, screenshot overlays).
 
 ```typescript
-// Example: SelectionAction — hybrid (standby + recycle).
+// Example: a hybrid pool (standby + recycle). Illustrative: the shipped SelectionAction keeps no standby.
 WINDOW_TYPE_REGISTRY[WindowType.SelectionAction] = {
   type: WindowType.SelectionAction,
   lifecycle: 'pooled',

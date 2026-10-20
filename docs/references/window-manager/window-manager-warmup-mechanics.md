@@ -3,6 +3,7 @@ description: Warmup state machine for pooled and singleton windows — idle queu
 sources:
   - src/main/core/window/WindowManager.ts
   - src/main/core/window/windowRegistry.ts
+  - src/main/core/window/firstPaint.ts
 ---
 
 # Warmup Mechanics
@@ -151,3 +152,14 @@ Rules:
 ## Avoiding First-Paint Flashes on Reuse
 
 Pooled windows that are **visually sensitive** to showing stale content or empty chrome (e.g. transparent hiddenInset frames on macOS where empty content reveals the native traffic-light buttons) can wrap their own `.show()` call in a short "reveal" sequence that briefly `setOpacity(0) + showInactive()` lets Chromium resume compositor paint, then `setOpacity(1)` after a settle window. See `SelectionService.processAction` for a reference implementation. This concern is domain-specific and not part of the generic `WindowManager` contract.
+
+## Revealing Windows Created on Demand
+
+A type without a pre-warmed standby builds its window on first use, so `open()` can return a window whose renderer has not painted yet; showing it at once leaves it blank while its renderer process starts. WindowManager tracks every window it creates until its first `ready-to-show`, and consumers with `showMode: 'manual'` show through `revealWhenPainted(window, reveal)` from `firstPaint.ts`:
+
+- An already painted window (pool recycle, live singleton) runs `reveal` synchronously.
+- A fresh window runs `reveal` on its first `ready-to-show`, or after `FIRST_PAINT_REVEAL_TIMEOUT_MS` if the renderer never paints, so it cannot stay hidden. The returned function cancels a pending reveal; a window destroyed first is never revealed.
+
+This relies on `paintWhenInitiallyHidden` staying at Electron's default (`true`); with `false`, a hidden window never fires `ready-to-show` and only appears after the timeout.
+
+`ready-to-show` marks the document's first paint, not the UI's. Entries that `await prepareWindow()` before mounting React fire it on the bare document, so a revealed window shows only its background colour for a moment before the UI appears. Measured on Linux, a detached SubWindow fires `ready-to-show` about 0.4 s after creation and renders its title bar about 0.17 s later. Closing that gap would need a renderer-side "first frame" signal.

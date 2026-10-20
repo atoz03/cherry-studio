@@ -173,24 +173,21 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
     }
   },
 
-  // One window per detached tab. SubWindowService supplies init data, positions it, then shows it.
-  // Manual showing also works for pooled standbys whose ready-to-show event has already fired.
+  // One window per detached tab, created on demand. SubWindowService supplies init data (and the
+  // drop position for drag detaches), then reveals the window once its renderer has painted.
+  //
+  // No pre-warmed standby: it kept a hidden full app renderer process (~80–150 MB) resident from
+  // boot just to skip the first-paint wait of an occasional detach.
+  //
+  // INVARIANT: destroy-on-close (`default` lifecycle). That is the *only* reason the SubWindow
+  // renderer is allowed to be single-init: SubWindowAppShell opens its tab once (an `initialized`
+  // ref guard) and ignores later window.reused events. Every open() creates a fresh window and
+  // close() destroys it, so a window is never handed back carrying a *different* tab. The renderer
+  // is NOT reuse-safe. Do NOT move this type to a recycling pool without first making the renderer
+  // re-initialize on window.reused; otherwise a recycled window would keep displaying its previous tab.
   [WindowType.SubWindow]: {
     type: WindowType.SubWindow,
-    lifecycle: 'pooled',
-    poolConfig: {
-      // INVARIANT: this pool is destroy-on-close (standbySize:1 + warmup:'eager', and NO
-      // recycleMaxSize). That is the *only* reason the SubWindow renderer is allowed to be
-      // single-init: SubWindowAppShell opens its tab once (an `initialized` ref guard) and
-      // ignores later WindowManager_Reused events. With no recycleMaxSize, close() always
-      // destroys, so a window is never handed back carrying a *different* tab — every open()
-      // either pops a pristine never-navigated standby or creates fresh. The renderer is NOT
-      // reuse-safe. Do NOT add recycleMaxSize (or otherwise enable recycle) here without first
-      // making the renderer re-initialize on window.reused; otherwise a recycled window would
-      // keep displaying its previous tab.
-      standbySize: 1,
-      warmup: 'eager'
-    },
+    lifecycle: 'default',
     htmlPath: 'windows/subWindow/index.html',
     // preload omitted → defaults to 'preload.js' (full API preload).
     showMode: 'manual',
@@ -202,11 +199,10 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       useContentSize: true,
       autoHideMenuBar: true,
       transparent: false,
-      // Load-bearing for SubWindowService.createWindow's show path: that path shows the window
-      // unconditionally + immediately (no ready-to-show wait), relying on the hidden window having
-      // already painted its renderer. This is Electron's default (true) — pinned explicitly so it
-      // is never silently flipped to false (which would re-introduce the empty-shell first-paint
-      // flash on reuse and the never-fires ready-to-show stuck-hidden failure mode).
+      // Load-bearing for SubWindowService.createWindow's show path: the window is created hidden
+      // and revealed on its first ready-to-show, which a hidden window only fires while it is
+      // allowed to paint. This is Electron's default (true) — pinned explicitly so it is never
+      // silently flipped to false (the window would then only appear after the reveal timeout).
       paintWhenInitiallyHidden: true,
       vibrancy: 'sidebar',
       visualEffectState: 'active',
@@ -223,8 +219,8 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
           // backgroundColor is theme-dependent → injected via args.options (non-mac only)
         },
         linux: {
-          // WCO regardless of `app.use_system_title_bar`: pooled standbys are created from
-          // these static options only. Overlay colors follow the theme via SubWindowService.
+          // WCO regardless of `app.use_system_title_bar` (static per type, not injected per open).
+          // Overlay colors follow the theme via SubWindowService.
           titleBarStyle: 'hidden',
           titleBarOverlay: { height: SUB_WINDOW_TITLE_BAR_HEIGHT }
           // icon is a nativeImage (required for Wayland task switcher) → injected via args.options
@@ -241,11 +237,9 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       }
     },
     behavior: {
-      // SubWindow must NOT contribute to the macOS Dock — a warm-created standby
-      // instance (standbySize:1 + warmup:'eager') is always resident and hidden.
-      // Without this flag, windowContributesToDock() returns true for it, so
-      // updateDockVisibility()'s some() never resolves to hide, and the Dock icon
-      // stays visible on close-to-tray / tray-on-launch (see issue #18186).
+      // SubWindow does not contribute to the macOS Dock; the Dock icon follows the Main window
+      // on close-to-tray / tray-on-launch. Introduced for issue #18186, when an always-resident
+      // hidden standby kept updateDockVisibility() from ever hiding the icon.
       macShowInDock: false
     }
     // NOTE: Fields intentionally NOT set here, injected per-call via wm.open({ options }):
@@ -253,8 +247,7 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
     //   - backgroundColor / darkTheme (theme snapshot at create time)
     //   - icon (Linux-only nativeImage; see SubWindowService.linuxIcon — mac/Windows omit)
     //   - x / y (only when Tab_Detach payload carries a drop position)
-    //   - zoomFactor (PreferenceService snapshot at open; pre-warmed standbys are
-    //     re-applied at pop — see SubWindowService.createWindow)
+    //   - zoomFactor (PreferenceService snapshot at open)
     // NOTE: setWindowOpenHandler + will-navigate are registered by WindowManager for
     // every BrowserWindow (see WindowManager.ts:1186-1201). SubWindow inherits both
     // automatically; do NOT attach another setWindowOpenHandler here or in the
@@ -337,7 +330,8 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
   },
 
   // Floating toolbar that appears near user text selections.
-  // Managed by SelectionService: onActivate opens it (hidden), showToolbarAtPosition positions + shows.
+  // Managed by SelectionService: created on the first selection (presentToolbar), then kept
+  // hidden between selections; showToolbarAtPosition positions + shows.
   [WindowType.SelectionToolbar]: {
     type: WindowType.SelectionToolbar,
     lifecycle: 'singleton',
@@ -437,7 +431,7 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
     }
   },
 
-  // Action result window — pooled for instant reuse.
+  // Action result window — pooled for reuse within a session.
   // Managed by SelectionService: processAction uses wm.open({ initData }) to hand each action to a renderer.
   [WindowType.SelectionAction]: {
     type: WindowType.SelectionAction,
@@ -489,22 +483,19 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       macRestoreFocusOnHide: true
     },
     poolConfig: {
-      // Producer axis: always keep one pre-warmed idle window. On every open(),
-      // an async setImmediate replacement is scheduled so the next action recycles
-      // instantly — the action window is user-facing and must not block on create.
-      standbySize: 1,
-      // Consumer axis: allow a small burst of concurrent action windows to be
-      // recycled for reuse (triggered when a second action fires while the first
-      // is still open). Beyond 3, close destroys.
+      // Producer axis: no pre-warmed standby. A resident hidden panel costs a renderer
+      // process (and lists in macOS window switchers) whether or not the user ever runs an
+      // action; the first action instead creates its window and SelectionService.processAction
+      // reveals it once painted (revealWhenPainted), a one-time delay.
+      standbySize: 0,
+      // Consumer axis: closed action windows are recycled for reuse (also covers a second
+      // action fired while the first is still open). Beyond 3, close destroys.
       recycleMaxSize: 3,
-      // Burst cleanup: after the pool grew above standbySize due to bursts,
-      // shed one extra idle window per minute back down toward standbySize.
+      // Idle cleanup: after a minute without actions, shed one recycled window per minute.
       decayInterval: 60,
-      // Full idle release: after 5 minutes of no action, trim the recycle
-      // buffer down to the standby window. standbySize is preserved as a
-      // permanent availability commitment.
+      // Full idle release: after 5 minutes of no action, destroy every recycled window.
       inactivityTimeout: 300,
-      warmup: 'eager'
+      warmup: 'lazy'
     }
   },
 
