@@ -36,6 +36,8 @@
 
 Cherry Studio is a desktop client that supports multiple LLM providers, available on Windows, Mac and Linux.
 
+> 🔀 **atoz03 fork**: upstream v2 features with a smaller footprint and the v1 fork's additions — see [FORK.md](./FORK.md).
+
 📱 Looking for the mobile app? Check out [Cherry Studio Mobile](https://github.com/CherryHQ/cherry-studio-app) for iOS and Android.
 
 👏 Join [Telegram Group](https://t.me/CherryStudioAI)｜[Discord](https://discord.gg/wez8HtpxqQ) | [QQ Group(575014769)](https://qm.qq.com/q/lo0D4qVZKi)
