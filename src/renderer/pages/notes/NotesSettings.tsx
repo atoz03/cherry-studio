@@ -21,6 +21,8 @@ import { ipcApi } from '@renderer/ipc'
 import { toast } from '@renderer/services/toast'
 import type { EditorView } from '@renderer/types/app'
 
+import NotesGitSettings from './NotesGitSettings'
+
 const logger = loggerService.withContext('NotesSettings')
 
 const NotesSettings: FC = () => {
@@ -125,6 +127,8 @@ const NotesSettings: FC = () => {
           <SettingHelpText>{t('notes.settings.data.work_directory_description')}</SettingHelpText>
         </SettingRow>
       </SettingGroup>
+
+      <NotesGitSettings />
 
       {/* Editor Settings */}
       <SettingGroup theme={theme}>
