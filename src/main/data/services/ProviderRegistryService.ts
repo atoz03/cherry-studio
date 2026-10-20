@@ -47,7 +47,8 @@ import {
   stripBedrockDottedVendorPrefix,
   stripBedrockRevision,
   stripDateSnapshot,
-  stripVariantQuantDateSuffixes
+  stripVariantQuantDateSuffixes,
+  withCustomImageSize
 } from '@cherrystudio/provider-registry'
 import { type RegistryFileName, RegistryLoader } from '@cherrystudio/provider-registry/node'
 import type { StoredEndpointConfigOverride } from '@data/db/schemas/userProvider'
@@ -1329,6 +1330,13 @@ class ProviderRegistryService {
    */
   getImageGenerationSupport(providerId: string, modelId: string): ImageGenerationSupport | null {
     getDataService('ProviderService').assertAvailable(providerId)
+    const support = this.getRegistryImageGenerationSupport(providerId, modelId)
+    // Fork: New API relays forward any `WxH`, so offer a free width × height next to the size presets.
+    const isNewApi = this.findProfileProvider(this.getEffectiveProviderContext(providerId))?.id === 'new-api'
+    return support && isNewApi ? withCustomImageSize(support) : support
+  }
+
+  private getRegistryImageGenerationSupport(providerId: string, modelId: string): ImageGenerationSupport | null {
     const { providerModel, presetModel, registryOverride } = this.lookupModel(providerId, modelId)
     if (providerModel) return providerModel.imageGeneration ?? null
     // Override wins — lets vendor-exclusive overrides declare their own

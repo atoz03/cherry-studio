@@ -856,6 +856,42 @@ describe('ProviderRegistryService', () => {
       expect(providerRegistryService.getImageGenerationSupport('custom-openai-image', 'image-model')).toEqual(block)
     })
 
+    it('getImageGenerationSupport adds a free custom size to New API image models, built-in or custom', async () => {
+      const block = {
+        modes: {
+          generate: { supports: { size: { type: 'enum' as const, options: ['1024x1024', '1536x1024'] } } }
+        }
+      }
+      mockReadModels.mockReturnValue({
+        version: '1.0',
+        models: [{ id: 'gpt-image-1', name: 'GPT Image 1', imageGeneration: block }]
+      })
+      mockReadProviderModels.mockReturnValue({ version: '1.0', overrides: [] })
+      mockReadProviders.mockReturnValue({
+        version: '1.0',
+        providers: [
+          { id: 'new-api', name: 'New API', defaultChatEndpoint: null, metadata: {} },
+          { id: 'openai', name: 'OpenAI', defaultChatEndpoint: null, metadata: {} }
+        ]
+      } as ReturnType<typeof readProviderRegistry>)
+      await dbh.db
+        .insert(userProviderTable)
+        .values([
+          { providerId: 'new-api', presetProviderId: 'new-api', name: 'New API', orderKey: 'a0' },
+          { providerId: 'my-relay', presetProviderId: 'new-api', name: 'My relay', orderKey: 'a1' },
+          { providerId: 'openai', presetProviderId: 'openai', name: 'OpenAI', orderKey: 'a2' }
+        ])
+        .onConflictDoNothing()
+      const customSize = { type: 'size', minSide: 1, maxSide: 16384, pairedEnumKey: 'size' }
+
+      for (const providerId of ['new-api', 'my-relay']) {
+        expect(providerRegistryService.getImageGenerationSupport(providerId, 'gpt-image-1')).toEqual({
+          modes: { generate: { supports: { ...block.modes.generate.supports, customSize } } }
+        })
+      }
+      expect(providerRegistryService.getImageGenerationSupport('openai', 'gpt-image-1')).toEqual(block)
+    })
+
     it('getImageGenerationSupport returns null when the model is unknown', async () => {
       mockReadModels.mockReturnValue({ version: '1.0', models: [] })
       mockReadProviderModels.mockReturnValue({ version: '1.0', overrides: [] })

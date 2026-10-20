@@ -44,6 +44,7 @@ export {
 } from './schemas/imageParamCatalog'
 export { ImageGenerationModeSchema, ImageGenerationSupportSchema } from './schemas/model'
 export { buildParamsSchema } from './utils/buildParamsSchema'
+export { RELAY_CUSTOM_IMAGE_SIZE, withCustomImageSize } from './utils/customImageSize'
 
 // Enum types (PascalCase, derived from const objects)
 export type {
