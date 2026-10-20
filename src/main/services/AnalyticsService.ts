@@ -8,6 +8,7 @@ import { type Activatable, BaseService, Injectable, Phase, ServicePhase } from '
 import { isDataCollectionConsented } from '@main/utils/privacyConsent'
 import { generateUserAgent, getClientId } from '@main/utils/systemInfo'
 import { APP_NAME } from '@shared/utils/constants'
+import { FORK_ANALYTICS_ENABLED } from '@shared/utils/forkFeatures'
 
 const logger = loggerService.withContext('AnalyticsService')
 
@@ -62,6 +63,7 @@ export class AnalyticsService extends BaseService implements Activatable {
   })
 
   private refreshDesiredEnabled(): void {
+    if (!FORK_ANALYTICS_ENABLED) return // desiredEnabled stays false: the client is never created
     const preferenceService = application.get('PreferenceService')
     this.desiredEnabled = isDataCollectionConsented(
       preferenceService.get('app.privacy.data_collection.enabled'),
