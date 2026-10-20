@@ -81,6 +81,7 @@ import { type FollowupQueueItem, useFollowupQueue } from '../useFollowupQueue'
 import { useInputHistory } from '../useInputHistory'
 import { ChatConversationControls, type ChatConversationControlsProps } from './chat/ChatConversationControls'
 import { type ChatComposerDraftCache, readChatDraftCache, writeChatDraftCache } from './chat/chatDraftCache'
+import { ContextSkillsComposerRuntime } from './chat/ContextSkillsComposerRuntime'
 import {
   createEditableMessageDraft,
   getEditableKnowledgeBases,
@@ -1936,6 +1937,7 @@ const ChatComposerInner = ({
       extensions={supportedExts}
       selectableKnowledgeBases={selectableKnowledgeBases}>
       <ComposerToolRuntimeHost scope={scope} assistant={displayAssistant} model={runtimeModel} />
+      {topicId ? <ContextSkillsComposerRuntime topicId={topicId} assistant={displayAssistant} /> : null}
       <ResourceEditDialogEventHost />
       <ComposerPinnedToolsProvider value={pinnedToolIds}>
         <ComposerSurface
