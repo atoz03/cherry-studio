@@ -1,7 +1,5 @@
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-import type { RemoteFailure } from '@cherrystudio/remote-protocol'
-
 import { createUpdateTimestamps } from './_columnHelpers'
 import { apiGatewayPairedDeviceTable } from './apiGatewayPairedDevice'
 
@@ -20,7 +18,7 @@ export const remoteCommandTable = sqliteTable(
     sessionId: text(),
     executionId: text(),
     result: text({ mode: 'json' }).$type<unknown>(),
-    error: text({ mode: 'json' }).$type<RemoteFailure>(),
+    error: text({ mode: 'json' }).$type<unknown>(),
     admittedAt: integer().notNull(),
     ...createUpdateTimestamps
   },

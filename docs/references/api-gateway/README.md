@@ -425,8 +425,7 @@ request **path**, so every endpoint speaks its caller's dialect:
 `DataApiError`s (from the data-layer services backing models/knowledge) carry
 their own `status`/`code` and are mapped straight into the selected envelope.
 Built-in Elysia `VALIDATION` / `NOT_FOUND` / `PARSE` codes map to 400/404/400
-(422 for REST validation). Explicit HTTP responses thrown by custom parsers
-are preserved through Elysia's `ParseError` wrapper.
+(422 for REST validation).
 Unknown provider/runtime errors are shaped by
 `transformAnthropicError` / `transformOpenAiError` — **status-driven**: they read
 `statusCode` off the AI-SDK `SerializedError`, so a provider 401/429/… keeps its

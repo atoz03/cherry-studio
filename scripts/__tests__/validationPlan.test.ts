@@ -39,7 +39,6 @@ describe('validation selection', () => {
   })
   it.each([
     ['packages/ai-sdk-provider/src/model.ts', ['ai-sdk-provider', 'aiCore', 'main', 'renderer']],
-    ['packages/remote-protocol/src/agent.ts', ['remote-protocol', 'main', 'renderer']],
     ['packages/system-speech/src/SystemSpeechNativeClient.ts', ['system-speech', 'main', 'preload']],
     ['packages/ui/src/button.tsx', ['ui', 'file-preview', 'renderer']],
     ['packages/file-preview/src/Preview.tsx', ['file-preview', 'renderer']],

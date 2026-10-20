@@ -137,17 +137,14 @@ vi.mock('@data/services/AgentChannelService', () => ({
 function simulateStream(parts: Array<{ type: string; delta?: string }>) {
   mockStartAgentSessionRun.mockImplementationOnce(
     async ({
-      listeners,
-      onPersist
+      listeners
     }: {
-      onPersist?: () => void
       listeners: Array<{
         id: string
         onChunk: (chunk: unknown) => void
         onDone: (result: { status: string }) => void | Promise<void>
       }>
     }) => {
-      onPersist?.()
       for (const listener of listeners) {
         for (const part of parts) {
           listener.onChunk(part)

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { executionFailureSchema } from '@cherrystudio/remote-protocol/failure'
-
-import { toExecutionFailure } from '../executionFailure'
+import { executionFailureSchema, toExecutionFailure } from '../executionFailure'
 
 describe('execution failure projection', () => {
   it('extracts a subscription rejection from CLI-style errors without confusing it with remote authorization', () => {

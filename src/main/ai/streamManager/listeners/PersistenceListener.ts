@@ -4,10 +4,9 @@
  * delegates the write to a `PersistenceBackend`.
  */
 
-import type { ExecutionFailure } from '@cherrystudio/remote-protocol/failure'
 import { loggerService } from '@logger'
 import { serializeError } from '@main/ai/utils/serializeError'
-import { toExecutionFailure } from '@shared/ai/executionFailure'
+import { type ExecutionFailure, toExecutionFailure } from '@shared/ai/executionFailure'
 import type {
   CherryMessagePart,
   CherryUIMessage,
@@ -63,25 +62,24 @@ export class PersistenceListener implements StreamListener {
 
   async onDone(result: StreamDoneResult): Promise<void> {
     if (!this.owns(result.modelId)) return
-    return this.persistAssistant(result.finalMessage, 'success', result.runtimeTiming, result)
+    return this.persistAssistant(result.finalMessage, 'success', result.runtimeTiming)
   }
 
   async onPaused(result: StreamPausedResult): Promise<void> {
     if (!this.owns(result.modelId)) return
-    return this.persistAssistant(result.finalMessage, 'paused', result.runtimeTiming, result)
+    return this.persistAssistant(result.finalMessage, 'paused', result.runtimeTiming)
   }
 
   async onError(result: StreamErrorResult): Promise<void> {
     if (!this.owns(result.modelId)) return
     // Folded once here so backends see a uniform UIMessage shape, not `SerializedError`.
-    result.failure ??= toExecutionFailure(result.error, result.modelId)
     const withErrorPart = mergeErrorIntoMessage(
       result.finalMessage,
       result.error,
-      result.failure,
+      toExecutionFailure(result.error, result.modelId),
       result.anchorMessageId
     )
-    return this.persistAssistant(withErrorPart, 'error', result.runtimeTiming, result)
+    return this.persistAssistant(withErrorPart, 'error', result.runtimeTiming)
   }
 
   isAlive(): boolean {
@@ -95,8 +93,7 @@ export class PersistenceListener implements StreamListener {
   private async persistAssistant(
     finalMessage: CherryUIMessage | undefined,
     status: 'success' | 'paused' | 'error',
-    runtimeTiming: MessageRuntimeTiming | undefined,
-    result: StreamDoneResult | StreamPausedResult | StreamErrorResult
+    runtimeTiming: MessageRuntimeTiming | undefined
   ): Promise<void> {
     const canPersistEmpty =
       status === 'success'
@@ -128,23 +125,18 @@ export class PersistenceListener implements StreamListener {
     }
 
     try {
-      const saved = await this.opts.backend.persistAssistant({
+      await this.opts.backend.persistAssistant({
         finalMessage: finalMessageForPersistence,
         status,
         modelId: this.opts.modelId,
         ...(Object.keys(runtimeStats).length > 0 ? { runtimeStats } : {})
       })
-      if (saved) result.persistence = { status: 'saved', message: saved }
       logger.info('Assistant message persisted', {
         backend: this.opts.backend.kind,
         topicId: this.opts.topicId,
         status
       })
     } catch (err) {
-      result.persistence = {
-        status: 'failed',
-        failure: toExecutionFailure(serializeError(err), this.opts.modelId, 'host')
-      }
       logger.error('Failed to persist assistant message', {
         backend: this.opts.backend.kind,
         topicId: this.opts.topicId,

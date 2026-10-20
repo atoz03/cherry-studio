@@ -486,10 +486,8 @@ describe('AgentSessionRuntimeService', () => {
     vi.clearAllMocks()
     mocks.saveMessage.mockImplementation(({ message }) => ({
       ...message,
-      id: message.id ?? 'generated-message-id',
-      updatedAt: '2026-01-01T00:00:00.000Z'
+      id: message.id ?? 'generated-message-id'
     }))
-    mocks.getSessionById.mockReturnValue({ updatedAt: '2026-01-01T00:00:01.000Z' })
     mocks.getSessionMessage.mockReturnValue({
       id: 'assistant-1',
       role: 'assistant',
@@ -4063,15 +4061,6 @@ describe('AgentSessionRuntimeService', () => {
     }
     await persistenceListener(handle).onDone(result)
 
-    expect(result.persistence).toEqual({
-      status: 'saved',
-      message: {
-        messageId: 'assistant-1',
-        messageRevision: '1767225600000',
-        historyRevision: '1767225601000'
-      }
-    })
-
     expect(mocks.saveMessage).toHaveBeenCalledWith(
       {
         runtimeAnchor: undefined,
@@ -4105,15 +4094,6 @@ describe('AgentSessionRuntimeService', () => {
     }
     await persistenceListener(handle).onDone(result)
 
-    expect(result.persistence).toEqual({
-      status: 'saved',
-      message: {
-        messageId: 'assistant-1',
-        messageRevision: '1767225600000',
-        historyRevision: '1767225601000'
-      }
-    })
-
     expect(mocks.maybeRenameAgentSession).not.toHaveBeenCalled()
   })
 
@@ -4128,15 +4108,6 @@ describe('AgentSessionRuntimeService', () => {
       finalMessage: undefined
     }
     await persistenceListener(handle).onPaused(result)
-
-    expect(result.persistence).toEqual({
-      status: 'saved',
-      message: {
-        messageId: 'assistant-1',
-        messageRevision: '1767225600000',
-        historyRevision: '1767225601000'
-      }
-    })
 
     expect(mocks.saveMessage).toHaveBeenCalledWith(
       {
@@ -5943,20 +5914,6 @@ describe('AgentSessionRuntimeService', () => {
     }
     await persistenceListener(handle).onError(result)
 
-    expect(result.persistence).toEqual({
-      status: 'saved',
-      message: {
-        messageId: 'assistant-1',
-        messageRevision: '1767225600000',
-        historyRevision: '1767225601000'
-      }
-    })
-
-    expect(result.failure).toEqual({
-      message: 'boom',
-      retryable: false,
-      failure: { version: 1, reasonCode: 'unknown', source: { layer: 'runtime' }, context: {} }
-    })
     expect(mocks.saveMessage).toHaveBeenCalledWith(
       {
         runtimeAnchor: undefined,
@@ -5970,7 +5927,16 @@ describe('AgentSessionRuntimeService', () => {
             parts: [
               {
                 type: 'data-error',
-                data: { name: 'Error', message: 'boom', stack: 'Error: boom', executionFailure: result.failure }
+                data: {
+                  name: 'Error',
+                  message: 'boom',
+                  stack: 'Error: boom',
+                  executionFailure: {
+                    message: 'boom',
+                    retryable: false,
+                    failure: { version: 1, reasonCode: 'unknown', source: { layer: 'runtime' }, context: {} }
+                  }
+                }
               }
             ]
           },
@@ -5997,15 +5963,6 @@ describe('AgentSessionRuntimeService', () => {
       finalMessage: { id: 'assistant-1', role: 'assistant', parts: [] }
     }
     await persistenceListener(handle).onDone(result)
-
-    expect(result.persistence).toEqual({
-      status: 'saved',
-      message: {
-        messageId: 'assistant-1',
-        messageRevision: '1767225600000',
-        historyRevision: '1767225601000'
-      }
-    })
 
     expect(mocks.saveMessage).toHaveBeenCalledWith(
       {
