@@ -20,6 +20,8 @@ import { isDataApiError, toDataApiError } from '@shared/data/api/errors'
 import type { MiniApp } from '@shared/data/types/miniApp'
 import { isHttpUrl } from '@shared/utils/url'
 
+import ChatgptExportButton from './ChatgptExportButton'
+
 const logger = loggerService.withContext('MinimalToolbar')
 
 /** `open` splits the view in two; `close` is the split pane's way back to one. */
@@ -262,6 +264,7 @@ const MinimalToolbar: FC<Props> = ({
       <MiniAppDebuggingIndicator appId={app.appId} />
       <div className="ml-auto flex shrink-0 items-center">
         <div className="flex items-center gap-0.5">
+          <ChatgptExportButton app={app} webview={webview} className={toolbarButtonClassName()} />
           <Tooltip content={t(splitLabelKey)} placement="bottom">
             <Button
               type="button"

@@ -1938,6 +1938,36 @@ describe('OpenClawService gateway status state machine', () => {
       expect(written.update.checkOnStart).toBe(true)
     })
 
+    // Regression: after an app restart the in-memory token is empty, and the first sync
+    // replaced the saved token with a new one, invalidating every dashboard session.
+    it('keeps the saved gateway token when syncing after an app restart', async () => {
+      fs.writeFileSync(
+        path.join(configDir, 'openclaw.json'),
+        JSON.stringify({ gateway: { mode: 'local', auth: { token: 'saved-token' } } })
+      )
+
+      const result = await service.syncProviderConfig(legacyProvider, legacyModel)
+
+      expect(result).toEqual({ success: true })
+      const written = JSON.parse(fs.readFileSync(path.join(configDir, 'openclaw.json'), 'utf-8'))
+      expect(written.gateway.auth.token).toBe('saved-token')
+      expect(service.getDashboardUrl()).toBe('http://127.0.0.1:18790#token=saved-token')
+    })
+
+    it('generates a gateway token once and reuses it on the next run', async () => {
+      await service.syncProviderConfig(legacyProvider, legacyModel)
+      const firstToken = JSON.parse(fs.readFileSync(path.join(configDir, 'openclaw.json'), 'utf-8')).gateway.auth.token
+      expect(firstToken).toEqual(expect.any(String))
+      expect(firstToken.length).toBeGreaterThan(0)
+
+      // A restarted process starts with no token in memory; only the config file survives.
+      ;(service as any).gatewayAuthToken = ''
+      await service.syncProviderConfig(legacyProvider, legacyModel)
+
+      const written = JSON.parse(fs.readFileSync(path.join(configDir, 'openclaw.json'), 'utf-8'))
+      expect(written.gateway.auth.token).toBe(firstToken)
+    })
+
     it('removes stale Cherry providers while preserving supported hand edits on the selected provider', async () => {
       fs.writeFileSync(
         path.join(configDir, 'openclaw.json'),
