@@ -379,7 +379,6 @@ export async function processMessage(config: MessageConfig): Promise<Response> {
             callOverrides,
             contextOwner: 'caller',
             ...(usageContext ? { usageContext } : {}),
-            ...(agentSessionId ? { tokenUsageSource: 'agent' as const } : {}),
             idleTimeoutMs: GATEWAY_STREAM_IDLE_TIMEOUT_MS,
             // Serve exactly the admitted model; clients own retries, and fallbacks would bypass admission.
             maxRetries: 0
@@ -465,7 +464,6 @@ export async function processMessage(config: MessageConfig): Promise<Response> {
         callOverrides,
         contextOwner: 'caller',
         ...(usageContext ? { usageContext } : {}),
-        ...(agentSessionId ? { tokenUsageSource: 'agent' as const } : {}),
         idleTimeoutMs: GATEWAY_STREAM_IDLE_TIMEOUT_MS,
         maxRetries: 0
       })

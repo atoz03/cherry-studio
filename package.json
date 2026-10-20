@@ -216,7 +216,6 @@
     "@changesets/config": "^4.0.1",
     "@changesets/read": "^1.0.1",
     "@cherrystudio/ai-core": "workspace:*",
-    "@cherrystudio/analytics-client": "1.4.0",
     "@cherrystudio/extension-table-plus": "workspace:^",
     "@cherrystudio/file-preview": "workspace:*",
     "@cherrystudio/openai": "6.15.0",

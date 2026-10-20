@@ -3386,9 +3386,9 @@
           "originalKey": "clientId",
           "type": "string",
           "defaultValue": "",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.user.id"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "GitBashPath": [

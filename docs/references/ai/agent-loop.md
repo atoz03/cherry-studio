@@ -12,7 +12,7 @@ sources:
 `Agent` (`src/main/ai/runtime/aiSdk/Agent.ts`) wraps `@cherrystudio/ai-core`'s
 `createAgent(...).stream()` (built on the AI SDK's `ToolLoopAgent`) with a
 `composeHooks` pipeline that folds N
-independent hook contributors (per-feature plugins, AiService analytics,
+independent hook contributors (per-feature plugins, caller hooks,
 internal observers) into a single `AgentLoopHooks` object with deterministic
 ordering, then bridges one streaming pass to a `ReadableStream<UIMessageChunk>`
 with a stable id for the first emitted message.
@@ -69,9 +69,8 @@ Hook contributions come from three sources, all folded by `composeHooks`:
    (injects `message-metadata` chunks carrying token usage).
 2. **Feature contributions** (`hookParts` param) — each `RequestFeature`'s
    `contributeHooks(scope)` (see [Params Pipeline](./params-pipeline.md)).
-3. **Caller hooks** — `AiService` adds the analytics hook only (usage is
-   accumulated via `onStepFinish`, then flushed idempotently from `onFinish`,
-   `onAbort`, or `onError`). It does *not* contribute a root-span/trace lifecycle hook —
+3. **Caller hooks** — `AiService` adds runtime-timing hooks when the request
+   carries a timing sink. It does *not* contribute a root-span/trace lifecycle hook —
    the OTel root span is owned by `AiStreamManager.runExecutionLoop`.
 
 Composition rules per hook key:
@@ -113,7 +112,7 @@ see [Agent Session Runtime](./agent-session-runtime.md#live-follow-up).
   streams settle cleanly with the accumulated chunks already broadcast,
   including when the SDK rejects result metadata while unwinding the aborted
   stream. Clean cancellation calls `onAbort` (not `onError`) so per-run
-  resources and analytics can finalize.
+  resources can finalize.
 - Thrown errors are caught and routed through `onError`. Returning
   `'retry'` is reserved for a future implementation — today the loop
   logs and aborts. Call-level retry/fallback lives one layer below at the

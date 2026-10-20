@@ -510,9 +510,6 @@ importers:
       '@cherrystudio/ai-core':
         specifier: workspace:*
         version: link:packages/aiCore
-      '@cherrystudio/analytics-client':
-        specifier: 1.4.0
-        version: 1.4.0(typescript@5.9.3)
       '@cherrystudio/extension-table-plus':
         specifier: workspace:^
         version: link:packages/extension-table-plus
@@ -2918,15 +2915,6 @@ packages:
   '@changesets/write@1.0.1':
     resolution: {integrity: sha512-q/ThtP9gcnEP6xlv7LrY26C2mHqdGBti/MmOVngt/M/oIGYkssmQGxPK9WzBNt2juVcH/vml2WQ+ra8LXYOTaA==}
     engines: {node: ^22.11 || ^24 || >=26}
-
-  '@cherrystudio/analytics-client@1.4.0':
-    resolution: {integrity: sha512-67Tg76o6Gl5upLqigZjpY5xMscf6WA1F6bQMD3JcuoeZmcl+qTNCjZC8XC10OdTdE5l1D6TWXuiEqVv1NnB31A==}
-    engines: {node: '>=16.0.0'}
-    peerDependencies:
-      typescript: '>=4.7.0'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
 
   '@cherrystudio/computer-use-darwin-arm64@0.1.9':
     resolution: {integrity: sha512-H9MlNSctA6OnkCy0B40YgOtd6g9ziKvJPnQYi13FbNs+2yvYht6kYK2bNzynp9yyQyyIOrJ36O9ihC2nO2YcZg==}
@@ -16776,10 +16764,6 @@ snapshots:
       '@changesets/format': 0.1.2
       '@changesets/types': 7.0.0
       human-id: 4.2.2
-
-  '@cherrystudio/analytics-client@1.4.0(typescript@5.9.3)':
-    optionalDependencies:
-      typescript: 5.9.3
 
   '@cherrystudio/computer-use-darwin-arm64@0.1.9':
     optional: true

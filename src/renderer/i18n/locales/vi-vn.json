@@ -4368,7 +4368,6 @@
   "settings.developer.cdp.invalid_port": "Nhập số cổng là số nguyên từ 1 đến 65534.",
   "settings.developer.cdp.port": "Cổng CDP",
   "settings.developer.cdp.title": "Tự động hóa cục bộ (CDP)",
-  "settings.developer.client_id": "ID khách hàng",
   "settings.developer.enable_developer_mode": "Kích hoạt Chế độ Nhà phát triển",
   "settings.developer.help": "Sau khi bật chế độ nhà phát triển, bạn có thể sử dụng tính năng dò dữ liệu để xem luồng dữ liệu trong quá trình gọi mô hình.",
   "settings.display.custom.css.label": "CSS Tùy chỉnh",

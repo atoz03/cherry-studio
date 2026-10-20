@@ -272,7 +272,6 @@ describe('processMessage model-id parsing', () => {
 
     await vi.waitFor(() => expect(captured.opts).toBeDefined())
     expect(captured.opts?.uniqueModelId).toBe(createUniqueModelId(CHERRY_CLOUD_PROVIDER_ID, 'deepseek-free'))
-    expect(captured.opts).toMatchObject({ tokenUsageSource: 'agent' })
     void captured.opts!.listener!.onDone({} as any)
 
     await expect(responsePromise.then((response) => response.json())).resolves.toEqual({ ok: true })
@@ -310,7 +309,6 @@ describe('internal requests without an Agent session', () => {
     })
     await vi.waitFor(() => expect(captured.opts).toBeDefined())
     expect(captured.opts?.uniqueModelId).toBe(createUniqueModelId(CHERRY_CLOUD_PROVIDER_ID, 'translation-model'))
-    expect(captured.opts).not.toHaveProperty('tokenUsageSource', 'agent')
     void captured.opts!.listener!.onDone({} as any)
     await expect(responsePromise.then((response) => response.json())).resolves.toEqual({ ok: true })
   })

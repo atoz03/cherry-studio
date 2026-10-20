@@ -106,7 +106,6 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
       })
     }
     const powerStub = { registerShutdownHandler: vi.fn() }
-    const analyticsStub = { trackAppUpdate: vi.fn() }
     const windowManagerStub = { broadcastToType: vi.fn() }
 
     scheduler = new SchedulerService()
@@ -120,8 +119,6 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
           return scheduler
         case 'PowerService':
           return powerStub
-        case 'AnalyticsService':
-          return analyticsStub
         case 'WindowManager':
           return windowManagerStub
         default:

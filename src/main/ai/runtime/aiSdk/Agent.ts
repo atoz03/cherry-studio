@@ -400,8 +400,8 @@ export class Agent<T extends AppProviderKey = AppProviderKey> {
       // onFinish is success-only by current design: it fires only when the
       // stream drains cleanly, never on the error/abort path below. Errors
       // route through invokeOnError; aborts settle the writer cleanly.
-      // Failed-turn analytics accumulate via onStepFinish and flush from
-      // onError rather than rely on onFinish. Whether onFinish should become
+      // Hooks that must also see failed turns finalize from onError rather
+      // than rely on onFinish. Whether onFinish should become
       // terminal is a deferred design decision — see agent-loop.md.
       await safeCall('onFinish', hooks.onFinish)
     })()

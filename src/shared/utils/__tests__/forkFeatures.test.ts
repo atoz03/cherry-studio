@@ -24,8 +24,6 @@ interface FeaturePackages {
  * here is a type error; a feature whose code is bundled (devDependencies) has nothing to exclude.
  */
 const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
-  // @cherrystudio/analytics-client is a devDependency, bundled into a chunk loaded only on activation.
-  FORK_ANALYTICS_ENABLED: { roots: [], excluded: [] },
   FORK_REMOTE_ACCESS_ENABLED: {
     roots: ['@cherrystudio/remote-transport'],
     excluded: [

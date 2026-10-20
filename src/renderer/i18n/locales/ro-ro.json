@@ -4368,7 +4368,6 @@
   "settings.developer.cdp.invalid_port": "Introduceți un număr întreg de port între 1 și 65534.",
   "settings.developer.cdp.port": "Port CDP",
   "settings.developer.cdp.title": "Automatizare locală (CDP)",
-  "settings.developer.client_id": "ID client",
   "settings.developer.enable_developer_mode": "Activează modul dezvoltator",
   "settings.developer.help": "După activarea modului dezvoltator, poți folosi funcția de urmărire (trace) pentru a vizualiza fluxul de date în timpul invocării modelului.",
   "settings.display.custom.css.label": "CSS personalizat",

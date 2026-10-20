@@ -20,7 +20,6 @@ import { makeProvider } from './fixtures/provider'
 type AiServicePrivate = {
   buildAgentParamsFor: (...args: never[]) => Promise<unknown>
   resolveTransportFor: (...args: never[]) => Promise<unknown>
-  trackUsage: (...args: never[]) => void
 }
 
 const mockGenerateImage = vi.fn()
@@ -535,105 +534,6 @@ describe('AiService', () => {
     })
   })
 
-  it('flushes accumulated token analytics once when an agent run errors', async () => {
-    const service = createService()
-    const trackTokenUsage = vi.fn()
-    mockApplicationGet.mockReturnValue({ trackTokenUsage })
-    const hooks = (service as any).analyticsHookPart({
-      id: 'test-model',
-      providerId: 'test-provider',
-      apiModelId: 'test-api-model'
-    })
-
-    await hooks.onStepFinish({
-      usage: {
-        inputTokens: 3,
-        outputTokens: 5,
-        totalTokens: 8,
-        inputTokenDetails: {},
-        outputTokenDetails: {}
-      }
-    })
-    await hooks.onError({ error: new Error('terminal tool failure') })
-    await hooks.onFinish()
-
-    expect(mockApplicationGet).toHaveBeenCalledWith('AnalyticsService')
-    expect(trackTokenUsage).toHaveBeenCalledOnce()
-    expect(trackTokenUsage).toHaveBeenCalledWith({
-      provider: 'test-provider',
-      model: 'test-api-model',
-      input_tokens: 3,
-      output_tokens: 5,
-      source: 'chat'
-    })
-  })
-
-  it('flushes accumulated token analytics when a completed step is followed by cancellation', async () => {
-    const service = createService()
-    const trackTokenUsage = vi.fn()
-    mockApplicationGet.mockReturnValue({ trackTokenUsage })
-    const hooks = (service as any).analyticsHookPart({
-      id: 'test-model',
-      providerId: 'test-provider',
-      apiModelId: 'test-api-model'
-    })
-
-    await hooks.onStepFinish({
-      usage: {
-        inputTokens: 3,
-        outputTokens: 5,
-        totalTokens: 8,
-        inputTokenDetails: {},
-        outputTokenDetails: {}
-      }
-    })
-    await hooks.onAbort()
-    await hooks.onFinish()
-
-    expect(mockApplicationGet).toHaveBeenCalledWith('AnalyticsService')
-    expect(trackTokenUsage).toHaveBeenCalledOnce()
-    expect(trackTokenUsage).toHaveBeenCalledWith({
-      provider: 'test-provider',
-      model: 'test-api-model',
-      input_tokens: 3,
-      output_tokens: 5,
-      source: 'chat'
-    })
-  })
-
-  it('reports explicitly classified token analytics as agent usage', async () => {
-    const service = createService()
-    const trackTokenUsage = vi.fn()
-    mockApplicationGet.mockReturnValue({ trackTokenUsage })
-    const hooks = (service as any).analyticsHookPart(
-      {
-        id: 'test-model',
-        providerId: 'test-provider',
-        apiModelId: 'test-api-model'
-      },
-      'agent'
-    )
-
-    await hooks.onStepFinish({
-      usage: {
-        inputTokens: 3,
-        outputTokens: 5,
-        totalTokens: 8,
-        inputTokenDetails: {},
-        outputTokenDetails: {}
-      }
-    })
-    await hooks.onFinish()
-
-    expect(trackTokenUsage).toHaveBeenCalledWith({
-      provider: 'test-provider',
-      model: 'test-api-model',
-      input_tokens: 3,
-      output_tokens: 5,
-      source: 'agent'
-    })
-  })
-
   it('normalizes base64 and url images from ai-core generateImage', async () => {
     const service = createService()
     vi.spyOn(service as unknown as AiServicePrivate, 'resolveTransportFor').mockResolvedValue({
@@ -952,21 +852,6 @@ describe('AiService', () => {
       })
       mockEmbedMany.mockResolvedValue({ embeddings: [[0.1, 0.2]], usage: { tokens: 42 } })
     }
-
-    it('returns embedding usage without reporting tokens to analytics', async () => {
-      const service = createService()
-      stubEmbedding(service)
-      const trackTokenUsage = vi.fn()
-      mockApplicationGet.mockReturnValue({ trackTokenUsage })
-
-      const result = await service.embedMany({
-        uniqueModelId: 'test-provider::test-embedding-model',
-        values: ['hello']
-      })
-
-      expect(result).toEqual({ embeddings: [[0.1, 0.2]], usage: { tokens: 42 } })
-      expect(trackTokenUsage).not.toHaveBeenCalled()
-    })
 
     it('records the usage entry with modality "embedding" and the token count', async () => {
       const service = createService()
@@ -1457,7 +1342,6 @@ describe('AiService tool approval', () => {
 
   it('caps embedMany parallelism and derives maxRetries from the retry preference', async () => {
     const service = createService()
-    vi.spyOn(service as unknown as AiServicePrivate, 'trackUsage').mockReturnValue(undefined)
     vi.spyOn(service as unknown as AiServicePrivate, 'resolveTransportFor').mockResolvedValue({
       sdkConfig: { providerId: 'test-provider', providerSettings: {}, modelId: 'test-embed' },
       credentialReceipt: { attribution: 'explicit', id: 'key-a', masked: 'sk-a****aaaa' },
@@ -1492,7 +1376,6 @@ describe('AiService tool approval', () => {
     // Regression: default-config embedding must NOT drop from the SDK's 2
     // retries to 0 — this PR adds retry behavior, it never removes it.
     const service = createService()
-    vi.spyOn(service as unknown as AiServicePrivate, 'trackUsage').mockReturnValue(undefined)
     vi.spyOn(service as unknown as AiServicePrivate, 'resolveTransportFor').mockResolvedValue({
       sdkConfig: { providerId: 'test-provider', providerSettings: {}, modelId: 'test-embed' },
       credentialReceipt: { attribution: 'explicit', id: 'key-a', masked: 'sk-a****aaaa' },

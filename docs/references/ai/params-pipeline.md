@@ -86,8 +86,8 @@ export const INTERNAL_FEATURES = [
 ```
 
 Callers can append per-request `extraFeatures`; those run after the
-internal set. (AiService's analytics is *not* one of these — it is injected
-separately as a `hookParts` entry, not a `RequestFeature`.)
+internal set. (AiService's runtime-timing hooks are *not* one of these — they
+are injected separately as `hookParts` entries, not `RequestFeature`s.)
 
 ## RequestScope
 

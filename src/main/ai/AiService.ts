@@ -27,7 +27,6 @@ import {
   type TranscriptionOptions,
   type TranscriptionResult
 } from '@cherrystudio/ai-core'
-import type { TokenUsageSource } from '@cherrystudio/analytics-client'
 import { endpointImpliedCapability, type ParamValues } from '@cherrystudio/provider-registry'
 import {
   type AiUsageCaptureContext,
@@ -67,7 +66,6 @@ import {
 import { isExternalCliProvider, isOllamaProvider } from '@shared/utils/provider'
 
 import { isAgentSessionTopic } from './agentSession/topic'
-import { createAnalyticsHook } from './hooks/analyticsHook'
 import { createAiUsagePlugin } from './hooks/billingHook'
 import { resolveAttachmentBudget } from './messages/attachmentBudget'
 import { prepareChatMessages } from './messages/attachmentRouting'
@@ -280,8 +278,6 @@ export interface AiRequestOptions extends AiTransportOptions {
 /** Widens `requestOptions` to accept the in-process shape on `AiService.*` method signatures. */
 export type AsInProcess<T extends AiRequest> = Omit<T, 'requestOptions'> & {
   requestOptions?: AiRequestOptions
-  /** Trusted in-process classification for remote token analytics. */
-  tokenUsageSource?: TokenUsageSource
   resolvedModel?: { readonly provider: Provider; readonly model: Model }
 }
 
@@ -756,7 +752,6 @@ export class AiService extends BaseService {
       system,
       options: wrapModel ? { ...options, maxRetries: 0, repairToolCall } : options,
       hookParts: [
-        this.analyticsHookPart(model, request.tokenUsageSource ?? 'chat'),
         ...(request.runtimeTimingSink
           ? [
               {
@@ -776,10 +771,6 @@ export class AiService extends BaseService {
     agentRef.current = agent
 
     return agent.stream(preparedMessages, signal)
-  }
-
-  private analyticsHookPart(model: Model, source: TokenUsageSource = 'chat'): Partial<AgentLoopHooks> {
-    return createAnalyticsHook(model, (trackedModel, usage) => this.trackUsage(trackedModel, usage, source))
   }
 
   // ── Request-scoped cancellation ──
@@ -916,7 +907,7 @@ export class AiService extends BaseService {
       tools,
       system,
       options: wrapModel ? { ...options, maxRetries: 0, repairToolCall } : options,
-      hookParts: [this.analyticsHookPart(model, request.tokenUsageSource ?? 'chat'), ...hookParts],
+      hookParts,
       mediaCapabilities,
       toolResultMediaCapabilities: resolveToolResultMediaCapabilities(
         mediaCapabilities,
@@ -1606,31 +1597,6 @@ export class AiService extends BaseService {
       compactionSink: request.compactionSink
     })
     return { ...built, provider, model, assistant }
-  }
-
-  // ── Token usage tracking ──
-
-  private trackUsage(
-    model: Model,
-    usage?: { inputTokens?: number; outputTokens?: number },
-    source: TokenUsageSource = 'chat'
-  ): void {
-    if (!usage || !model.providerId || !model.apiModelId) return
-    const inputTokens = usage.inputTokens ?? 0
-    const outputTokens = usage.outputTokens ?? 0
-
-    try {
-      const analyticsService = application.get('AnalyticsService')
-      analyticsService.trackTokenUsage({
-        provider: model.providerId,
-        model: model.apiModelId ?? model.id,
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        source
-      })
-    } catch {
-      // AnalyticsService may not be activated (data collection disabled)
-    }
   }
 
   /** Priority: explicit `uniqueModelId` > `assistant.modelId`. */

@@ -4368,7 +4368,6 @@
   "settings.developer.cdp.invalid_port": "Enter a whole-number port from 1 to 65534.",
   "settings.developer.cdp.port": "CDP port",
   "settings.developer.cdp.title": "Local automation (CDP)",
-  "settings.developer.client_id": "Client ID",
   "settings.developer.enable_developer_mode": "Enable Developer Mode",
   "settings.developer.help": "After enabling developer mode, you can use the trace feature to view the data flow during model invocation. Changes take effect after restarting the application.",
   "settings.display.custom.css.label": "Custom CSS",

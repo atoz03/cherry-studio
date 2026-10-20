@@ -585,7 +585,7 @@ describe('processMessage (streaming)', () => {
     await vi.waitFor(() => expect(captured.listener).toBeDefined())
 
     expect(mockResolveAgentSessionUsage).toHaveBeenCalledWith(requestHeaders)
-    expect(mockStreamPrompt).toHaveBeenCalledWith(expect.objectContaining({ tokenUsageSource: 'agent', usageContext }))
+    expect(mockStreamPrompt).toHaveBeenCalledWith(expect.objectContaining({ usageContext }))
 
     commit(captured.listener!)
     await captured.listener!.onDone({} as any)
@@ -610,7 +610,7 @@ describe('processMessage (streaming)', () => {
     }
   )
 
-  it('marks internal Agent usage when no active turn correlation is available', async () => {
+  it('omits usage correlation for internal Agent usage without an active turn', async () => {
     mockIsInternalAgentRequest.mockReturnValue(true)
     const response = processMessage({
       params: { model: 'openai:gpt-4', stream: true, messages: [] },
@@ -620,9 +620,7 @@ describe('processMessage (streaming)', () => {
     })
     await vi.waitFor(() => expect(captured.listener).toBeDefined())
 
-    const streamPromptInput = mockStreamPrompt.mock.calls[0][0]
-    expect(streamPromptInput).toEqual(expect.objectContaining({ tokenUsageSource: 'agent' }))
-    expect(streamPromptInput).not.toHaveProperty('usageContext')
+    expect(mockStreamPrompt.mock.calls[0][0]).not.toHaveProperty('usageContext')
 
     commit(captured.listener!)
     await captured.listener!.onDone({} as any)
@@ -731,21 +729,6 @@ describe('processMessage (streaming)', () => {
     const res = await resPromise
     expect(res.headers.get('Content-Type')).toBe('application/json')
     await expect(res.json()).resolves.toEqual({ done: true })
-  })
-
-  it('marks non-streaming internal Agent usage as agent usage', async () => {
-    mockIsInternalAgentRequest.mockReturnValue(true)
-    const resPromise = processMessage({
-      params: { model: 'openai:gpt-4', messages: [] },
-      inputFormat: 'openai',
-      outputFormat: 'openai',
-      requestHeaders: new Headers({ 'x-api-key': 'internal-agent-key', 'x-cherry-agent-session-id': 'session-1' })
-    })
-
-    await vi.waitFor(() => expect(captured.listener).toBeDefined())
-    expect(mockStreamPrompt).toHaveBeenCalledWith(expect.objectContaining({ tokenUsageSource: 'agent' }))
-    await captured.listener!.onDone({} as any)
-    await resPromise
   })
 })
 

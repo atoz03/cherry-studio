@@ -4368,7 +4368,6 @@
   "settings.developer.cdp.invalid_port": "1 ile 65534 arasında bir tam sayı bağlantı noktası girin.",
   "settings.developer.cdp.port": "CDP bağlantı noktası",
   "settings.developer.cdp.title": "Yerel otomasyon (CDP)",
-  "settings.developer.client_id": "İstemci Kimliği",
   "settings.developer.enable_developer_mode": "Geliştirici Modunu Etkinleştir",
   "settings.developer.help": "Geliştirici modu etkinleştirildikten sonra, model çağrısı sırasındaki veri akışını görüntülemek için izleme özelliği kullanılabilir. Değişiklikler uygulama yeniden başlatıldıktan sonra geçerli olur.",
   "settings.display.custom.css.label": "Özel CSS",

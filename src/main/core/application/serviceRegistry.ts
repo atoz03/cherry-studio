@@ -37,7 +37,6 @@ import { FileProcessingService, TesseractRuntimeService } from '@main/features/f
 import { KnowledgeService, KnowledgeVectorStoreService } from '@main/features/knowledge'
 import { MiniAppRuntimeService } from '@main/features/miniApp/runtime/MiniAppRuntimeService'
 import { IpcApiService } from '@main/ipc/IpcApiService'
-import { AnalyticsService } from '@main/services/AnalyticsService'
 import { AppMenuService } from '@main/services/AppMenuService'
 import { AppService } from '@main/services/AppService'
 import { AppUpdaterService } from '@main/services/AppUpdaterService'
@@ -119,7 +118,6 @@ export const services = {
   SubWindowService,
   PreferenceService,
   TesseractRuntimeService,
-  AnalyticsService,
   AppMenuService,
   AppService,
   CodeCliService,

@@ -7,9 +7,6 @@
  * Flip a switch only together with those exclusions — `forkFeatures.test.ts` checks both.
  */
 
-/** Usage analytics sent to upstream's analytics endpoint. */
-export const FORK_ANALYTICS_ENABLED = false
-
 /** Pairing the desktop with the mobile app over LAN/VPN ("Device Connections"). */
 export const FORK_REMOTE_ACCESS_ENABLED = false
 
@@ -29,4 +26,4 @@ export const FORK_DIAGNOSTICS_UPLOAD_ENABLED = false
 export const FORK_TEST_PLAN_ENABLED = false
 
 /** Data-collection consent only means something while a collector is shipped. */
-export const FORK_DATA_COLLECTION_ENABLED = FORK_ANALYTICS_ENABLED
+export const FORK_DATA_COLLECTION_ENABLED = false

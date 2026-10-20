@@ -1,42 +1,39 @@
 import type { UpdateInfo } from 'builder-util-runtime'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { updaterModule, autoUpdaterMock, readOnlyCheckMock, readOnlyUpdaters, scheduler, trackAppUpdateMock } =
-  vi.hoisted(() => {
-    const armed = new Set<string>()
-    return {
-      // Flips when the service first imports electron-updater.
-      updaterModule: { loaded: false },
-      autoUpdaterMock: {
-        on: vi.fn(),
-        removeListener: vi.fn(),
-        checkForUpdates: vi.fn(),
-        downloadUpdate: vi.fn(),
-        quitAndInstall: vi.fn()
-      } as Record<string, any>,
-      readOnlyCheckMock: vi.fn(),
-      readOnlyUpdaters: [] as Array<Record<string, unknown>>,
-      trackAppUpdateMock: vi.fn(),
-      // Minimal SchedulerService (scheduling itself: AppUpdaterService.scheduler.test.ts).
-      scheduler: {
-        armed,
-        registerSchedule: vi.fn((id: string) => {
-          armed.add(id)
-          return { dispose: () => armed.delete(id) }
-        }),
-        unregister: vi.fn((id: string) => {
-          armed.delete(id)
-        })
-      }
+const { updaterModule, autoUpdaterMock, readOnlyCheckMock, readOnlyUpdaters, scheduler } = vi.hoisted(() => {
+  const armed = new Set<string>()
+  return {
+    // Flips when the service first imports electron-updater.
+    updaterModule: { loaded: false },
+    autoUpdaterMock: {
+      on: vi.fn(),
+      removeListener: vi.fn(),
+      checkForUpdates: vi.fn(),
+      downloadUpdate: vi.fn(),
+      quitAndInstall: vi.fn()
+    } as Record<string, any>,
+    readOnlyCheckMock: vi.fn(),
+    readOnlyUpdaters: [] as Array<Record<string, unknown>>,
+    // Minimal SchedulerService (scheduling itself: AppUpdaterService.scheduler.test.ts).
+    scheduler: {
+      armed,
+      registerSchedule: vi.fn((id: string) => {
+        armed.add(id)
+        return { dispose: () => armed.delete(id) }
+      }),
+      unregister: vi.fn((id: string) => {
+        armed.delete(id)
+      })
     }
-  })
+  }
+})
 
 vi.mock('@application', async () => {
   const { mockApplicationFactory } = await import('@test-mocks/main/application')
   const result = mockApplicationFactory()
   const originalGet = result.application.get.getMockImplementation()!
   result.application.get.mockImplementation((name: string) => {
-    if (name === 'AnalyticsService') return { trackAppUpdate: trackAppUpdateMock }
     if (name === 'SchedulerService') return scheduler
     if (name === 'PowerService') return { registerShutdownHandler: vi.fn() }
     return originalGet(name)
@@ -113,7 +110,6 @@ describe('AppUpdaterService', () => {
     scheduler.armed.clear()
     readOnlyCheckMock.mockReset().mockResolvedValue(null)
     readOnlyUpdaters.length = 0
-    trackAppUpdateMock.mockReset()
     // electron-updater's defaults for a prerelease-tagged fork build (2.1.8-atoz.1).
     Object.assign(autoUpdaterMock, {
       allowDowngrade: false,
@@ -219,7 +215,7 @@ describe('AppUpdaterService', () => {
   })
 
   describe('read-only update query', () => {
-    it('reports an available release from the same feed without using the app updater or analytics', async () => {
+    it('reports an available release from the same feed without using the app updater', async () => {
       readOnlyCheckMock.mockResolvedValue({ isUpdateAvailable: true, updateInfo: { version: '2.1.8-atoz.2' } })
       const service = new AppUpdaterService()
 
@@ -234,7 +230,6 @@ describe('AppUpdaterService', () => {
         autoInstallOnAppQuit: false
       })
       expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled()
-      expect(trackAppUpdateMock).not.toHaveBeenCalled()
     })
 
     it('does not turn a failed or unsupported updater query into an up-to-date result', async () => {

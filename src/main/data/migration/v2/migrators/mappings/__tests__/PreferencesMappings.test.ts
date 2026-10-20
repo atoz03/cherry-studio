@@ -9,7 +9,7 @@ import {
   getComplexMappingById,
   getComplexMappingTargetKeys
 } from '../ComplexPreferenceMappings'
-import { ELECTRON_STORE_MAPPINGS, LOCALSTORAGE_MAPPINGS, REDUX_STORE_MAPPINGS } from '../PreferencesMappings'
+import { LOCALSTORAGE_MAPPINGS, REDUX_STORE_MAPPINGS } from '../PreferencesMappings'
 
 describe('PreferencesMappings', () => {
   it('exports exactly the localStorage keys consumed by all migration mappings', () => {
@@ -25,17 +25,6 @@ describe('PreferencesMappings', () => {
     ]
 
     expect([...new Set(mappedLocalStorageKeys)].sort()).toEqual([...MIGRATION_LOCAL_STORAGE_KEYS].sort())
-  })
-
-  it('maps the v1 Electron Store clientId instead of the unrelated Redux userId', () => {
-    expect(ELECTRON_STORE_MAPPINGS).toContainEqual({
-      originalKey: 'clientId',
-      targetKey: 'app.user.id'
-    })
-    expect(REDUX_STORE_MAPPINGS.settings).not.toContainEqual({
-      originalKey: 'userId',
-      targetKey: 'app.user.id'
-    })
   })
 
   it('uses flat file processing default target keys', () => {

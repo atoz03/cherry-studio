@@ -4368,7 +4368,6 @@
   "settings.developer.cdp.invalid_port": "Saisissez un numéro de port entier compris entre 1 et 65534.",
   "settings.developer.cdp.port": "Port CDP",
   "settings.developer.cdp.title": "Automatisation locale (CDP)",
-  "settings.developer.client_id": "ID client",
   "settings.developer.enable_developer_mode": "Activer le mode développeur",
   "settings.developer.help": "Une fois le mode développeur activé, vous pourrez utiliser la fonctionnalité de chaînage d'appels pour consulter le flux de données du processus d'appel du modèle.",
   "settings.display.custom.css.label": "CSS personnalisé",
