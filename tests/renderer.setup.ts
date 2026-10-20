@@ -191,6 +191,7 @@ vi.mock('@cherrystudio/ui', async () => {
     Markdown: ({ children }) => React.createElement('div', null, children),
     StreamingMarkdown: ({ children }) => React.createElement('div', null, children),
     withChatPlugins: () => [],
+    withCjk: () => undefined,
     withMath: (plugins) => plugins ?? [],
     withMermaid: (plugins) => plugins ?? [],
     withFullMarkdown: (plugins) => plugins ?? [],
