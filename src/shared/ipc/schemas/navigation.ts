@@ -92,9 +92,7 @@ export type NavigationEventSchemas = {
     target: ConversationNavigationTarget
     title: string
   }
-  // Broadcast fall-through for a deep link whose host matched no dedicated handler
-  // (e.g. the PPIO OAuth callback, which has an empty host). Carries the raw url + query
-  // params; each consumer filters for what it expects. Broadcast, unlike the directed
-  // open_route_requested above.
+  // Broadcast fall-through for a deep link whose host matched no dedicated handler. Carries the
+  // raw url + query params; each consumer filters for what it expects.
   'navigation.protocol_data': { url: string; params: Record<string, string> }
 }
