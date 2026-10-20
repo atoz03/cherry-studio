@@ -20,8 +20,9 @@ import { ipcApi } from '@renderer/ipc'
 import { openRoute } from '@renderer/services/mainWindowNavigation'
 import { toast } from '@renderer/services/toast'
 import { openExternalWebsite } from '@renderer/services/website'
+import { FORK_NEW_ISSUE_URL } from '@shared/utils/forkRelease'
 
-export const FEEDBACK_GITHUB_URL = 'https://github.com/CherryHQ/cherry-studio/issues/new/choose'
+export const FEEDBACK_GITHUB_URL = FORK_NEW_ISSUE_URL
 
 const logger = loggerService.withContext('FeedbackDialog')
 

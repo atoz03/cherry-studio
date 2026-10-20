@@ -14,6 +14,7 @@ import { sanitizeUrl } from 'strict-url-sanitise'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
+import { FORK_REPO_URL } from '@shared/utils/forkRelease'
 
 import { JsonFileStorage } from './storage'
 import type { OAuthProviderOptions } from './types'
@@ -35,7 +36,7 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
       callbackPath: options.callbackPath || '/oauth/callback',
       configDir: options.configDir || configDir,
       clientName: options.clientName || 'Cherry Studio',
-      clientUri: options.clientUri || 'https://github.com/CherryHQ/cherry-studio'
+      clientUri: options.clientUri || FORK_REPO_URL
     }
     this.storage = new JsonFileStorage(this.config.serverUrlHash, this.config.configDir)
   }

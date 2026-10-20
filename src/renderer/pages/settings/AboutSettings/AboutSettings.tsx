@@ -41,7 +41,7 @@ import { cn } from '@renderer/utils/style'
 import { UpgradeChannel } from '@shared/data/preference/preferenceTypes'
 import { DOCTOR_OPEN_QUERY_PARAM, type DoctorPanel } from '@shared/utils/doctor'
 import { FORK_TEST_PLAN_ENABLED } from '@shared/utils/forkFeatures'
-import { FORK_RELEASES_URL } from '@shared/utils/forkRelease'
+import { FORK_RELEASES_URL, FORK_REPO_URL } from '@shared/utils/forkRelease'
 
 import { ModelCatalogAutoUpdateRow } from './ModelCatalogAutoUpdateRow'
 
@@ -218,7 +218,7 @@ const AboutSettings: FC = () => {
           <button
             type="button"
             aria-label={t('settings.about.repository')}
-            onClick={() => onOpenWebsite('https://github.com/CherryHQ/cherry-studio')}
+            onClick={() => onOpenWebsite(FORK_REPO_URL)}
             className="inline-flex items-center justify-center rounded-md p-1 text-foreground transition-colors hover:bg-muted">
             <Github aria-hidden="true" className="size-5" />
           </button>
@@ -231,7 +231,7 @@ const AboutSettings: FC = () => {
             <button
               type="button"
               aria-label={t('settings.about.repository')}
-              onClick={() => onOpenWebsite('https://github.com/CherryHQ/cherry-studio')}
+              onClick={() => onOpenWebsite(FORK_REPO_URL)}
               className="relative cursor-pointer">
               <span aria-hidden="true">
                 {appUpdateState.downloading && appUpdateState.downloadProgress > 0 && (

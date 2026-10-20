@@ -8,6 +8,7 @@ import {
   type ImageAttachment,
   MAX_FILE_SIZE_BYTES
 } from '@main/utils/downloadAsBase64'
+import { FORK_REPO_URL } from '@shared/utils/forkRelease'
 import { clampSurrogateBoundary } from '@shared/utils/text'
 
 import {
@@ -22,7 +23,7 @@ import { splitMessage } from '../../utils'
 
 const DISCORD_API_BASE = 'https://discord.com/api/v10'
 const DISCORD_MAX_LENGTH = 2000
-const USER_AGENT = 'DiscordBot (https://github.com/CherryHQ/cherry-studio, 1.0.0)'
+const USER_AGENT = `DiscordBot (${FORK_REPO_URL}, 1.0.0)`
 
 // Discord Gateway Opcodes
 const OP_DISPATCH = 0

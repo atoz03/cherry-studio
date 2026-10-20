@@ -19,6 +19,7 @@ import {
   resolveMenu
 } from '@shared/utils/command'
 import { doctorSettingsPath } from '@shared/utils/doctor'
+import { FORK_NEW_ISSUE_URL, FORK_RELEASES_URL } from '@shared/utils/forkRelease'
 
 const logger = loggerService.withContext('AppMenuService')
 
@@ -212,7 +213,7 @@ export class AppMenuService extends BaseService {
             click: () => {
               void application
                 .get('MainWindowService')
-                .openWebsite('https://github.com/CherryHQ/cherry-studio/issues/new/choose')
+                .openWebsite(FORK_NEW_ISSUE_URL)
                 .catch((error) => logger.warn('Failed to open website', { error }))
             }
           },
@@ -222,7 +223,7 @@ export class AppMenuService extends BaseService {
             click: () => {
               void application
                 .get('MainWindowService')
-                .openWebsite('https://github.com/CherryHQ/cherry-studio/releases')
+                .openWebsite(FORK_RELEASES_URL)
                 .catch((error) => logger.warn('Failed to open website', { error }))
             }
           }

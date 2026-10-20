@@ -73,7 +73,7 @@ import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
 
 import { AboutSettings } from '..'
 
-const REPOSITORY_URL = 'https://github.com/CherryHQ/cherry-studio'
+const REPOSITORY_URL = 'https://github.com/atoz03/cherry-studio'
 
 async function renderAboutSettings() {
   render(<AboutSettings />)
