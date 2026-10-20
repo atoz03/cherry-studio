@@ -13,6 +13,10 @@ import type { NoteDraft } from '../types'
 const TOOLBAR_WRAP =
   '[&_.ToolbarWrapper]:flex-wrap [&_.ToolbarWrapper]:overflow-x-visible [&_.ToolbarWrapper]:whitespace-normal'
 
+// Compare blocks keep their text in a base64 file footer meant for notes; in a knowledge
+// item it would only be indexed as noise.
+const DISABLED_COMMANDS = ['compareBlock'] as const
+
 interface NoteCreateContentProps {
   draft: NoteDraft
   onTitleChange: (title: string) => void
@@ -56,6 +60,7 @@ const NoteCreateContent = ({ draft, onTitleChange, onContentChange }: NoteCreate
           className={`min-h-0 flex-1 ${TOOLBAR_WRAP}`}
           autoFocus={false}
           enableImageInsertion={false}
+          disabledCommands={DISABLED_COMMANDS}
           showToolbar
           isFullWidth
         />

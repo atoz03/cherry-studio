@@ -14,6 +14,7 @@ import { TableCell, TableHeader, TableRow } from '@cherrystudio/extension-table-
 
 import { createCommandSuggestion } from './command'
 import { CodeBlockShiki } from './extensions/codeBlockShiki/codeBlockShiki'
+import { CompareBlock, CompareBlockDocument, CompareBlockMetaFooter } from './extensions/compareBlock'
 import { EnhancedImage } from './extensions/enhancedImage'
 import { EnhancedLink, type EnhancedLinkOptions } from './extensions/enhancedLink'
 import { EnhancedMath, type EnhancedMathOptions } from './extensions/enhancedMath'
@@ -94,8 +95,10 @@ export const createRichEditorExtensions = (options: CreateRichEditorExtensionsOp
         levels: [1, 2, 3, 4, 5, 6]
       },
       codeBlock: false,
-      link: false
+      link: false,
+      document: false
     }),
+    CompareBlockDocument,
     EnhancedLink.configure({
       onLinkHover,
       onLinkHoverEnd,
@@ -122,6 +125,8 @@ export const createRichEditorExtensions = (options: CreateRichEditorExtensionsOp
       includeChildren: false
     }),
     YamlFrontMatter,
+    CompareBlock,
+    CompareBlockMetaFooter,
     Mention.configure({
       HTMLAttributes: {
         class: 'mention'

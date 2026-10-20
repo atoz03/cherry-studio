@@ -31,6 +31,7 @@ import {
 import { contextCountToMaxMessages } from './AssistantMappings'
 import { mergeFileProcessingOverrides } from './FileProcessingOverrideMappings'
 import { transformLlmModelIds } from './LlmModelTransforms'
+import { transformNotesGitSettings } from './NotesGitMappings'
 import { SHORTCUT_TARGET_KEYS, transformShortcuts } from './ShortcutMappings'
 import {
   copyTargetLanguageForMiniWindow,
@@ -322,6 +323,17 @@ export const COMPLEX_PREFERENCE_MAPPINGS: ComplexMapping[] = [
       'feature.translate.page.target_language'
     ],
     transform: copyTranslatePageLanguages
+  },
+
+  {
+    id: 'notes_git_settings_migrate',
+    description: "Carry the v1 fork's notes git versioning switch and auto-commit interval",
+    sources: {
+      enableGit: { source: 'redux', category: 'note', key: 'settings.enableGit' },
+      commitIntervalMinutes: { source: 'redux', category: 'note', key: 'settings.gitCommitIntervalMinutes' }
+    },
+    targetKeys: ['feature.notes.git.enabled', 'feature.notes.git.commit_interval_minutes'],
+    transform: transformNotesGitSettings
   }
 ]
 
