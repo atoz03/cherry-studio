@@ -28,6 +28,12 @@ const mocks = vi.hoisted(() => ({
   showMainWindow: vi.fn()
 }))
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_CHERRY_CLOUD_ENABLED: true
+}))
+
 vi.mock('systeminformation', () => ({
   uuid: vi.fn(async () => ({ os: 'abcdef12123456789abc1234567890ab', hardware: '', macs: [] }))
 }))

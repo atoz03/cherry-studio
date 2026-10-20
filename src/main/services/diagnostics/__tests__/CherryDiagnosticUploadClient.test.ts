@@ -12,6 +12,12 @@ import { AbsoluteFilePathSchema } from '@shared/types/file'
 const signerMocks = vi.hoisted(() => ({ generateDiagnosticUploadHeaders: vi.fn() }))
 const snapshotHooks = vi.hoisted(() => ({ onFirstRead: undefined as undefined | (() => Promise<void>) }))
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_DIAGNOSTICS_UPLOAD_ENABLED: true
+}))
+
 vi.mock('@main/ai/provider/cherryai', () => signerMocks)
 
 vi.mock('@main/utils/file', async (importOriginal) => {

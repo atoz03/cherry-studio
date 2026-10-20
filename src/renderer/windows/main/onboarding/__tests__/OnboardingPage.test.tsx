@@ -57,6 +57,12 @@ const selectedModelsMock: {
 const defaultUsePreferenceImplementation = mockUsePreference.getMockImplementation()
 const defaultUseMultiplePreferencesImplementation = mockUseMultiplePreferences.getMockImplementation()
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_DATA_COLLECTION_ENABLED: true
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key })
 }))

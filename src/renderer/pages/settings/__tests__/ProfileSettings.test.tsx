@@ -5,6 +5,12 @@ import { ProfileSettings } from '../ProfileSettings'
 
 const { edition } = vi.hoisted(() => ({ edition: { current: 'global' } }))
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_CHERRY_CLOUD_ENABLED: true
+}))
+
 vi.mock('@renderer/components/UserProfileEditor', () => ({
   UserProfileEditor: () => <button type="button" aria-label="Avatar editor" />
 }))

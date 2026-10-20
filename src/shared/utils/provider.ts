@@ -11,6 +11,7 @@ import {
 import { CHERRYAI_PROVIDER_ID, isManagedCherryProviderId } from '@shared/data/presets/cherryai'
 import { ENDPOINT_TYPE, type EndpointType, type Model } from '@shared/data/types/model'
 import type { EndpointDialect, Provider } from '@shared/data/types/provider'
+import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 import { getLowerBaseModelName, getRawModelId, isFunctionCallingModel, isGeminiModel, isNonChatModel } from './model'
 import { getProviderHostTopology } from './providerTopology'
@@ -146,6 +147,8 @@ export function canManageProvider(provider: Provider): boolean {
 export const API_KEY_OAUTH_PROVIDER_IDS = ['302ai', 'silicon', 'aihubmix', 'ppio', 'aionly', 'tokendance'] as const
 
 export function isProviderSupportAuth(provider: Pick<Provider, 'id'>): boolean {
+  // Their OAuth needs a client secret that only upstream's release CI has; API keys still work.
+  if (!FORK_CHERRY_CLOUD_ENABLED && (provider.id === 'aihubmix' || provider.id === 'ppio')) return false
   return (API_KEY_OAUTH_PROVIDER_IDS as readonly string[]).includes(provider.id)
 }
 

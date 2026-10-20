@@ -23,6 +23,7 @@ import { openSettingsTab } from '@renderer/services/mainWindowNavigation'
 import { getAppEdition } from '@renderer/utils/appEdition'
 import { isEmoji } from '@renderer/utils/naming'
 import { ThemeMode } from '@shared/data/preference/preferenceTypes'
+import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 import UserPopup from './UserPopup'
 
@@ -46,7 +47,7 @@ export function UserAccountPanel({ active = true, onRequestClose }: { active?: b
     isCancellingLogin,
     isRevokingSession,
     isAuthorizing
-  } = useCherryAccountSession(active)
+  } = useCherryAccountSession(active && FORK_CHERRY_CLOUD_ENABLED)
   const isGlobalEdition = getAppEdition() === 'global'
   const isCloudSignedIn = cloudStatus?.phase === 'signed-in'
 
@@ -92,7 +93,7 @@ export function UserAccountPanel({ active = true, onRequestClose }: { active?: b
         : t('settings.provider.cherry_cloud.title')
   const cloudSubtitleRole =
     isCloudSignedIn || isAuthorizing ? 'status' : cloudStatusLoadState === 'error' ? 'alert' : undefined
-  const useCloudSubtitleAsTitle = !userName
+  const useCloudSubtitleAsTitle = FORK_CHERRY_CLOUD_ENABLED && !userName
   const paidPlanName = isCloudSignedIn && subscriptionLookup.status === 'ready' ? subscriptionLookup.planName : null
   const subscriptionLoading =
     cloudStatusLoadState === 'loading' || isAuthorizing || (isCloudSignedIn && subscriptionLookup.status === 'loading')
@@ -203,7 +204,7 @@ export function UserAccountPanel({ active = true, onRequestClose }: { active?: b
               className="truncate font-medium text-[13px] text-foreground leading-[18px]">
               {userName || (useCloudSubtitleAsTitle ? cloudSubtitle : t('settings.general.user_name.placeholder'))}
             </span>
-            {!useCloudSubtitleAsTitle && cloudSubtitle ? (
+            {FORK_CHERRY_CLOUD_ENABLED && !useCloudSubtitleAsTitle && cloudSubtitle ? (
               <span role={cloudSubtitleRole} className="truncate text-muted-foreground text-xs leading-4">
                 {cloudSubtitle}
               </span>
@@ -212,7 +213,7 @@ export function UserAccountPanel({ active = true, onRequestClose }: { active?: b
         </Button>
       </ColFlex>
       <ColFlex className="border-border-subtle gap-0.5 border-t pt-1">
-        {isGlobalEdition ? (
+        {FORK_CHERRY_CLOUD_ENABLED && isGlobalEdition ? (
           <Button
             type="button"
             className="min-h-7 w-full justify-start gap-2 px-2 text-[13px] text-foreground leading-5"
@@ -249,7 +250,7 @@ export function UserAccountPanel({ active = true, onRequestClose }: { active?: b
             onValueChange={setTheme}
           />
         </RowFlex>
-        {cloudHeaderAction ? (
+        {FORK_CHERRY_CLOUD_ENABLED && cloudHeaderAction ? (
           <Button
             type="button"
             className="min-h-7 w-full justify-start gap-2 px-2 text-[13px] text-foreground leading-5"

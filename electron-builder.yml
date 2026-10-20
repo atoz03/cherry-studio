@@ -98,6 +98,17 @@ files:
   - "!**/node_modules/{@libp2p,@chainsafe,@multiformats,@noble}/**"
   - "!**/node_modules/{multiformats,uint8arrays,uint8arraylist,protons-runtime,cborg}/**"
   - "!**/*.{h,iobj,ipdb,tlog,recipe,vcxproj,vcxproj.filters,Makefile,*.Makefile}" # filter .node build files
+  # Fork: production dependencies only reachable through features switched off in
+  # src/shared/utils/forkFeatures.ts. forkFeatures.test.ts keeps this block in sync with the
+  # switches and pnpm-lock.yaml — update the test's mapping together with these lines.
+  # FORK_SENTRY_ENABLED=false: @sentry/electron and everything only it pulls in
+  - "!**/node_modules/@sentry/**"
+  - "!**/node_modules/@opentelemetry/**"
+  - "!**/node_modules/import-in-the-middle/**"
+  - "!**/node_modules/require-in-the-middle/**"
+  - "!**/node_modules/module-details-from-path/**"
+  - "!**/node_modules/cjs-module-lexer/**"
+  - "!**/node_modules/es-module-lexer/**"
   - "resources/**/*" # include all files in resources, and unpack them from asar for runtime access
   - "!resources/devtools/**" # dev-only extensions are loaded from source in development
 asarUnpack:
