@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "Επιλογέας emoji",
   "settings.general.image_upload": "Φόρτωση εικόνων",
   "settings.general.label": "Γενικές ρυθμίσεις",
+  "settings.general.model_catalog_auto_update.tip": "Κάθε 6 ώρες γίνεται λήψη ενημερωμένων πληροφοριών μοντέλων (δυνατότητες, όρια περιβάλλοντος, τιμές) που δημοσιεύει το έργο Cherry Studio. Όταν είναι απενεργοποιημένο, διατηρείται ο τρέχων κατάλογος μοντέλων.",
+  "settings.general.model_catalog_auto_update.title": "Αυτόματη ενημέρωση καταλόγου μοντέλων",
   "settings.general.restore.button": "Αποκατάσταση",
   "settings.general.retry.enabled": "Ενεργοποίηση επανάληψης",
   "settings.general.sections.agent": "Συμπεριφορά πράκτορα",

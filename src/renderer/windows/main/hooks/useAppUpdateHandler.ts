@@ -23,7 +23,18 @@ export function getManualUpdateErrorMessageKey(error: { message?: string } | nul
 function isUnpublishedReleaseError(message: string): boolean {
   const lower = message.toLowerCase()
   return (
-    lower.includes('not_published') || (/\b503\b/.test(message) && /latest\.yml|httperror|http error/i.test(message))
+    lower.includes('not_published') ||
+    (/\b503\b/.test(message) && /latest\.yml|httperror|http error/i.test(message)) ||
+    isUnpublishedGitHubReleaseError(lower)
+  )
+}
+
+// Fork feed (GitHub Releases): no release yet, or the latest release is still uploading its manifests.
+function isUnpublishedGitHubReleaseError(lower: string): boolean {
+  return (
+    lower.includes('no published versions on github') ||
+    lower.includes('please ensure a production release exists') ||
+    /cannot find [\w.-]+\.yml in the latest release artifacts/.test(lower)
   )
 }
 

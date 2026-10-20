@@ -69,6 +69,8 @@ vi.mock('@renderer/components/icons/LogoAvatar', () => ({
   default: ({ logo, alt }: { logo: string; alt?: string }) => <img src={logo} alt={alt} />
 }))
 
+import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
+
 import { AboutSettings } from '..'
 
 const REPOSITORY_URL = 'https://github.com/CherryHQ/cherry-studio'
@@ -162,5 +164,49 @@ describe('AboutSettings repository controls accessibility', () => {
 
     await user.click(repositoryButtons[1])
     expect(mocks.request).toHaveBeenCalledWith('system.shell.open_external_website', REPOSITORY_URL)
+  })
+})
+
+describe('AboutSettings fork update controls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    MockUsePreferenceUtils.resetMocks()
+    mocks.search = {}
+    mocks.request.mockImplementation(async (route: string) => {
+      if (route === 'app.get_info') return { isPortable: false, version: '2.1.8-atoz.1' }
+      return undefined
+    })
+  })
+
+  it('opens the fork releases page from the version badge', async () => {
+    const user = userEvent.setup()
+    await renderAboutSettings()
+
+    await user.click(screen.getByRole('button', { name: 'settings.about.releases.title' }))
+
+    expect(mocks.request).toHaveBeenCalledWith(
+      'system.shell.open_external_website',
+      'https://github.com/atoz03/cherry-studio/releases'
+    )
+  })
+
+  it('hides the upstream test-plan channels the fork does not publish', async () => {
+    await renderAboutSettings()
+
+    expect(screen.getByText('settings.general.test_plan.title')).not.toBeVisible()
+    expect(screen.getByText('settings.general.auto_check_update.title')).toBeVisible()
+  })
+
+  it('switches the background model catalog download through its preference', async () => {
+    const user = userEvent.setup()
+    MockUsePreferenceUtils.setPreferenceValue('app.provider_registry.auto_update.enabled', true)
+    await renderAboutSettings()
+
+    const toggle = screen.getByRole('switch', { name: 'settings.general.model_catalog_auto_update.title' })
+    expect(toggle).toBeChecked()
+
+    await user.click(toggle)
+
+    expect(MockUsePreferenceUtils.getPreferenceValue('app.provider_registry.auto_update.enabled')).toBe(false)
   })
 })

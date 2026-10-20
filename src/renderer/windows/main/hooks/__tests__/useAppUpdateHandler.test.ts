@@ -194,9 +194,26 @@ describe('getManualUpdateErrorMessageKey', () => {
     ).toBe('settings.about.updateNotPublished')
   })
 
+  it.each([
+    ['no fork release exists yet', 'No published versions on GitHub'],
+    [
+      'GitHub has no latest release',
+      'Unable to find latest version on GitHub (https://github.com/atoz03/cherry-studio/releases/latest), please ensure a production release exists: HttpError: 404'
+    ],
+    [
+      'the latest release is still uploading its manifests',
+      'Cannot find latest-mac.yml in the latest release artifacts (https://github.com/atoz03/cherry-studio/releases/download/v2.1.8-atoz.2/latest-mac.yml): HttpError: 404'
+    ]
+  ])('classifies %s as an unpublished update', (_label, message) => {
+    expect(getManualUpdateErrorMessageKey(new Error(message))).toBe('settings.about.updateNotPublished')
+  })
+
   it('falls back to the generic update error for unrelated failures', () => {
     expect(getManualUpdateErrorMessageKey(new Error('manual failure'))).toBe('settings.about.updateError')
     expect(getManualUpdateErrorMessageKey(new Error('ENOTFOUND releases.cherry-ai.com'))).toBe(
+      'settings.about.updateError'
+    )
+    expect(getManualUpdateErrorMessageKey(new Error('net::ERR_CONNECTION_RESET github.com'))).toBe(
       'settings.about.updateError'
     )
     expect(getManualUpdateErrorMessageKey(undefined)).toBe('settings.about.updateError')

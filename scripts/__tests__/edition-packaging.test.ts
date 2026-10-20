@@ -92,7 +92,7 @@ describe('edition packaging', () => {
       nsisGuid: '41a4ccd8-bcc0-5710-9eee-0e164da68057',
       productName: 'Cherry Studio',
       protocol: 'cherrystudio',
-      publish: expect.objectContaining({ provider: 'generic', url: 'https://releases.cherry-ai.com' }),
+      publish: expect.objectContaining({ provider: 'github', owner: 'atoz03', repo: 'cherry-studio' }),
       windowsArtifactName: '${productName}-${version}-${arch}-setup.${ext}'
     })
   })
@@ -109,8 +109,9 @@ describe('edition packaging', () => {
         cherryEdition: CHINA_EDITION
       },
       publish: expect.objectContaining({
-        provider: 'generic',
-        url: 'https://releases.cherry-ai.com',
+        provider: 'github',
+        owner: 'atoz03',
+        repo: 'cherry-studio',
         channel: 'latest-cn'
       })
     })

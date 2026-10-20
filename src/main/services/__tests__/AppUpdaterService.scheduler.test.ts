@@ -2,8 +2,8 @@
  * Scheduler tests for AppUpdaterService — the auto update-check cadence that
  * was moved out of the renderer into the main process.
  *
- * Unlike the sibling `AppUpdaterService.test.ts` (which mocks the lifecycle base
- * to isolate pure helpers), this suite runs the REAL `BaseService` + a REAL
+ * Unlike the sibling `AppUpdaterService.test.ts` (which stubs the scheduler to
+ * test the update feed), this suite runs the REAL `BaseService` + a REAL
  * `SchedulerService` with fake timers, mirroring `JobManager.smoke.test.ts`.
  * That is the only way to exercise the self-rescheduling `once` loop end to end:
  * jitter on success, exponential backoff on failure, preference gating, and
@@ -17,7 +17,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { application } from '@application'
 import { BaseService } from '@main/core/lifecycle/BaseService'
 import { SchedulerService } from '@main/core/scheduler/SchedulerService'
-import { regionService } from '@main/services/RegionService'
 
 import { AppUpdaterService } from '../AppUpdaterService'
 
@@ -28,17 +27,6 @@ vi.mock('@logger', () => ({
 }))
 
 vi.mock('@main/core/platform', () => ({ isWin: false }))
-
-vi.mock('@main/utils/appEdition', () => ({ getAppEdition: () => 'global' }))
-
-vi.mock('@main/services/RegionService', () => ({
-  regionService: { getCountry: vi.fn(async () => 'US') }
-}))
-
-vi.mock('@main/utils/systemInfo', () => ({
-  generateUserAgent: vi.fn(() => 'test-user-agent'),
-  getClientId: vi.fn(() => 'test-client-id')
-}))
 
 vi.mock('electron', () => ({
   app: {
@@ -92,6 +80,12 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
   let scheduler: SchedulerService
   let appUpdater: AppUpdaterService
   let prefValues: Record<string, unknown>
+  let prefHandlers: Record<string, (value: unknown) => void>
+
+  const changePreference = (key: string, value: unknown) => {
+    prefValues[key] = value
+    prefHandlers[key]?.(value)
+  }
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -100,14 +94,16 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
 
     prefValues = {
       'app.dist.auto_update.enabled': true,
-      'app.dist.test_plan.enabled': false,
-      'app.dist.test_plan.channel': undefined,
       'app.language': 'en'
     }
+    prefHandlers = {}
     const prefStub = {
       get: vi.fn((key: string) => prefValues[key]),
-      // onInit subscribes to test_plan changes; return an unsubscribe fn.
-      subscribeMultipleChanges: vi.fn(() => vi.fn())
+      // onAllReady follows the auto-update preference; return an unsubscribe fn.
+      subscribeChange: vi.fn((key: string, handler: (value: unknown) => void) => {
+        prefHandlers[key] = handler
+        return () => delete prefHandlers[key]
+      })
     }
     const powerStub = { registerShutdownHandler: vi.fn() }
     const analyticsStub = { trackAppUpdate: vi.fn() }
@@ -133,7 +129,6 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
       }
     })
 
-    vi.mocked(regionService.getCountry).mockResolvedValue('US')
     vi.mocked(autoUpdater.checkForUpdates).mockResolvedValue(null)
     autoUpdater.requestHeaders = {}
     autoUpdater.channel = ''
@@ -177,18 +172,42 @@ describe('AppUpdaterService — auto update-check scheduling', () => {
     expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2)
   })
 
-  it('skips the check while disabled but keeps the loop alive and resumes when re-enabled', async () => {
+  it('keeps no timer while disabled and starts checking once re-enabled', async () => {
     prefValues['app.dist.auto_update.enabled'] = false
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     await appUpdater._doAllReady()
 
-    await vi.advanceTimersByTimeAsync(INITIAL_DELAY)
+    expect(scheduler.has(SCHEDULE_ID)).toBe(false)
+    await vi.advanceTimersByTimeAsync(INITIAL_DELAY + INTERVAL)
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled()
+
+    changePreference('app.dist.auto_update.enabled', true)
+    await vi.advanceTimersByTimeAsync(INITIAL_DELAY)
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1)
+  })
+
+  it('drops the timer when auto update is switched off, also after a check in flight', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    await appUpdater._doAllReady()
+    await vi.advanceTimersByTimeAsync(INITIAL_DELAY)
     expect(scheduler.has(SCHEDULE_ID)).toBe(true)
 
-    prefValues['app.dist.auto_update.enabled'] = true
-    await vi.advanceTimersByTimeAsync(INTERVAL)
-    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1)
+    changePreference('app.dist.auto_update.enabled', false)
+    expect(scheduler.has(SCHEDULE_ID)).toBe(false)
+
+    // A check that is running when the user switches auto update off must not re-arm.
+    changePreference('app.dist.auto_update.enabled', true)
+    let finishCheck: (value: null) => void = () => {}
+    vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => new Promise((resolve) => (finishCheck = resolve)))
+    await vi.advanceTimersByTimeAsync(INITIAL_DELAY)
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2)
+    changePreference('app.dist.auto_update.enabled', false)
+    finishCheck(null)
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(scheduler.has(SCHEDULE_ID)).toBe(false)
+    await vi.advanceTimersByTimeAsync(INTERVAL * 2)
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2)
   })
 
   it('backs off after a failed check and recovers normal cadence after a success', async () => {

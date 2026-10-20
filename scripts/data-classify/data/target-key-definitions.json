@@ -1006,6 +1006,13 @@
       "defaultValue": "AltLeft+ControlLeft",
       "status": "classified",
       "description": "Physical key codes for application-local toggle dictation; empty disables the shortcut"
+    },
+    {
+      "targetKey": "app.provider_registry.auto_update.enabled",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Periodically download model catalog updates for the provider registry (fork setting, no v1 source)"
     }
   ]
 }

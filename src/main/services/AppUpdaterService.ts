@@ -1,8 +1,6 @@
 import type { ProgressInfo, UpdateInfo } from 'builder-util-runtime'
-import { CancellationToken } from 'builder-util-runtime'
-import { app, net } from 'electron'
-import type { Logger, NsisUpdater, UpdateCheckResult } from 'electron-updater'
-import { AppUpdater, autoUpdater } from 'electron-updater'
+import { app } from 'electron'
+import type { AppUpdater, Logger, NsisUpdater } from 'electron-updater'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
@@ -10,58 +8,41 @@ import { computeBackoff } from '@main/core/job/runtime/backoff'
 import { BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isWin } from '@main/core/platform'
 import { WindowType } from '@main/core/window/types'
-import { regionService } from '@main/services/RegionService'
-import { getAppEdition } from '@main/utils/appEdition'
-import { generateUserAgent, getClientId } from '@main/utils/systemInfo'
+import { applyForkUpdateFeed } from '@main/services/forkUpdateFeed'
 import type { RetryPolicy } from '@shared/data/api/schemas/jobs'
-import { UpgradeChannel } from '@shared/data/preference/preferenceTypes'
-import type { AppEdition } from '@shared/types/appEdition'
-import { APP_NAME } from '@shared/utils/constants'
-import {
-  hasMultiLanguageReleaseNotes,
-  localizeReleaseNotes,
-  mergeReleaseHistory,
-  parseReleaseHistory,
-  type ReleaseNotesEntry
-} from '@shared/utils/releaseNotes'
+import { hasMultiLanguageReleaseNotes, localizeReleaseNotes, type ReleaseNotesEntry } from '@shared/utils/releaseNotes'
 
 const logger = loggerService.withContext('AppUpdaterService')
 
-type ReleaseRegion = 'cn' | 'global'
+/**
+ * A second updater on the same feed that only reads it (release notes, Doctor's update check),
+ * leaving the app updater's download/install state alone. electron-updater is imported here, at
+ * first use, rather than at boot.
+ */
+async function createReadOnlyUpdater(): Promise<AppUpdater> {
+  const { AppUpdater } = await import('electron-updater')
 
-export const RELEASE_HISTORY_URL = 'https://releases.cherry-ai.com/release-history.json'
-const RELEASE_HISTORY_TIMEOUT_MS = 10_000
-const RELEASE_HISTORY_MAX_BYTES = 1024 * 1024
+  class ReleaseNotesUpdater extends AppUpdater {
+    constructor() {
+      super(undefined)
+    }
 
-function getEditionUpdateChannel(channel: UpgradeChannel, edition: AppEdition): string {
-  return edition === 'cn' ? `${channel}-cn` : channel
-}
+    protected doDownloadUpdate(): Promise<string[]> {
+      return Promise.reject(new Error('Release-notes updater cannot download updates'))
+    }
 
-function getUpdateHeaders({ region, edition }: { region: ReleaseRegion; edition: AppEdition }) {
-  return {
-    'User-Agent': generateUserAgent(),
-    'Cache-Control': 'no-cache',
-    'Client-Id': getClientId(),
-    'App-Name': APP_NAME,
-    'App-Version': `v${app.getVersion()}`,
-    OS: process.platform,
-    'X-Edition': edition,
-    'X-Region': region
-  }
-}
-
-class ReleaseNotesUpdater extends AppUpdater {
-  constructor() {
-    super(undefined)
+    quitAndInstall(): never {
+      throw new Error('Release-notes updater cannot install updates')
+    }
   }
 
-  protected doDownloadUpdate(): Promise<string[]> {
-    return Promise.reject(new Error('Release-notes updater cannot download updates'))
-  }
-
-  quitAndInstall(): never {
-    throw new Error('Release-notes updater cannot install updates')
-  }
+  const updater = new ReleaseNotesUpdater()
+  updater.logger = logger as Logger
+  updater.forceDevUpdateConfig = !app.isPackaged
+  updater.autoDownload = false
+  updater.autoInstallOnAppQuit = false
+  applyForkUpdateFeed(updater)
+  return updater
 }
 
 // Auto update-check scheduling. The cadence lives in the main process (this
@@ -90,12 +71,58 @@ const CHECK_RETRY_POLICY: RetryPolicy = {
 @ServicePhase(Phase.WhenReady)
 @DependsOn(['WindowManager', 'SchedulerService'])
 export class AppUpdaterService extends BaseService {
-  private cancellationToken: CancellationToken = new CancellationToken()
-  private updateCheckResult: UpdateCheckResult | null = null
+  // electron-updater's `autoUpdater`, loaded and configured by the first update check.
+  private autoUpdater: AppUpdater | null = null
+  private autoUpdaterLoading: Promise<AppUpdater> | null = null
   // Consecutive scheduled-check failures, drives backoff; reset on success.
   private updateCheckFailures = 0
 
   protected async onInit(): Promise<void> {
+    // Stop the scheduled check when this service stops (it depends on
+    // SchedulerService, so SchedulerService is still alive at this point).
+    this.registerDisposable(() => application.get('SchedulerService').unregister(AUTO_UPDATE_SCHEDULE_ID))
+  }
+
+  protected async onAllReady(): Promise<void> {
+    application.get('PowerService').registerShutdownHandler(() => {
+      if (this.autoUpdater) this.autoUpdater.autoDownload = false
+    })
+
+    // The automatic check is armed only while auto update is on, so a disabled
+    // updater keeps no timer and never loads electron-updater.
+    const preferences = application.get('PreferenceService')
+    this.registerDisposable(
+      preferences.subscribeChange('app.dist.auto_update.enabled', (enabled) => this.applyAutoUpdate(enabled))
+    )
+    this.applyAutoUpdate(preferences.get('app.dist.auto_update.enabled'))
+  }
+
+  private applyAutoUpdate(enabled: boolean): void {
+    if (this.autoUpdater) this.autoUpdater.autoDownload = enabled
+
+    // Development builds skip automatic checks but still support manual checks.
+    // Portable builds do not perform update checks.
+    if (!app.isPackaged || this.isPortable()) {
+      return
+    }
+    if (enabled) {
+      this.updateCheckFailures = 0
+      this.scheduleNextUpdateCheck(INITIAL_CHECK_DELAY_MS)
+    } else {
+      application.get('SchedulerService').unregister(AUTO_UPDATE_SCHEDULE_ID)
+    }
+  }
+
+  private getAutoUpdater(): Promise<AppUpdater> {
+    this.autoUpdaterLoading ??= this.loadAutoUpdater().catch((error: unknown) => {
+      this.autoUpdaterLoading = null
+      throw error
+    })
+    return this.autoUpdaterLoading
+  }
+
+  private async loadAutoUpdater(): Promise<AppUpdater> {
+    const { autoUpdater } = await import('electron-updater')
     autoUpdater.logger = logger as Logger
     // Packaged builds use app-update.yml generated from electron-builder.yml;
     // development uses the repository's dev-app-update.yml.
@@ -105,44 +132,24 @@ export class AppUpdaterService extends BaseService {
     // Auto-install on quit can cause issues: unexpected updates on restart,
     // corruption if system shuts down during install, or app uninstall on force shutdown
     autoUpdater.autoInstallOnAppQuit = false
+    applyForkUpdateFeed(autoUpdater)
 
-    this.registerAutoUpdaterListeners()
+    this.registerAutoUpdaterListeners(autoUpdater)
 
     if (isWin) {
       ;(autoUpdater as NsisUpdater).installDirectory = application.getPath('app.install')
     }
 
-    // Cancel an in-flight download when the test plan or channel changes — the
-    // download targets the previously selected channel. The v2 settings UI
-    // writes these preferences directly (no IPC), so react to the change here
-    // rather than in a now-removed `App_SetTestPlan`/`App_SetTestChannel` handler.
-    this.registerDisposable(
-      application
-        .get('PreferenceService')
-        .subscribeMultipleChanges(['app.dist.test_plan.enabled', 'app.dist.test_plan.channel'], () =>
-          this.cancelDownload()
-        )
-    )
-
-    // Stop the scheduled check when this service stops (it depends on
-    // SchedulerService, so SchedulerService is still alive at this point).
-    this.registerDisposable(() => application.get('SchedulerService').unregister(AUTO_UPDATE_SCHEDULE_ID))
-  }
-
-  protected async onAllReady(): Promise<void> {
-    application.get('PowerService').registerShutdownHandler(() => {
-      autoUpdater.autoDownload = false
+    this.autoUpdater = autoUpdater
+    // The listeners above are disposed on stop; a restarted service configures afresh.
+    this.registerDisposable(() => {
+      this.autoUpdater = null
+      this.autoUpdaterLoading = null
     })
-
-    // Development builds skip automatic checks but still support manual checks.
-    // Portable builds do not perform update checks.
-    if (!app.isPackaged || this.isPortable()) {
-      return
-    }
-    this.scheduleNextUpdateCheck(INITIAL_CHECK_DELAY_MS)
+    return autoUpdater
   }
 
-  private registerAutoUpdaterListeners(): void {
+  private registerAutoUpdaterListeners(autoUpdater: AppUpdater): void {
     const onError = (error: Error) => {
       logger.error('update error', error)
       application.get('IpcApiService').broadcastToType(WindowType.Main, 'app.updater.error', error)
@@ -179,88 +186,14 @@ export class AppUpdaterService extends BaseService {
     this.registerDisposable(() => autoUpdater.removeListener('update-downloaded', onUpdateDownloaded))
   }
 
-  private async getUpdateRequest() {
-    const currentVersion = app.getVersion()
-    const testPlan = application.get('PreferenceService').get('app.dist.test_plan.enabled')
-    const requestedChannel = testPlan
-      ? application.get('PreferenceService').get('app.dist.test_plan.channel') || UpgradeChannel.RC
-      : UpgradeChannel.LATEST
-
-    const ipCountry = await regionService.getCountry()
-    const region: ReleaseRegion = ipCountry.toLowerCase() === 'cn' ? 'cn' : 'global'
-    const edition = getAppEdition()
-    const updateChannel = getEditionUpdateChannel(requestedChannel, edition)
-
-    const updateHeaders = getUpdateHeaders({ region, edition })
-
-    return { currentVersion, edition, ipCountry, region, testPlan, updateChannel, updateHeaders }
-  }
-
-  private async configureUpdaterForCheck() {
-    const { currentVersion, edition, ipCountry, region, testPlan, updateChannel, updateHeaders } =
-      await this.getUpdateRequest()
-
-    autoUpdater.requestHeaders = {
-      ...autoUpdater.requestHeaders,
-      ...updateHeaders
-    }
-
-    logger.info(
-      `Using managed update feed for version ${currentVersion}, edition: ${edition}, testPlan: ${testPlan}, channel: ${updateChannel}, region: ${region} (IP country: ${ipCountry})`
-    )
-    autoUpdater.channel = updateChannel
-
-    // disable downgrade after change the channel
-    autoUpdater.allowDowngrade = false
-    // The updater falls back to a full download when blockmaps or the cached base are unavailable.
-    autoUpdater.disableDifferentialDownload = false
-  }
-
-  private async fetchReleaseHistory(): Promise<ReleaseNotesEntry[] | null> {
-    try {
-      const { updateHeaders } = await this.getUpdateRequest()
-      const response = await net.fetch(RELEASE_HISTORY_URL, {
-        headers: updateHeaders,
-        redirect: 'follow',
-        signal: AbortSignal.timeout(RELEASE_HISTORY_TIMEOUT_MS)
-      })
-
-      if (!response.ok) {
-        throw new Error(`Release history request failed with HTTP ${response.status}`)
-      }
-
-      const contentLength = Number(response.headers.get('content-length'))
-      if (Number.isFinite(contentLength) && contentLength > RELEASE_HISTORY_MAX_BYTES) {
-        throw new Error('Release history response exceeds the size limit')
-      }
-
-      const source = await response.text()
-      if (Buffer.byteLength(source, 'utf8') > RELEASE_HISTORY_MAX_BYTES) {
-        throw new Error('Release history response exceeds the size limit')
-      }
-
-      return parseReleaseHistory(source)
-    } catch (error) {
-      logger.warn('Failed to fetch release history', error as Error)
-      return null
-    }
-  }
-
   public async queryUpdateAvailability(): Promise<
     | { status: 'unsupported' }
     | { status: 'current'; currentVersion: string }
     | { status: 'available'; currentVersion: string; version: string }
   > {
     if (this.isPortable()) return { status: 'unsupported' }
-    const { currentVersion, updateChannel, updateHeaders } = await this.getUpdateRequest()
-    const updater = new ReleaseNotesUpdater()
-    updater.logger = logger as Logger
-    updater.forceDevUpdateConfig = !app.isPackaged
-    updater.autoDownload = false
-    updater.autoInstallOnAppQuit = false
-    updater.requestHeaders = updateHeaders
-    updater.channel = updateChannel
-    updater.allowDowngrade = false
+    const currentVersion = app.getVersion()
+    const updater = await createReadOnlyUpdater()
     const result = await updater.checkForUpdates()
     if (!result) throw new Error('Update query did not produce a result')
     return result.isUpdateAvailable
@@ -270,16 +203,7 @@ export class AppUpdaterService extends BaseService {
 
   public async getLatestReleaseNotes(): Promise<ReleaseNotesEntry | null> {
     try {
-      const { updateChannel, updateHeaders } = await this.getUpdateRequest()
-      const updater = new ReleaseNotesUpdater()
-      updater.logger = logger as Logger
-      updater.forceDevUpdateConfig = !app.isPackaged
-      updater.autoDownload = false
-      updater.autoInstallOnAppQuit = false
-      updater.requestHeaders = updateHeaders
-      updater.channel = updateChannel
-      updater.allowDowngrade = false
-
+      const updater = await createReadOnlyUpdater()
       const result = await updater.checkForUpdates()
       if (!result?.isUpdateAvailable) {
         return null
@@ -297,22 +221,13 @@ export class AppUpdaterService extends BaseService {
     }
   }
 
+  /**
+   * Releases newer than the bundled release history. The fork publishes no
+   * release-history feed, so this is at most the update the feed offers.
+   */
   public async getReleaseHistory(): Promise<ReleaseNotesEntry[] | null> {
-    const [history, latestRelease] = await Promise.all([this.fetchReleaseHistory(), this.getLatestReleaseNotes()])
-
-    if (!history) {
-      return latestRelease ? [latestRelease] : null
-    }
-
-    return latestRelease ? mergeReleaseHistory([latestRelease], history) : history
-  }
-
-  public cancelDownload() {
-    this.cancellationToken.cancel()
-    this.cancellationToken = new CancellationToken()
-    if (autoUpdater.autoDownload) {
-      this.updateCheckResult?.cancellationToken?.cancel()
-    }
+    const latestRelease = await this.getLatestReleaseNotes()
+    return latestRelease ? [latestRelease] : null
   }
 
   private isPortable(): boolean {
@@ -337,23 +252,23 @@ export class AppUpdaterService extends BaseService {
       }
     }
 
-    await this.configureUpdaterForCheck()
+    const autoUpdater = await this.getAutoUpdater()
 
-    this.updateCheckResult = await autoUpdater.checkForUpdates()
+    const updateCheckResult = await autoUpdater.checkForUpdates()
     logger.info(
-      `update check result: ${this.updateCheckResult?.isUpdateAvailable}, channel: ${autoUpdater.channel}, currentVersion: ${autoUpdater.currentVersion}`
+      `update check result: ${updateCheckResult?.isUpdateAvailable}, currentVersion: ${autoUpdater.currentVersion}`
     )
 
-    if (this.updateCheckResult?.isUpdateAvailable && !autoUpdater.autoDownload) {
+    if (updateCheckResult?.isUpdateAvailable && !autoUpdater.autoDownload) {
       // 如果 autoDownload 为 false，则需要再调用下面的函数触发下
       // do not use await, because it will block the return of this function
-      logger.info('downloadUpdate manual by check for updates', this.cancellationToken)
-      void autoUpdater.downloadUpdate(this.cancellationToken)
+      logger.info('downloadUpdate manual by check for updates')
+      void autoUpdater.downloadUpdate()
     }
 
     return {
       currentVersion: autoUpdater.currentVersion,
-      updateInfo: this.updateCheckResult?.isUpdateAvailable ? this.updateCheckResult?.updateInfo : null
+      updateInfo: updateCheckResult?.isUpdateAvailable ? updateCheckResult.updateInfo : null
     }
   }
 
@@ -375,8 +290,11 @@ export class AppUpdaterService extends BaseService {
    * callback re-arming itself with a freshly computed delay (jitter on success,
    * backoff on failure) forms the recurring loop. The returned Disposable is
    * discarded; cleanup is the single `unregister` registered in `onInit`.
+   * Nothing is armed while auto update is off — including a re-arm after a
+   * check that was in flight when the user switched it off.
    */
   private scheduleNextUpdateCheck(delayMs: number): void {
+    if (!application.get('PreferenceService').get('app.dist.auto_update.enabled')) return
     application
       .get('SchedulerService')
       .registerSchedule(AUTO_UPDATE_SCHEDULE_ID, { kind: 'once', at: Date.now() + delayMs }, () =>
@@ -386,14 +304,10 @@ export class AppUpdaterService extends BaseService {
 
   private async runScheduledUpdateCheck(): Promise<void> {
     try {
-      // Gate per tick rather than subscribing to the preference: when disabled
-      // the loop keeps ticking (harmless no-op) and resumes automatically once
-      // re-enabled. Only the detection failure of `performUpdateCheck` drives
-      // backoff — the manual download trigger is fire-and-forget and surfaces
-      // its own errors via the `UpdateError` event.
-      if (application.get('PreferenceService').get('app.dist.auto_update.enabled')) {
-        await this.performUpdateCheck()
-      }
+      // Only the detection failure of `performUpdateCheck` drives backoff — the
+      // manual download trigger is fire-and-forget and surfaces its own errors
+      // via the `UpdateError` event.
+      await this.performUpdateCheck()
       this.updateCheckFailures = 0
       this.scheduleNextUpdateCheck(this.nextUpdateCheckDelayMs())
     } catch {
@@ -409,6 +323,12 @@ export class AppUpdaterService extends BaseService {
   }
 
   public quitAndInstall() {
+    // Only reachable after an update was downloaded, i.e. after the updater loaded.
+    const autoUpdater = this.autoUpdater
+    if (!autoUpdater) {
+      logger.warn('quitAndInstall requested before any update check')
+      return
+    }
     application.markQuitting()
     setImmediate(() => autoUpdater.quitAndInstall(true, true))
   }

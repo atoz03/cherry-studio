@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "Bộ chọn biểu tượng cảm xúc",
   "settings.general.image_upload": "Tải lên hình ảnh",
   "settings.general.label": "Cài đặt chung",
+  "settings.general.model_catalog_auto_update.tip": "Cứ mỗi 6 giờ, tải xuống thông tin mô hình mới nhất (khả năng, giới hạn ngữ cảnh, giá) do dự án Cherry Studio phát hành. Khi tắt, danh mục mô hình hiện tại được giữ nguyên.",
+  "settings.general.model_catalog_auto_update.title": "Tự động cập nhật danh mục mô hình",
   "settings.general.restore.button": "Khôi phục",
   "settings.general.retry.enabled": "Bật thử lại",
   "settings.general.sections.agent": "Hành vi của tác nhân",

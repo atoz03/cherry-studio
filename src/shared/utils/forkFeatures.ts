@@ -25,5 +25,11 @@ export const FORK_CHERRY_CLOUD_ENABLED = false
 /** Uploading diagnostic bundles to upstream's support backend. */
 export const FORK_DIAGNOSTICS_UPLOAD_ENABLED = false
 
+/**
+ * Upstream's RC/Beta update channels ("test plan"). The fork publishes one release line on its
+ * GitHub Releases, so there is no other channel to join.
+ */
+export const FORK_TEST_PLAN_ENABLED = false
+
 /** Data-collection consent only means something while a collector is shipped. */
 export const FORK_DATA_COLLECTION_ENABLED = FORK_SENTRY_ENABLED || FORK_ANALYTICS_ENABLED

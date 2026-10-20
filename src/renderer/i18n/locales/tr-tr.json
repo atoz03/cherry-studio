@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "Emoji Seçici",
   "settings.general.image_upload": "Görsel Yükleme",
   "settings.general.label": "Genel Ayarlar",
+  "settings.general.model_catalog_auto_update.tip": "Cherry Studio projesinin yayımladığı güncel model bilgilerini (yetenekler, bağlam sınırları, fiyatlandırma) her 6 saatte bir indirir. Kapalıyken mevcut model kataloğu korunur.",
+  "settings.general.model_catalog_auto_update.title": "Model kataloğunu otomatik güncelle",
   "settings.general.restore.button": "Geri Yükle",
   "settings.general.retry.enabled": "Yeniden denemeyi etkinleştir",
   "settings.general.sections.agent": "Ajan davranışı",

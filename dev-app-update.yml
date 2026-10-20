@@ -1,9 +1,8 @@
+# Development feed (`forceDevUpdateConfig`): the fork's GitHub Releases, same as packaged builds.
+# To exercise downloads against a local server instead:
 # provider: generic
-# url: http://127.0.0.1:8080
-# updaterCacheDirName: cherry-studio-updater
-# provider: github
-# repo: cherry-studio
-# owner: kangfenmao
-provider: generic
-url: http://127.0.0.1:3378
-useMultipleRangeRequest: false
+# url: http://127.0.0.1:3378
+# useMultipleRangeRequest: false
+provider: github
+owner: atoz03
+repo: cherry-studio

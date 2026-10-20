@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "Selector emoji",
   "settings.general.image_upload": "Încărcare imagine",
   "settings.general.label": "Setări generale",
+  "settings.general.model_catalog_auto_update.tip": "La fiecare 6 ore, descarcă informațiile actualizate despre modele (capabilități, limite de context, prețuri) publicate de proiectul Cherry Studio. Când este dezactivată, catalogul de modele curent este păstrat.",
+  "settings.general.model_catalog_auto_update.title": "Actualizare automată a catalogului de modele",
   "settings.general.restore.button": "Restaurează",
   "settings.general.retry.enabled": "Activează reîncercarea",
   "settings.general.sections.agent": "Comportamentul agentului",

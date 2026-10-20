@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "Выбор эмодзи",
   "settings.general.image_upload": "Загрузка изображений",
   "settings.general.label": "Общие настройки",
+  "settings.general.model_catalog_auto_update.tip": "Каждые 6 часов загружает обновлённые сведения о моделях (возможности, лимиты контекста, цены), публикуемые проектом Cherry Studio. Если выключено, сохраняется текущий каталог моделей.",
+  "settings.general.model_catalog_auto_update.title": "Автообновление каталога моделей",
   "settings.general.restore.button": "Восстановление",
   "settings.general.retry.enabled": "Включить повторные попытки",
   "settings.general.sections.agent": "Поведение агента",

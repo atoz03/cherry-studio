@@ -186,10 +186,12 @@ rpm:
   # Workaround for electron build issue on rpm package:
   # https://github.com/electron/forge/issues/3594
   fpm: ["--rpm-rpmbuild-define=_build_id_links none"]
+# Fork: updates come from this fork's GitHub Releases (`.github/workflows/release.yml` uploads
+# latest*.yml + blockmaps). Keep in sync with src/shared/utils/forkRelease.ts.
 publish:
-  provider: generic
-  url: https://releases.cherry-ai.com
-  useMultipleRangeRequest: false
+  provider: github
+  owner: atoz03
+  repo: cherry-studio
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
 beforePack: scripts/packaging/before-pack.js

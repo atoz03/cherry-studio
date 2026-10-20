@@ -1,5 +1,6 @@
 import { app, net } from 'electron'
 
+import { application } from '@application'
 import {
   type CatalogManifest,
   CatalogManifestSchema,
@@ -80,17 +81,37 @@ interface StagedFile {
 @Injectable('ProviderRegistryUpdaterService')
 @ServicePhase(Phase.WhenReady)
 export class ProviderRegistryUpdaterService extends BaseService {
+  // Clears the armed initial/periodic checks; null while none are armed.
+  private disarmChecks: (() => void) | null = null
+
   protected onReady(): void {
     // Dev/test never auto-download — an override under userData would silently
     // shadow the source catalog a developer just regenerated. `check()` is still
     // callable directly for manual/test runs.
     if (!app.isPackaged) return
 
-    this.registerInterval(() => this.check(), CHECK_INTERVAL_MS)
+    // Fork: downloads are user-switchable; while switched off no timer is armed.
+    const preferences = application.get('PreferenceService')
+    this.registerDisposable(
+      preferences.subscribeChange('app.provider_registry.auto_update.enabled', (enabled) => this.armChecks(enabled))
+    )
+    this.registerDisposable(() => this.armChecks(false))
+    this.armChecks(preferences.get('app.provider_registry.auto_update.enabled'))
+  }
 
+  private armChecks(enabled: boolean): void {
+    this.disarmChecks?.()
+    this.disarmChecks = null
+    if (!enabled) return
+
+    const interval = setInterval(() => void this.check(), CHECK_INTERVAL_MS)
     const initial = setTimeout(() => void this.check(), INITIAL_CHECK_DELAY_MS)
+    interval.unref()
     initial.unref()
-    this.registerDisposable(() => clearTimeout(initial))
+    this.disarmChecks = () => {
+      clearInterval(interval)
+      clearTimeout(initial)
+    }
   }
 
   /** Run one update cycle: fetch → compatibility+revision validate → apply → notify. Never throws. */

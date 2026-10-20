@@ -4607,6 +4607,8 @@
   "settings.general.emoji_picker": "絵文字ピッカー",
   "settings.general.image_upload": "画像アップロード",
   "settings.general.label": "一般設定",
+  "settings.general.model_catalog_auto_update.tip": "6 時間ごとに、Cherry Studio プロジェクトが公開する最新のモデル情報（機能、コンテキスト上限、価格）をダウンロードします。オフの場合は現在のモデルカタログを維持します。",
+  "settings.general.model_catalog_auto_update.title": "モデルカタログを自動更新",
   "settings.general.restore.button": "復元",
   "settings.general.retry.enabled": "再試行を有効にする",
   "settings.general.sections.agent": "エージェントの動作",
