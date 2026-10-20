@@ -92,11 +92,6 @@ files:
   - "!node_modules/sherpa-onnx-{darwin,linux,win}-*/**" # binaries are downloaded on first use; only the JS wrapper ships
   - "!node_modules/@cherrystudio/system-speech/{native,windows,src,tests,scripts}/**"
   - "!node_modules/@cherrystudio/system-speech/dist/native/**" # target helper is copied once through platform packaging
-  # Fork: remote access is switched off (src/shared/utils/forkFeatures.ts), so its Noise/libp2p transport never loads.
-  # No other production dependency uses these packages; @cherrystudio/remote-protocol stays (shared types).
-  - "!**/node_modules/@cherrystudio/remote-transport/**"
-  - "!**/node_modules/{@libp2p,@chainsafe,@multiformats,@noble}/**"
-  - "!**/node_modules/{multiformats,uint8arrays,uint8arraylist,protons-runtime,cborg}/**"
   - "!**/*.{h,iobj,ipdb,tlog,recipe,vcxproj,vcxproj.filters,Makefile,*.Makefile}" # filter .node build files
   # Fork: production dependencies only reachable through features switched off in
   # src/shared/utils/forkFeatures.ts. forkFeatures.test.ts keeps this block in sync with the
@@ -109,6 +104,52 @@ files:
   - "!**/node_modules/module-details-from-path/**"
   - "!**/node_modules/cjs-module-lexer/**"
   - "!**/node_modules/es-module-lexer/**"
+  # FORK_REMOTE_ACCESS_ENABLED=false: the Noise/libp2p remote transport and everything only it pulls in
+  # (@cherrystudio/remote-protocol stays: shared types)
+  - "!**/node_modules/@cherrystudio/remote-transport/**"
+  - "!**/node_modules/@libp2p/**"
+  - "!**/node_modules/@chainsafe/**"
+  - "!**/node_modules/@multiformats/**"
+  - "!**/node_modules/@noble/**"
+  - "!**/node_modules/multiformats/**"
+  - "!**/node_modules/uint8arrays/**"
+  - "!**/node_modules/uint8arraylist/**"
+  - "!**/node_modules/protons-runtime/**"
+  - "!**/node_modules/cborg/**"
+  - "!**/node_modules/abort-error/**"
+  - "!**/node_modules/any-signal/**"
+  - "!**/node_modules/delay/**"
+  - "!**/node_modules/@dnsquery/dns-packet/**"
+  - "!**/node_modules/eventemitter3/**"
+  - "!**/node_modules/hashlru/**"
+  - "!**/node_modules/interface-datastore/**"
+  - "!**/node_modules/interface-store/**"
+  - "!**/node_modules/is-electron/**"
+  - "!**/node_modules/is-loopback-addr/**"
+  - "!**/node_modules/it-length-prefixed/**"
+  - "!**/node_modules/it-merge/**"
+  - "!**/node_modules/it-pipe/**"
+  - "!**/node_modules/it-pushable/**"
+  - "!**/node_modules/it-queueless-pushable/**"
+  - "!**/node_modules/it-reader/**"
+  - "!**/node_modules/it-stream-types/**"
+  - "!**/node_modules/json-rpc-2.0/**"
+  - "!**/node_modules/@leichtgewicht/ip-codec/**"
+  - "!**/node_modules/main-event/**"
+  - "!**/node_modules/netmask/**"
+  - "!**/node_modules/p-defer/**"
+  - "!**/node_modules/p-event/**"
+  - "!**/node_modules/p-queue/**"
+  - "!**/node_modules/p-timeout/**"
+  - "!**/node_modules/progress-events/**"
+  - "!**/node_modules/race-signal/**"
+  - "!**/node_modules/random-int/**"
+  - "!**/node_modules/@sindresorhus/fnv1a/**"
+  - "!**/node_modules/uint8-varint/**"
+  - "!**/node_modules/unlimited-timeout/**"
+  - "!**/node_modules/utf8-codec/**"
+  - "!**/node_modules/weald/**"
+  - "!**/node_modules/wherearewe/**"
   - "resources/**/*" # include all files in resources, and unpack them from asar for runtime access
   - "!resources/devtools/**" # dev-only extensions are loaded from source in development
 asarUnpack:
