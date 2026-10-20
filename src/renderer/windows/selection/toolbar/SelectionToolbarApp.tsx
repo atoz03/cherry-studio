@@ -5,6 +5,7 @@ import { ThemeProvider } from '@renderer/components/ThemeProvider'
 import { WindowFatalFallback } from '@renderer/components/WindowFatalFallback'
 import { useCustomCss } from '@renderer/hooks/useCustomCss'
 import { useLanguageSync } from '@renderer/hooks/useLanguageSync'
+import { useReportFirstFrame } from '@renderer/hooks/useReportFirstFrame'
 
 import SelectionToolbar from './SelectionToolbar'
 
@@ -13,6 +14,9 @@ import SelectionToolbar from './SelectionToolbar'
 function SelectionToolbarRuntime(): null {
   useLanguageSync()
   useCustomCss()
+  // Sent after SelectionToolbar's mount effects (size report, text_selected listener), which
+  // SelectionService relies on when it shows the first toolbar on this report.
+  useReportFirstFrame()
   return null
 }
 

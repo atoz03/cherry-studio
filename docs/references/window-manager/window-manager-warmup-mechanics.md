@@ -3,7 +3,8 @@ description: Warmup state machine for pooled and singleton windows — idle queu
 sources:
   - src/main/core/window/WindowManager.ts
   - src/main/core/window/windowRegistry.ts
-  - src/main/core/window/firstPaint.ts
+  - src/main/core/window/firstFrame.ts
+  - src/renderer/hooks/useReportFirstFrame.ts
 ---
 
 # Warmup Mechanics
@@ -155,11 +156,18 @@ Pooled windows that are **visually sensitive** to showing stale content or empty
 
 ## Revealing Windows Created on Demand
 
-A type without a pre-warmed standby builds its window on first use, so `open()` can return a window whose renderer has not painted yet; showing it at once leaves it blank while its renderer process starts. WindowManager tracks every window it creates until its first `ready-to-show`, and consumers with `showMode: 'manual'` show through `revealWhenPainted(window, reveal)` from `firstPaint.ts`:
+A type without a pre-warmed standby builds its window on first use, so `open()` can return a window whose UI has not rendered yet; showing it at once leaves it blank while its renderer process starts. `ready-to-show` does not close that gap: it fires on the document's first paint, before entries that `await prepareWindow()` have mounted React (measured on Linux: a detached SubWindow sat blank for about 0.17 s after it).
 
-- An already painted window (pool recycle, live singleton) runs `reveal` synchronously.
-- A fresh window runs `reveal` on its first `ready-to-show`, or after `FIRST_PAINT_REVEAL_TIMEOUT_MS` if the renderer never paints, so it cannot stay hidden. The returned function cancels a pending reveal; a window destroyed first is never revealed.
+So the UI reports its own first frame. The renderer calls `useReportFirstFrame(ready)` from a component only that window renders; once the frame that paints the shell's commit with `ready` true is out (two animation frames), it sends the `window.report_first_frame` IpcApi request. WindowManager tracks every window it creates until that report (`firstFrame.ts`), and consumers with `showMode: 'manual'` show through `revealOnFirstFrame(window, reveal)`:
 
-This relies on `paintWhenInitiallyHidden` staying at Electron's default (`true`); with `false`, a hidden window never fires `ready-to-show` and only appears after the timeout.
+- An already rendered window (pool recycle, live singleton) runs `reveal` synchronously.
+- A fresh window runs `reveal` on its first-frame report, or after `FIRST_FRAME_TIMEOUT_MS` if the report never comes, so it cannot stay hidden. The returned function cancels a pending reveal; a window destroyed first is never revealed.
 
-`ready-to-show` marks the document's first paint, not the UI's. Entries that `await prepareWindow()` before mounting React fire it on the bare document, so a revealed window shows only its background colour for a moment before the UI appears. Measured on Linux, a detached SubWindow fires `ready-to-show` about 0.4 s after creation and renders its title bar about 0.17 s later. Closing that gap would need a renderer-side "first frame" signal.
+| Window | Reports its first frame when |
+|---|---|
+| SubWindow | its detached tab is attached (title bar and page) |
+| QuickAssistant | its UI first commits |
+| SelectionToolbar | its UI first commits, after its mount effects reported its size and registered its `selection.text_selected` listener (SelectionService shows the first toolbar on this report) |
+| SelectionAction | its action payload has arrived |
+
+A window revealed this way must keep `paintWhenInitiallyHidden` at Electron's default (`true`): a hidden window that may not paint runs no animation frames, so its report never comes and it only appears after the timeout.

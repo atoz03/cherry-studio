@@ -31,7 +31,7 @@ import { loggerService } from '@logger'
 import { type Activatable, BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isMac, isWin } from '@main/core/platform'
 import { isAppRendererUrl } from '@main/core/security/validateSender'
-import { revealWhenPainted } from '@main/core/window/firstPaint'
+import { revealOnFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
 import { isSafeExternalUrl } from '../utils/externalUrlSafety'
@@ -100,6 +100,10 @@ const MACOS_AUTO_FOCUS_VERSION = 26
 const POST_UNPIN_FOCUS_POLL_MAX_MS = 30_000
 const POST_UNPIN_FOCUS_POLL_INTERVAL_MS = 200
 
+// Destroy the quick window once it has stayed hidden this long, returning its renderer's memory.
+// The next show recreates it and waits for its first frame (about half a second).
+export const QUICK_ASSISTANT_IDLE_TEARDOWN_MS = 5 * 60_000
+
 const logger = loggerService.withContext('QuickAssistantService')
 
 @Injectable('QuickAssistantService')
@@ -123,8 +127,10 @@ export class QuickAssistantService extends BaseService implements Activatable {
   private wasMainWindowFocused = false
   // Cached mainWindow reference — see file-level docstring for why this asymmetry exists.
   private mainWindowRef: BrowserWindow | null = null
-  // Set while a just-created window waits for its first paint before its first show.
+  // Set while a just-created window waits for its first frame before its first show.
   private cancelPendingShow: (() => void) | null = null
+  // Armed only while the window exists and is hidden (see scheduleIdleTeardown).
+  private idleTeardownTimer: ReturnType<typeof setTimeout> | null = null
 
   protected async onInit() {
     this.subscribeMainWindowLifecycle()
@@ -176,22 +182,44 @@ export class QuickAssistantService extends BaseService implements Activatable {
    * service shutdown.
    */
   async onDeactivate(): Promise<void> {
-    this.releaseActivationResources()
+    this.destroyQuickAssistant()
   }
 
-  private releaseActivationResources(): void {
+  /**
+   * Destroy the quick window, if any, and reset its per-window state. Runs on deactivate and once
+   * the window has stayed hidden for QUICK_ASSISTANT_IDLE_TEARDOWN_MS; the next show builds a new one.
+   */
+  private destroyQuickAssistant(): void {
     this.cancelPendingFirstShow()
     if (this.windowId) {
       // QuickAssistant is a singleton — wm.close() falls through to destroyWindow()
-      // just like wm.destroy() would, but stays in the Consumer API layer. The
-      // registered 'closed' listener clears this.windowId via onClosed in setupQuickAssistant.
-      const wm = application.get('WindowManager')
-      wm.close(this.windowId)
+      // just like wm.destroy() would, but stays in the Consumer API layer.
+      application.get('WindowManager').close(this.windowId)
       this.windowId = null
     }
+    this.cancelIdleTeardown()
     this.isPinnedQuickAssistant = false
     this.hasBlurredSinceShow = false
     this.stopPostUnpinFocusPoll()
+  }
+
+  /** (Re)start the idle teardown when the window goes off screen; proceedShow cancels it. */
+  private scheduleIdleTeardown(): void {
+    this.cancelIdleTeardown()
+    this.idleTeardownTimer = setTimeout(() => {
+      this.idleTeardownTimer = null
+      logger.debug('Quick assistant hidden long enough, destroying its window', {
+        idleMs: QUICK_ASSISTANT_IDLE_TEARDOWN_MS
+      })
+      this.destroyQuickAssistant()
+    }, QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+  }
+
+  private cancelIdleTeardown(): void {
+    if (this.idleTeardownTimer) {
+      clearTimeout(this.idleTeardownTimer)
+      this.idleTeardownTimer = null
+    }
   }
 
   /**
@@ -348,16 +376,20 @@ export class QuickAssistantService extends BaseService implements Activatable {
     }
     const onHide = () => {
       this.stopPostUnpinFocusPoll()
+      this.scheduleIdleTeardown()
     }
 
     window.on('blur', onBlur)
     window.on('show', onShow)
     window.on('hide', onHide)
+    // [Windows] hideQuickAssistant minimizes the window instead of hiding it.
+    window.on('minimize', onHide)
     this.registerDisposable(() => {
       if (window.isDestroyed()) return
       window.removeListener('blur', onBlur)
       window.removeListener('show', onShow)
       window.removeListener('hide', onHide)
+      window.removeListener('minimize', onHide)
     })
   }
 
@@ -375,15 +407,15 @@ export class QuickAssistantService extends BaseService implements Activatable {
     // subscription in onInit keeps these in lockstep.
     if (!this.isActivated) return
 
-    // A just-created window is already queued to show once it has painted.
+    // A just-created window is already queued to show once its UI has rendered.
     if (this.cancelPendingShow) return
 
     const window = this.getQuickAssistant() ?? this.createQuickAssistant()
     if (!window) return
 
-    // An existing window shows right away; a new one once its renderer has painted (loadURL is
-    // async, so a direct show() would reveal it before anything is drawn).
-    this.cancelPendingShow = revealWhenPainted(window, () => {
+    // An existing window shows right away; a new one once its UI has rendered (loadURL is async,
+    // so a direct show() would reveal it before anything is drawn).
+    this.cancelPendingShow = revealOnFirstFrame(window, () => {
       this.cancelPendingShow = null
       this.proceedShow()
     })
@@ -394,6 +426,7 @@ export class QuickAssistantService extends BaseService implements Activatable {
     const window = this.getQuickAssistant()
     if (!window) return
 
+    this.cancelIdleTeardown()
     this.wasMainWindowFocused = this.mainWindowRef?.isFocused() ?? false
 
     // [Windows] Recovery from the minimize-instead-of-hide branch in hideQuickAssistant.
@@ -470,9 +503,9 @@ export class QuickAssistantService extends BaseService implements Activatable {
    * high-frequency toggle surface; destroy + recreate would make every next show
    * wait for a fresh renderer to load and paint, and waste the preload work. The
    * renderer call sites (settings panel toggles) only need the window to disappear —
-   * hide() satisfies that. True teardown happens in onDeactivate() when the feature
-   * preference is turned off, and as a final fallback in WindowManager.onDestroy()
-   * at app quit.
+   * hide() satisfies that. True teardown happens once the window has stayed hidden for
+   * QUICK_ASSISTANT_IDLE_TEARDOWN_MS, in onDeactivate() when the feature preference is
+   * turned off, and as a final fallback in WindowManager.onDestroy() at app quit.
    */
   public closeQuickAssistant() {
     this.cancelPendingFirstShow()

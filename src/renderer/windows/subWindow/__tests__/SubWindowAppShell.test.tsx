@@ -14,6 +14,7 @@ type ShellTab = {
 }
 
 const defaultTabs: ShellTab[] = [{ id: 'home', type: 'route', url: '/home', title: 'Home' }]
+let shellTabs: ShellTab[] = defaultTabs
 const openTab = vi.fn()
 const closeTab = vi.fn()
 const commandHandlers = new Map<string, () => void>()
@@ -57,7 +58,7 @@ async function renderSubWindowAppShell({
     return {
       ...(actual as object),
       useTabs: () => ({
-        tabs: defaultTabs,
+        tabs: shellTabs,
         activeTabId: 'home',
         setActiveTab: vi.fn(),
         closeTab,
@@ -106,7 +107,8 @@ async function renderSubWindowAppShell({
   }))
 
   const { SubWindowAppShell } = await import('../SubWindowAppShell')
-  render(<SubWindowAppShell />)
+  const { rerender } = render(<SubWindowAppShell />)
+  return { rerenderShell: () => rerender(<SubWindowAppShell />) }
 }
 
 afterEach(() => {
@@ -117,6 +119,8 @@ afterEach(() => {
   ipcListeners.clear()
   ipcRequest = vi.fn()
   resolveInitialFullscreen = undefined
+  shellTabs = defaultTabs
+  vi.unstubAllGlobals()
 })
 
 describe('SubWindowAppShell', () => {
@@ -154,6 +158,23 @@ describe('SubWindowAppShell', () => {
       })
     })
     expect(openTab).toHaveBeenCalledOnce()
+  })
+
+  it('reports its first frame only once the detached tab is attached', async () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => frames.push(callback))
+    // Two passes: the hook reports from the second animation frame after the commit.
+    const runFrames = () => [0, 1].forEach(() => frames.splice(0).forEach((callback) => callback(0)))
+    shellTabs = []
+
+    const { rerenderShell } = await renderSubWindowAppShell()
+    runFrames()
+    expect(ipcRequest).not.toHaveBeenCalledWith('window.report_first_frame')
+
+    shellTabs = defaultTabs
+    rerenderShell()
+    runFrames()
+    expect(ipcRequest).toHaveBeenCalledWith('window.report_first_frame')
   })
 
   it('reflects native fullscreen in the title bar on macOS', async () => {

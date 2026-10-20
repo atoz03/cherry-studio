@@ -18,7 +18,7 @@ import {
 } from '@main/core/lifecycle'
 import { isDev, isMac } from '@main/core/platform'
 import { applyWindowBehavior, BehaviorController } from '@main/core/window/behavior'
-import { trackFirstPaint } from '@main/core/window/firstPaint'
+import { trackFirstFrame } from '@main/core/window/firstFrame'
 import { applyWindowQuirks } from '@main/core/window/quirks'
 import type { WindowType } from '@main/core/window/types'
 import {
@@ -1402,8 +1402,8 @@ export class WindowManager extends BaseService {
 
     // 2. Setup event listeners
     this.setupWindowListeners(windowId, window)
-    // Lets consumers that create windows on demand reveal them only once painted (see firstPaint.ts).
-    trackFirstPaint(window)
+    // Lets consumers that create windows on demand reveal them once their UI has rendered (firstFrame.ts).
+    trackFirstFrame(window)
 
     // Auto-show on ready-to-show (suppressed for pool idle windows).
     // Windows with showMode: 'manual' opt out entirely — their owner drives visibility

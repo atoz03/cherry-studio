@@ -5,6 +5,10 @@ const { appGetMock } = vi.hoisted(() => ({
 }))
 vi.mock('@application', () => ({ application: { get: appGetMock } }))
 
+import type { BrowserWindow } from 'electron'
+
+import { revealOnFirstFrame, trackFirstFrame } from '@main/core/window/firstFrame'
+
 import { windowHandlers } from '../window'
 
 const windowManager = {
@@ -80,6 +84,21 @@ describe('windowHandlers', () => {
     const result = await windowHandlers['window.get_init_data'](undefined, ctx('w1'))
     expect(windowManager.getInitData).toHaveBeenCalledWith('w1')
     expect(result).toEqual({ path: '/settings/provider' })
+  })
+
+  it('report_first_frame reveals the caller window once its UI has rendered', async () => {
+    const callerWindow = { isDestroyed: () => false } as unknown as BrowserWindow
+    trackFirstFrame(callerWindow)
+    const reveal = vi.fn()
+    revealOnFirstFrame(callerWindow, reveal)
+    windowManager.getWindow.mockImplementation((id: string) => (id === 'w1' ? callerWindow : undefined))
+
+    await windowHandlers['window.report_first_frame'](undefined, ctx('w2'))
+    await windowHandlers['window.report_first_frame'](undefined, ctx(null))
+    expect(reveal).not.toHaveBeenCalled()
+
+    await windowHandlers['window.report_first_frame'](undefined, ctx('w1'))
+    expect(reveal).toHaveBeenCalledTimes(1)
   })
 
   it('void controls are a no-op when the caller is not a tracked window (senderId null)', async () => {

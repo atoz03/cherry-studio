@@ -53,16 +53,17 @@ vi.mock('@application', async () => {
 })
 
 import { BaseService } from '@main/core/lifecycle/BaseService'
-import { trackFirstPaint } from '@main/core/window/firstPaint'
+import { markFirstFrame, trackFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
-import { QuickAssistantService } from '../QuickAssistantService'
+import { QUICK_ASSISTANT_IDLE_TEARDOWN_MS, QuickAssistantService } from '../QuickAssistantService'
 
 type MockQuickWindow = EventEmitter & {
   id: number
   visible: boolean
   show: ReturnType<typeof vi.fn>
   hide: ReturnType<typeof vi.fn>
+  minimize: ReturnType<typeof vi.fn>
   focus: ReturnType<typeof vi.fn>
 }
 
@@ -81,6 +82,7 @@ function createQuickWindow(id: number): MockQuickWindow {
     win.visible = false
     win.emit('hide')
   })
+  win.minimize = vi.fn(() => win.emit('minimize'))
   win.focus = vi.fn()
   Object.assign(win, {
     isDestroyed: () => false,
@@ -96,6 +98,9 @@ function createQuickWindow(id: number): MockQuickWindow {
   return win
 }
 
+/** The window's renderer reporting its first frame (window.report_first_frame). */
+const reportFirstFrame = (win: MockQuickWindow) => markFirstFrame(win as unknown as BrowserWindow)
+
 describe('QuickAssistantService — on-demand window', () => {
   let svc: QuickAssistantService
 
@@ -108,13 +113,13 @@ describe('QuickAssistantService — on-demand window', () => {
     createdListeners.length = 0
     electronMock.getFocusedWindow.mockReturnValue(null)
 
-    // WindowManager.open(): construct, notify onWindowCreatedByType subscribers, track first paint.
+    // WindowManager.open(): construct, notify onWindowCreatedByType subscribers, track the first frame.
     wmMock.open.mockImplementation(() => {
       const win = createQuickWindow(100 + createdWindows.length)
       createdWindows.push(win)
       const id = `qa-${createdWindows.length}`
       for (const listener of createdListeners) listener({ id, window: win })
-      trackFirstPaint(win as unknown as BrowserWindow)
+      trackFirstFrame(win as unknown as BrowserWindow)
       return id
     })
     wmMock.getWindow.mockImplementation((id) => createdWindows[Number(id.split('-')[1]) - 1])
@@ -126,7 +131,17 @@ describe('QuickAssistantService — on-demand window', () => {
   afterEach(async () => {
     await svc._doDestroy()
     BaseService.resetInstances()
+    vi.useRealTimers()
   })
+
+  /** Activate, open the window for the first time and let its UI render. */
+  async function showFirstTime(): Promise<MockQuickWindow> {
+    await svc._doActivate()
+    svc.showQuickAssistant()
+    const win = createdWindows.at(-1)!
+    reportFirstFrame(win)
+    return win
+  }
 
   it('creates no window when the feature is activated', async () => {
     expect(await svc._doActivate()).toBe(true)
@@ -140,16 +155,17 @@ describe('QuickAssistantService — on-demand window', () => {
     expect(wmMock.open).not.toHaveBeenCalled()
   })
 
-  it('creates the window on the first show and shows it only after its first paint', async () => {
+  it('creates the window on the first show and shows it only once its UI has rendered', async () => {
     await svc._doActivate()
 
     svc.showQuickAssistant()
 
     expect(wmMock.open).toHaveBeenCalledExactlyOnceWith(WindowType.QuickAssistant)
     const [win] = createdWindows
+    win.emit('ready-to-show')
     expect(win.show).not.toHaveBeenCalled()
 
-    win.emit('ready-to-show')
+    reportFirstFrame(win)
 
     expect(win.show).toHaveBeenCalledTimes(1)
   })
@@ -160,17 +176,14 @@ describe('QuickAssistantService — on-demand window', () => {
     svc.showQuickAssistant()
     svc.toggleQuickAssistant()
     svc.showQuickAssistant()
-    createdWindows[0].emit('ready-to-show')
+    reportFirstFrame(createdWindows[0])
 
     expect(wmMock.open).toHaveBeenCalledTimes(1)
     expect(createdWindows[0].show).toHaveBeenCalledTimes(1)
   })
 
   it('reuses the window and shows it immediately on later requests', async () => {
-    await svc._doActivate()
-    svc.showQuickAssistant()
-    const [win] = createdWindows
-    win.emit('ready-to-show')
+    const win = await showFirstTime()
     svc.closeQuickAssistant()
     win.show.mockClear()
 
@@ -180,12 +193,12 @@ describe('QuickAssistantService — on-demand window', () => {
     expect(win.show).toHaveBeenCalledTimes(1)
   })
 
-  it('drops the pending first show when the window is closed before it painted', async () => {
+  it('drops the pending first show when the window is closed before its UI rendered', async () => {
     await svc._doActivate()
     svc.showQuickAssistant()
 
     svc.closeQuickAssistant()
-    createdWindows[0].emit('ready-to-show')
+    reportFirstFrame(createdWindows[0])
 
     expect(createdWindows[0].show).not.toHaveBeenCalled()
   })
@@ -195,7 +208,7 @@ describe('QuickAssistantService — on-demand window', () => {
     svc.showQuickAssistant()
 
     await svc._doDeactivate()
-    createdWindows[0].emit('ready-to-show')
+    reportFirstFrame(createdWindows[0])
 
     expect(wmMock.close).toHaveBeenCalledWith('qa-1')
     expect(createdWindows[0].show).not.toHaveBeenCalled()
@@ -212,7 +225,7 @@ describe('QuickAssistantService — on-demand window', () => {
 
     wmMock.open.mockImplementation(open)
     svc.showQuickAssistant()
-    createdWindows[0].emit('ready-to-show')
+    reportFirstFrame(createdWindows[0])
 
     expect(createdWindows[0].show).toHaveBeenCalledTimes(1)
   })
@@ -226,5 +239,83 @@ describe('QuickAssistantService — on-demand window', () => {
     svc.showQuickAssistant()
 
     expect(mainWindow.focus).toHaveBeenCalledTimes(1)
+  })
+
+  describe('idle teardown', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    it('destroys the window once it has stayed hidden for the idle delay', async () => {
+      await showFirstTime()
+      svc.closeQuickAssistant()
+
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS - 1)
+      expect(wmMock.close).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(wmMock.close).toHaveBeenCalledExactlyOnceWith('qa-1')
+    })
+
+    it('builds a new window on the next show, again only once its UI has rendered', async () => {
+      await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      svc.showQuickAssistant()
+
+      expect(wmMock.open).toHaveBeenCalledTimes(2)
+      const recreated = createdWindows[1]
+      expect(recreated.show).not.toHaveBeenCalled()
+      reportFirstFrame(recreated)
+      expect(recreated.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the window when it is shown again before the delay runs out', async () => {
+      const win = await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS - 1)
+
+      svc.showQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      expect(win.visible).toBe(true)
+      expect(wmMock.close).not.toHaveBeenCalled()
+    })
+
+    it('arms no timer while the window is shown, nor after the feature is turned off', async () => {
+      await showFirstTime()
+      expect(vi.getTimerCount()).toBe(0)
+
+      svc.closeQuickAssistant()
+      expect(vi.getTimerCount()).toBe(1)
+
+      await svc._doDeactivate()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('[Windows] treats the minimized (hidden) window as idle', async () => {
+      platform.isWin = true
+      await showFirstTime()
+
+      svc.hideQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      expect(wmMock.close).toHaveBeenCalledExactlyOnceWith('qa-1')
+    })
+
+    it('[macOS] hands focus back again when the window is rebuilt after a teardown', async () => {
+      platform.isMac = true
+      const mainWindow = { id: 1, isDestroyed: () => false, focus: vi.fn() }
+      await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+      electronMock.getFocusedWindow.mockReturnValue(mainWindow)
+
+      svc.showQuickAssistant()
+
+      expect(wmMock.open).toHaveBeenCalledTimes(2)
+      expect(mainWindow.focus).toHaveBeenCalledTimes(1)
+    })
   })
 })

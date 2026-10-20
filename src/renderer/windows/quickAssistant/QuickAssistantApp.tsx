@@ -9,6 +9,7 @@ import { WindowFatalFallback } from '@renderer/components/WindowFatalFallback'
 import { useAutoReadPreferenceSync } from '@renderer/hooks/useAutoReadPreferenceSync'
 import { useCustomCss } from '@renderer/hooks/useCustomCss'
 import { useLanguageSync } from '@renderer/hooks/useLanguageSync'
+import { useReportFirstFrame } from '@renderer/hooks/useReportFirstFrame'
 
 import HomeWindow from './home/HomeWindow'
 
@@ -22,6 +23,7 @@ function QuickAssistantRuntime(): null {
   useLanguageSync()
   useAutoReadPreferenceSync()
   useCustomCss()
+  useReportFirstFrame()
 
   return null
 }

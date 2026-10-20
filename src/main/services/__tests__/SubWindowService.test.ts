@@ -103,7 +103,7 @@ vi.mock('@main/core/lifecycle', async () => {
 import { BrowserWindow, ipcMain } from 'electron'
 
 // Import after mocks
-import { FIRST_PAINT_REVEAL_TIMEOUT_MS, trackFirstPaint } from '@main/core/window/firstPaint'
+import { FIRST_FRAME_TIMEOUT_MS, markFirstFrame, trackFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
 import { SubWindowService } from '../SubWindowService'
@@ -144,12 +144,15 @@ function createMockWindow(overrides: Partial<MockBrowserWindow> = {}): MockBrows
   return win
 }
 
-/** A window as WindowManager returns it from open(): freshly constructed, not painted yet. */
+/** A window as WindowManager returns it from open(): freshly constructed, its UI not rendered yet. */
 function createFreshWindow(): MockBrowserWindow {
   const win = createMockWindow({ isVisible: vi.fn(() => false) })
-  trackFirstPaint(win as unknown as BrowserWindow)
+  trackFirstFrame(win as unknown as BrowserWindow)
   return win
 }
+
+/** The window's renderer reporting its first frame (window.report_first_frame). */
+const reportFirstFrame = (win: MockBrowserWindow) => markFirstFrame(win as unknown as BrowserWindow)
 
 function lastOpenCall() {
   const call = windowManagerMock.open.mock.calls.at(-1)
@@ -376,47 +379,48 @@ describe('SubWindowService', () => {
       vi.useRealTimers()
     })
 
-    it('keeps a fresh window hidden until its renderer has painted, then shows it', () => {
+    it('keeps a fresh window hidden until its UI has rendered, not just its blank page', () => {
       const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
       svc.createWindow({ id: 'tab-fresh', url: 'u' })
+      win.emit('ready-to-show')
       expect(win.show).not.toHaveBeenCalled()
 
-      win.emit('ready-to-show')
+      reportFirstFrame(win)
       expect(win.show).toHaveBeenCalledTimes(1)
     })
 
-    it('reveals a drag-detached window after its first paint as well', () => {
+    it('reveals a drag-detached window once its UI has rendered as well', () => {
       const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
       svc.detachTab({ id: 'tab-drag', url: 'u', x: 10, y: 10 })
       expect(win.show).not.toHaveBeenCalled()
 
-      win.emit('ready-to-show')
+      reportFirstFrame(win)
       expect(win.show).toHaveBeenCalledTimes(1)
     })
 
-    it('still shows the window when its renderer never paints, so the detached tab is not lost', () => {
+    it('still shows the window when its UI never reports, so the detached tab is not lost', () => {
       vi.useFakeTimers()
       const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
       svc.detachTab({ id: 'tab-stuck', url: 'u' })
-      vi.advanceTimersByTime(FIRST_PAINT_REVEAL_TIMEOUT_MS)
+      vi.advanceTimersByTime(FIRST_FRAME_TIMEOUT_MS)
 
       expect(win.show).toHaveBeenCalledTimes(1)
     })
 
-    it('never shows a window that was closed before it painted', () => {
+    it('never shows a window that was closed before its UI rendered', () => {
       const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
 
       svc.createWindow({ id: 'tab-closed', url: 'u' })
       win.isDestroyed = vi.fn(() => true)
       win.emit('closed')
-      win.emit('ready-to-show')
+      reportFirstFrame(win)
 
       expect(win.show).not.toHaveBeenCalled()
     })
@@ -520,7 +524,7 @@ describe('SubWindowService', () => {
       expect(senderWin.setPosition).toHaveBeenCalledWith(10, 20)
     })
 
-    it('moves a just-detached window without showing it before its first paint', () => {
+    it('moves a just-detached window without showing it before its UI has rendered', () => {
       const win = createFreshWindow()
       windowManagerMock.getWindow.mockReturnValue(win)
       svc.detachTab({ id: 'tab-dragging', url: 'u', x: 10, y: 10 })
@@ -531,11 +535,11 @@ describe('SubWindowService', () => {
       expect(win.setPosition).toHaveBeenCalledWith(40, 50)
       expect(win.show).not.toHaveBeenCalled()
 
-      win.emit('ready-to-show')
+      reportFirstFrame(win)
       expect(win.show).toHaveBeenCalledTimes(1)
     })
 
-    it('shows a hidden window that has already painted', () => {
+    it('shows a hidden window whose UI has already rendered', () => {
       const win = createMockWindow({ isVisible: vi.fn(() => false) })
       windowManagerMock.getWindow.mockReturnValue(win)
       ;(svc as any).tabIdToWindowId.set('tab-hidden', 'wid-hidden')

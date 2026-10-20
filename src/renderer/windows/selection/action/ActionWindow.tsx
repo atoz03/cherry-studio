@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Slider, Tooltip } from '@cherrystudio/ui'
 import { usePreference } from '@data/hooks/usePreference'
 import SelectionActionIcon from '@renderer/components/selection/SelectionActionIcon'
+import { useReportFirstFrame } from '@renderer/hooks/useReportFirstFrame'
 import { useWindowInitData } from '@renderer/hooks/useWindowInitData'
 import { ipcApi } from '@renderer/ipc'
 import { isMac } from '@renderer/utils/platform'
@@ -28,6 +29,7 @@ import ActionTranslate from './components/ActionTranslate'
  */
 const ActionWindow: FC = () => {
   const action = useWindowInitData<SelectionActionSession>()
+  useReportFirstFrame(action !== null)
   if (!action) return null
   return <SelectionActionContent action={action} />
 }

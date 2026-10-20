@@ -551,7 +551,7 @@
     },
     {
       "path": "docs/references/window-manager/window-manager-warmup-mechanics.md",
-      "sources": ["src/main/core/window/WindowManager.ts","src/main/core/window/firstPaint.ts","src/main/core/window/windowRegistry.ts"]
+      "sources": ["src/main/core/window/WindowManager.ts","src/main/core/window/firstFrame.ts","src/main/core/window/windowRegistry.ts","src/renderer/hooks/useReportFirstFrame.ts"]
     }
   ]
 }
