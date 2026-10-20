@@ -25,9 +25,9 @@ import { MINI_APP_SCHEME_DECLARATION } from '@main/features/miniApp/runtime/prot
 import { runDataReset } from '@main/services/dataReset'
 import { CHERRY_MEDIA_SCHEME_DECLARATION } from '@main/services/mediaProtocol'
 import { configureRemoteDebugging } from '@main/services/remoteDebugging'
-import { initSentry } from '@main/services/sentry'
 import { runUserDataRelocation } from '@main/services/userDataRelocation'
 import { getApplicationId } from '@main/utils/appEdition'
+import { FORK_SENTRY_ENABLED } from '@shared/utils/forkFeatures'
 
 // should be the first to resolveUserDataLocation()
 resolveUserDataLocation()
@@ -38,7 +38,7 @@ initCrashTelemetry()
 // Freeze the path registry — bootstrap() asserts this completed.
 application.initPathRegistry()
 const isolatedRestoreSession = prepareBackupRestoreSession()
-initSentry()
+if (FORK_SENTRY_ENABLED) void import('@main/services/sentry').then(({ initSentry }) => initSentry())
 // Privileged schemes must be declared before the app is ready, and only ONCE per
 // process — startApp() itself awaits app.whenReady(), so this cannot move in there.
 protocol.registerSchemesAsPrivileged([CHERRY_MEDIA_SCHEME_DECLARATION, MINI_APP_SCHEME_DECLARATION])
