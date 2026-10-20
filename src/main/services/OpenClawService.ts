@@ -8,7 +8,7 @@ import { application } from '@application'
 import { modelService } from '@data/services/ModelService'
 import { providerService } from '@data/services/ProviderService'
 import { loggerService } from '@logger'
-import { BaseService, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
+import { BaseService, type Disposable, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isWin } from '@main/core/platform'
 import type { Model, Provider, ProviderType, VertexProvider } from '@main/data/migration/legacyTypes'
 import { t } from '@main/i18n'
@@ -404,6 +404,8 @@ export class OpenClawService extends BaseService {
   private gatewayAuthToken: string = ''
   // Bumped by every setGatewayStatus; probes discard results from an older generation.
   private gatewayTransitionId = 0
+  /** Liveness probe, armed only while a gateway is believed running. */
+  private gatewayProbe: Disposable | null = null
 
   public get gatewayUrl(): string {
     return `ws://127.0.0.1:${this.gatewayPort}/ws`
@@ -422,8 +424,6 @@ export class OpenClawService extends BaseService {
         .get('PreferenceService')
         .subscribeChange('feature.openclaw.gateway_port', () => this.onGatewayPortPreferenceChanged())
     )
-    // Report a gateway that died without telling us; registerInterval is lifecycle-cleaned.
-    this.registerInterval(() => this.probeGatewayTick(), GATEWAY_PROBE_INTERVAL_MS)
   }
 
   private syncGatewayPortFromPreference(): void {
@@ -438,6 +438,7 @@ export class OpenClawService extends BaseService {
   }
 
   protected async onStop(): Promise<void> {
+    this.gatewayProbe = null // auto-disposed after onStop; null'd so a restart re-arms it
     await this.stopGateway()
   }
 
@@ -446,6 +447,13 @@ export class OpenClawService extends BaseService {
     if (!options?.force && this.gatewayStatus === status) return
     this.gatewayStatus = status
     this.gatewayTransitionId++
+    // Report a gateway that died without telling us; an idle service keeps no timer.
+    if (status === 'running')
+      this.gatewayProbe ??= this.registerInterval(() => this.probeGatewayTick(), GATEWAY_PROBE_INTERVAL_MS)
+    else {
+      this.gatewayProbe?.dispose()
+      this.gatewayProbe = null
+    }
     // Becoming idle is the moment a port preference change deferred during a run takes effect.
     if (status === 'stopped' || status === 'error') this.syncGatewayPortFromPreference()
     application.get('CacheService').setShared('feature.openclaw.gateway_status', this.gatewayStatus)

@@ -81,7 +81,13 @@ function createRuntimeConfigSchema(
 // --- Mocks for OpenClawService dependencies ---
 
 vi.mock('@main/core/lifecycle', () => {
-  class MockBaseService {}
+  class MockBaseService {
+    registerInterval(callback: () => void, intervalMs: number) {
+      const handle = setInterval(callback, intervalMs)
+      handle.unref?.()
+      return { dispose: () => clearInterval(handle) }
+    }
+  }
   return {
     BaseService: MockBaseService,
     Injectable: () => (target: unknown) => target,
@@ -250,6 +256,8 @@ describe('OpenClawService gateway status state machine', () => {
   })
 
   afterEach(() => {
+    // Tests that leave the gateway 'running' must not leave its liveness probe behind.
+    ;(service as any).gatewayProbe?.dispose()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -1264,6 +1272,37 @@ describe('OpenClawService gateway status state machine', () => {
   })
 
   describe('probeGatewayTick (liveness of a running gateway)', () => {
+    it('probes every 5 s only while the gateway runs', async () => {
+      vi.useFakeTimers()
+      checkHealthSpy.mockResolvedValue({ status: 'healthy', gatewayPort: 18790 })
+      expect(vi.getTimerCount()).toBe(0)
+
+      ;(service as any).setGatewayStatus('starting')
+      expect(vi.getTimerCount()).toBe(0)
+      ;(service as any).setGatewayStatus('running')
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(checkHealthSpy).toHaveBeenCalledTimes(2)
+
+      ;(service as any).setGatewayStatus('stopped')
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(checkHealthSpy).toHaveBeenCalledTimes(2)
+      expect(vi.getTimerCount()).toBe(0)
+
+      ;(service as any).setGatewayStatus('running')
+      expect(vi.getTimerCount()).toBe(1)
+    })
+
+    it('stops probing once a probe finds the gateway dead', async () => {
+      vi.useFakeTimers()
+      ;(service as any).setGatewayStatus('running')
+      checkHealthSpy.mockResolvedValue({ status: 'unhealthy', gatewayPort: 18790 })
+
+      await vi.advanceTimersByTimeAsync(5000)
+
+      expect((service as any).gatewayStatus).toBe('stopped')
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
     it('marks a dead gateway stopped when the probe goes unhealthy', async () => {
       ;(service as any).gatewayStatus = 'running'
       checkHealthSpy.mockResolvedValue({ status: 'unhealthy', gatewayPort: 18790 })
