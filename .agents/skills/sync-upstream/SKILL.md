@@ -38,6 +38,8 @@ Resolve conflicts with these rules:
 | `migrations/sqlite-drizzle/**` | always take upstream's (the fork never adds migrations) |
 | `CLAUDE.md` | take upstream's body, keep the `## Fork Rules` section at the end |
 | A file the fork gates with `forkFeatures.ts` | take upstream's change, then re-apply the one- or two-line gate |
+| `src/main/services/AppUpdaterService.ts`, `electron-builder*.{yml,cjs}` `publish`, `dev-app-update.yml` | keep the fork's version (GitHub Releases feed, lazy updater); port upstream bug fixes by hand |
+| Tests of upstream release infrastructure (`scripts/__tests__/release-*.test.ts`, backport, gitcode-sync) | delete the file again |
 | Anything else | understand both sides; keep the fork's behaviour only where a Fork Rule requires it |
 
 After resolving, search for upstream additions that break Fork Rules — new boot-time warmups, timers, downloads, telemetry endpoints, or workflows:

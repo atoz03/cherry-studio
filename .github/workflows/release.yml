@@ -3,7 +3,8 @@ name: Release
 # Fork release pipeline: builds the global edition on a version tag push and publishes the
 # installers plus electron-updater manifests (latest*.yml) to this repository's GitHub Release.
 # electron-builder runs with `--publish never`: its `publish: github` config only names the update
-# feed, and the Release step below is the single uploader.
+# feed. The `publish` job is the single uploader and runs only after every platform built, so
+# users never see a release whose update manifests are still missing.
 on:
   push:
     tags:
@@ -132,6 +133,35 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=8192
 
+      - name: Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ runner.os }}
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+            dist/latest*.yml
+            dist/*.blockmap
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    name: Publish release
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download builds
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
       - name: Release
         uses: ncipollo/release-action@v1
         with:
@@ -139,6 +169,6 @@ jobs:
           allowUpdates: true
           makeLatest: true
           prerelease: false
-          tag: ${{ steps.get-tag.outputs.tag }}
-          artifacts: "dist/*.exe,dist/*.zip,dist/*.dmg,dist/*.AppImage,dist/*.deb,dist/*.rpm,dist/*.tar.gz,dist/latest*.yml,dist/*.blockmap"
+          tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+          artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}

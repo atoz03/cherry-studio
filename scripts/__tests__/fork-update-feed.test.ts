@@ -13,7 +13,7 @@ const readProjectFile = (file: string) => readFileSync(path.join(projectRoot, fi
 const forkFeed = { provider: 'github', owner: FORK_RELEASE_OWNER, repo: FORK_RELEASE_REPO }
 const UPSTREAM_UPDATE_HOSTS = /cherry-ai\.com|gitcode/i
 
-type WorkflowStep = { name?: string; run?: string; with?: Record<string, string> }
+type WorkflowStep = { name?: string; run?: string; uses?: string; with?: Record<string, string> }
 
 describe('fork update feed', () => {
   it('writes the fork GitHub Releases into the global edition app-update.yml', () => {
@@ -37,15 +37,20 @@ describe('fork update feed', () => {
     }
   )
 
-  it('uploads the manifests the updater reads and leaves uploading to the release step', () => {
-    const workflow = parse(readProjectFile('.github/workflows/release.yml'))
-    const steps: WorkflowStep[] = workflow.jobs.release.steps
+  it('publishes the manifests the updater reads only after every platform built', () => {
+    const { jobs } = parse(readProjectFile('.github/workflows/release.yml'))
+    const steps: WorkflowStep[] = jobs.release.steps
     const builds = steps.filter((step) => step.name?.startsWith('Build ') && step.run?.includes('pnpm build:'))
-    const release = steps.find((step) => step.name === 'Release')
+    const upload = steps.find((step) => step.uses?.startsWith('actions/upload-artifact@'))
+    const release = (jobs.publish.steps as WorkflowStep[]).find((step) => step.name === 'Release')
 
     expect(builds).toHaveLength(3)
     for (const build of builds) expect(build.run).toMatch(/pnpm build:\w+ --publish never/)
-    expect(release?.with?.artifacts.split(',')).toEqual(expect.arrayContaining(['dist/latest*.yml', 'dist/*.blockmap']))
+    expect(steps.some((step) => step.uses?.startsWith('ncipollo/release-action@'))).toBe(false)
+    expect(upload?.with?.path).toMatch(/dist\/latest\*\.yml/)
+    expect(upload?.with?.path).toMatch(/dist\/\*\.blockmap/)
+    expect(jobs.publish.needs).toBe('release')
+    expect(jobs.publish.if).toBeUndefined()
     expect(release?.with).toMatchObject({ draft: false, prerelease: false, makeLatest: true })
   })
 })
