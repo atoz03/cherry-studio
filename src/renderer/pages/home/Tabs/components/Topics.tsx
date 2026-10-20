@@ -122,6 +122,7 @@ import {
   resolveAssistantGroupActions
 } from './assistantGroupActions'
 import { EMPTY_TOPIC_LIST_ITEM_RECONCILIATION, reconcileTopicListItems } from './topicListItemSharing'
+import { useMoveAllTopics } from './useMoveAllTopics'
 
 const logger = loggerService.withContext('Topics')
 const ResourceEditDialogHost = lazy(() =>
@@ -207,6 +208,7 @@ function AssistantGroupMoreMenu({
   onDeleteAssistant,
   onDeleteAllTopics,
   onEdit,
+  onMoveAllTopics,
   onSetAssistantIconType,
   onToggleGrouping,
   onTogglePin,
@@ -223,6 +225,7 @@ function AssistantGroupMoreMenu({
   onDeleteAssistant: (assistantId: string) => void | Promise<void>
   onDeleteAllTopics: (assistantId: string) => void | Promise<void>
   onEdit: (assistantId: string) => void
+  onMoveAllTopics?: (assistantId: string) => void | Promise<void>
   onSetAssistantIconType: (iconType: AssistantIconType) => void | Promise<void>
   onToggleGrouping: () => void | Promise<void>
   onTogglePin: (assistantId: string) => void | Promise<void>
@@ -239,6 +242,7 @@ function AssistantGroupMoreMenu({
     onDeleteAssistant,
     onDeleteAllTopics,
     onEdit,
+    onMoveAllTopics,
     onSetAssistantIconType,
     onToggleGrouping,
     onTogglePin,
@@ -491,6 +495,12 @@ export function Topics({
   const topicsRef = useRef(topics)
   const activeTopicRef = useRef(activeTopic)
   const activeTopicIdRef = useRef(activeTopic?.id ?? '')
+  const handleMoveAllTopics = useMoveAllTopics({
+    assistants,
+    pinnedTopicIds: topicPinnedIds,
+    topicsRef,
+    activeTopicIdRef
+  })
 
   useEffect(() => {
     topicsRef.current = topics
@@ -1127,6 +1137,7 @@ export function Topics({
                 pinned={assistantPinnedIdSet.has(assistantGroupId)}
                 onDeleteAllTopics={handleDeleteAssistantTopics}
                 onEdit={openAssistantEditor}
+                onMoveAllTopics={handleMoveAllTopics}
                 onSetAssistantIconType={setAssistantIconType}
                 onToggleGrouping={() => setAssistantSortType(isGroupGrouping ? 'list' : 'tags')}
                 onTogglePin={handleToggleAssistantPin}
@@ -1160,6 +1171,7 @@ export function Topics({
       displayMode,
       handleDeleteAssistant,
       handleDeleteAssistantTopics,
+      handleMoveAllTopics,
       handleToggleAssistantPin,
       handleToggleAssistantSidebar,
       isAssistantPinActionDisabled,
@@ -1191,6 +1203,7 @@ export function Topics({
         onDeleteAssistant: handleDeleteAssistant,
         onDeleteAllTopics: handleDeleteAssistantTopics,
         onEdit: openAssistantEditor,
+        onMoveAllTopics: handleMoveAllTopics,
         onSetAssistantIconType: setAssistantIconType,
         onToggleGrouping: () => setAssistantSortType(isGroupGrouping ? 'list' : 'tags'),
         onTogglePin: handleToggleAssistantPin,
@@ -1215,6 +1228,7 @@ export function Topics({
       displayMode,
       handleDeleteAssistant,
       handleDeleteAssistantTopics,
+      handleMoveAllTopics,
       handleToggleAssistantPin,
       handleToggleAssistantSidebar,
       isAssistantPinActionDisabled,
