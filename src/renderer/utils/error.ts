@@ -1,6 +1,6 @@
 import { AISDKError, APICallError, type NoSuchToolError } from 'ai'
 import { InvalidToolInputError } from 'ai'
-import { type AxiosError, isAxiosError } from 'axios'
+import type { AxiosError } from 'axios'
 import { t } from 'i18next'
 import type * as z from 'zod'
 import { ZodError } from 'zod'
@@ -22,6 +22,10 @@ import { formatErrorDetails } from './errorDetails'
 import { parseJSON } from './json'
 
 export { getErrorDetails } from './errorDetails'
+
+// Same check as axios' `isAxiosError`, without loading axios into every window that formats errors.
+const isAxiosError = (error: unknown): error is AxiosError =>
+  typeof error === 'object' && error !== null && (error as { isAxiosError?: unknown }).isAxiosError === true
 
 export function formatErrorMessage(error: unknown): string {
   if (error instanceof ZodError) {
