@@ -304,8 +304,9 @@ describe('remote agent access', () => {
     notifications.length = 0
     fake.runtime.respondToolApproval.mockClear()
     service = new RemoteAccessService()
-    hub = service['hub']
     await service._doInit()
+    await service.prepareIngress()
+    hub = service['runtime']!.hub
     await dbh.db.insert(agentTable).values({
       id: 'agent-1',
       type: 'claude-code',

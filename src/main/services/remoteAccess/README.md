@@ -23,6 +23,7 @@ listener flushes pending text while the session still exists.
 | File | Owns |
 |---|---|
 | `RemoteAccessService.ts` | Accepts sockets from the gateway's `/v1/remote/connect` ws route, identity, sweep, connection registry |
+| `remoteRuntime.ts` | Fork: the lazy boundary — the Noise/libp2p transport and Bonjour load on first real use; sweep and advertisement timers run only while an endpoint, connection or retained state exists |
 | `RemoteAdvertisement.ts` | Publishes the actual Gateway port and public identity while LAN access is enabled; refreshes interface changes and withdraws on shutdown |
 | `RemoteConnection.ts` | Per-connection RPC: hello/authenticate/refresh/ping, pairing, configuration export |
 | `RemotePairing.ts` / `RemoteTokens.ts` / `deviceIdentity.ts` | Invitation + claim state, access tokens, Ed25519 identity file |

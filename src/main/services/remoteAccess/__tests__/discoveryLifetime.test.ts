@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
 
 import { BaseService } from '@main/core/lifecycle'
 
@@ -27,6 +27,8 @@ import { createDeviceIdentity, deviceIdentityId } from '@cherrystudio/remote-tra
 import { RemoteAccessService } from '../RemoteAccessService'
 
 let service: RemoteAccessService
+// The runtime loads lazily; warm the module cache so each waitFor measures discovery, not the first import.
+beforeAll(() => import('../remoteRuntime'))
 beforeEach(() => {
   BaseService.resetInstances()
   state.load.mockReset()

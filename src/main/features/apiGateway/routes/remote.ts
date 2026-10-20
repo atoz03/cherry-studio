@@ -22,6 +22,8 @@ function underlyingSocket(raw: unknown): RemoteSocket | undefined {
 export const remoteRoutes = (app: AnyElysia) =>
   app.ws(REMOTE_CONNECT_PATH, {
     detail: { hide: true },
+    // The transport loads on first use; finish before the 101 so the stream hears the first handshake frame.
+    beforeHandle: () => application.get('RemoteAccessService').prepareIngress(),
     open(ws) {
       const socket = underlyingSocket(ws.raw)
       if (!socket) {

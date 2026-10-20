@@ -23,6 +23,7 @@ vi.mock('@application', async () => {
     },
     RemoteAccessService: {
       updateDirectEndpoint: vi.fn(),
+      prepareIngress: vi.fn(async () => {}),
       accept: (socket: RemoteSocket) => {
         connections.add(socket)
         socket.addEventListener('close', () => connections.delete(socket))
