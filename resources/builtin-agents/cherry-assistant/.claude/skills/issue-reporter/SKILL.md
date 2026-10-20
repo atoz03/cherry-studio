@@ -15,7 +15,7 @@ description: 只在用户明确要求提交 GitHub Issue、GitHub Bug Report 或
 
 ## GitHub 模式
 
-**Bug Report**: 收集信息(描述/复现步骤/期望/平台/版本) → 查重 `gh search issues "[关键词]" --repo CherryHQ/cherry-studio --state open --limit 5` → 读模板 `.github/ISSUE_TEMPLATE/0_bug_report.yml` → 预览给用户 → 确认后 `gh issue create` → 告知链接
+**Bug Report**: 收集信息(描述/复现步骤/期望/平台/版本) → 查重 `gh search issues "[关键词]" --repo atoz03/cherry-studio --state open --limit 5` → 读模板 `.github/ISSUE_TEMPLATE/0_bug_report.yml` → 预览给用户 → 确认后 `gh issue create --repo atoz03/cherry-studio` → 告知链接
 
 **Feature Request**: 确认需求→查重→读模板 `1_feature_request.yml`→预览→确认→提交→记录到 `.cherry-assistant/feature-requests.md`
 
@@ -30,7 +30,7 @@ Bug 存 `.cherry-assistant/bug-reports.md`，Feature 存 `feature-requests.md`�
 ---
 ```
 
-存档后引导: GitHub(推荐) https://github.com/CherryHQ/cherry-studio/issues | 论坛 linux.do | 飞书表单 https://mcnnox2fhjfq.feishu.cn/share/base/form/shrcnsjfFkx4gy6wx9LQ70tMaKe
+存档后引导: GitHub https://github.com/atoz03/cherry-studio/issues
 
 **批量提交**: 有权限时可说「帮我把待提交的都提交了」→读文件→筛待提交→逐个查重预览确认→更新状态为「已提交 #号」
 

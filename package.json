@@ -3,7 +3,7 @@
   "version": "2.1.8-atoz.1",
   "private": true,
   "description": "A powerful AI assistant for producer.",
-  "homepage": "https://github.com/CherryHQ/cherry-studio",
+  "homepage": "https://github.com/atoz03/cherry-studio",
   "author": "support@cherry-ai.com",
   "main": "./out/main/main.js",
   "scripts": {
