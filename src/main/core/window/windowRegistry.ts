@@ -331,8 +331,8 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
   },
 
   // Floating toolbar that appears near user text selections.
-  // Managed by SelectionService: created on the first selection (presentToolbar), then kept
-  // hidden between selections; showToolbarAtPosition positions + shows.
+  // Managed by SelectionService: created on the first selection (presentToolbar), kept hidden
+  // between selections and destroyed after 5 minutes hidden; showToolbarAtPosition positions + shows.
   [WindowType.SelectionToolbar]: {
     type: WindowType.SelectionToolbar,
     lifecycle: 'singleton',

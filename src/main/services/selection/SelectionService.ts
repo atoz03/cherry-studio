@@ -26,6 +26,10 @@ import { SELECTION_FINETUNED_LIST, SELECTION_PREDEFINED_BLACKLIST } from './sele
 
 const logger = loggerService.withContext('SelectionService')
 
+// Destroy the toolbar window once it has stayed hidden this long, returning its renderer's memory.
+// The next selection recreates it and waits for its first frame (about half a second).
+export const TOOLBAR_IDLE_TEARDOWN_MS = 5 * 60_000
+
 let SelectionHook: SelectionHookConstructor | null = null
 
 // Type definitions
@@ -110,6 +114,8 @@ export class SelectionService extends BaseService implements Activatable {
    */
   private pendingToolbarShow: (() => void) | null = null
   private cancelToolbarReveal: (() => void) | null = null
+  // Armed only while the toolbar exists and is hidden (see scheduleToolbarTeardown).
+  private toolbarTeardownTimer: ReturnType<typeof setTimeout> | null = null
 
   private isHideByMouseKeyListenerActive: boolean = false
   private isCtrlkeyListenerActive: boolean = false
@@ -316,6 +322,7 @@ export class SelectionService extends BaseService implements Activatable {
           this.toolbarWindow = null
           this.toolbarWindowId = null
           this.dropPendingToolbarShow()
+          this.cancelToolbarTeardown()
         }
       })
     )
@@ -583,6 +590,7 @@ export class SelectionService extends BaseService implements Activatable {
       // sites: normal show path, crash-recovery re-open, and any future
       // caller all inherit this for free.
       this.startHideByMouseKeyListener()
+      this.cancelToolbarTeardown()
     })
 
     window.on('hide', () => {
@@ -593,6 +601,7 @@ export class SelectionService extends BaseService implements Activatable {
       // `hideToolbar()`, WM blur-driven `window.hide()`, quirk-wrapped hide)
       // triggers cleanup. `stopHideByMouseKeyListener` is idempotent.
       this.stopHideByMouseKeyListener()
+      this.scheduleToolbarTeardown()
     })
 
     /** uncomment to open dev tools in dev mode */
@@ -609,7 +618,7 @@ export class SelectionService extends BaseService implements Activatable {
   /**
    * Show the toolbar for a selection and hand the selection to the toolbar renderer.
    *
-   * The toolbar window is created here on the first selection (and re-created if it was destroyed).
+   * The toolbar window is created here on the first selection, and again after an idle teardown.
    * A new toolbar shows once its UI reports its first frame. The renderer sends that report after
    * its mount effects have registered the `selection.text_selected` listener and reported the
    * toolbar size (determineToolbarSize, handled first since IpcApi requests are dispatched in
@@ -646,6 +655,25 @@ export class SelectionService extends BaseService implements Activatable {
     this.pendingToolbarShow = null
     this.cancelToolbarReveal?.()
     this.cancelToolbarReveal = null
+  }
+
+  /** (Re)start the idle teardown whenever the toolbar hides; showing it cancels the teardown. */
+  private scheduleToolbarTeardown(): void {
+    this.cancelToolbarTeardown()
+    this.toolbarTeardownTimer = setTimeout(() => {
+      this.toolbarTeardownTimer = null
+      if (!this.toolbarWindowId) return
+      this.logInfo('Toolbar hidden long enough, destroying its window')
+      // Singleton → destroyed; onWindowDestroyedByType clears the cached reference.
+      application.get('WindowManager').close(this.toolbarWindowId)
+    }, TOOLBAR_IDLE_TEARDOWN_MS)
+  }
+
+  private cancelToolbarTeardown(): void {
+    if (this.toolbarTeardownTimer) {
+      clearTimeout(this.toolbarTeardownTimer)
+      this.toolbarTeardownTimer = null
+    }
   }
 
   /**
@@ -1311,6 +1339,7 @@ export class SelectionService extends BaseService implements Activatable {
       wm.destroy(this.toolbarWindowId)
       // toolbarWindow / toolbarWindowId are cleared by the onWindowDestroyed handler in onInit().
     }
+    this.cancelToolbarTeardown()
 
     // Suspend the action pool — destroys idle (recycled) windows and stops recycling until
     // resumePool() is called on next activate. In-use windows are NOT destroyed here,

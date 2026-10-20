@@ -25,7 +25,7 @@ vi.mock('@main/core/platform', () => ({
   isWin: false
 }))
 
-const { SelectionService } = await import('../SelectionService')
+const { SelectionService, TOOLBAR_IDLE_TEARDOWN_MS } = await import('../SelectionService')
 
 // Reach the protected onAllReady/activate without widening the public surface.
 type TestableSelectionService = InstanceType<typeof SelectionService> & {
@@ -425,6 +425,15 @@ describe('SelectionService — windows created on first use', () => {
       trackFirstFrame(window as unknown as BrowserWindow)
       return id
     })
+    // WindowManager.close() on the toolbar singleton: destroy it and notify destroyed subscribers.
+    vi.spyOn(wm, 'close').mockImplementation((id) => {
+      const window = windows.get(id)
+      if (!window) return false
+      window.destroy()
+      windows.delete(id)
+      listenerFor(wm.onWindowDestroyedByType, WindowType.SelectionToolbar)({ id, window })
+      return true
+    })
     vi.spyOn(wm, 'getWindow').mockImplementation((id) => windows.get(id))
 
     svc = new SelectionService()
@@ -437,6 +446,7 @@ describe('SelectionService — windows created on first use', () => {
     await svc._doDestroy()
     BaseService.resetInstances()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   const toolbar = (n = 1) => windows.get(`selectionToolbar-${n}`)!
@@ -525,5 +535,65 @@ describe('SelectionService — windows created on first use', () => {
     svc.processAction({ id: 'translate', name: 'Translate', enabled: true, isBuiltIn: true })
 
     expect(recycled.show).toHaveBeenCalledTimes(1)
+  })
+
+  describe('toolbar idle teardown', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'one' })
+      renderToolbar()
+    })
+
+    it('destroys the toolbar once it has stayed hidden for the idle delay', () => {
+      svc.hideToolbar()
+
+      vi.advanceTimersByTime(TOOLBAR_IDLE_TEARDOWN_MS - 1)
+      expect(wm.close).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(wm.close).toHaveBeenCalledExactlyOnceWith('selectionToolbar-1')
+    })
+
+    it('rebuilds the toolbar on the next selection and shows it once the new UI has rendered', () => {
+      svc.hideToolbar()
+      vi.advanceTimersByTime(TOOLBAR_IDLE_TEARDOWN_MS)
+
+      internals.presentToolbar({ x: 50, y: 60 }, 'bottomLeft', { text: 'after idle' })
+
+      expect(openCalls(WindowType.SelectionToolbar)).toHaveLength(2)
+      expect(toolbar(2).showInactive).not.toHaveBeenCalled()
+
+      renderToolbar(2)
+
+      expect(toolbar(2).showInactive).toHaveBeenCalledTimes(1)
+      expect(toolbar(2).setBounds).toHaveBeenCalledWith(expect.objectContaining({ width: 280 }))
+      expect(textSelectedCalls().at(-1)).toEqual([
+        'selectionToolbar-2',
+        'selection.text_selected',
+        { text: 'after idle' }
+      ])
+    })
+
+    it('keeps the toolbar while selections keep showing it', () => {
+      svc.hideToolbar()
+      vi.advanceTimersByTime(TOOLBAR_IDLE_TEARDOWN_MS - 1)
+
+      internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'two' })
+      vi.advanceTimersByTime(TOOLBAR_IDLE_TEARDOWN_MS)
+
+      expect(wm.close).not.toHaveBeenCalled()
+      expect(openCalls(WindowType.SelectionToolbar)).toHaveLength(1)
+    })
+
+    it('arms no timer while the toolbar is shown, nor after the feature is turned off', () => {
+      expect(vi.getTimerCount()).toBe(0)
+
+      svc.hideToolbar()
+      expect(vi.getTimerCount()).toBe(1)
+
+      Object.assign(wm, { destroy: vi.fn(() => true) })
+      ;(svc as unknown as { onDeactivate(): void }).onDeactivate()
+      expect(vi.getTimerCount()).toBe(0)
+    })
   })
 })
