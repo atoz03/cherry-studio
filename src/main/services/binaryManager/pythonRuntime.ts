@@ -1,4 +1,3 @@
-import fs from 'fs'
 import { execFile } from 'node:child_process'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
@@ -10,9 +9,9 @@ import { application } from '@application'
 import { loggerService } from '@logger'
 import { regionService } from '@main/services/RegionService'
 import { isPathWithin } from '@main/utils/binaryEnv'
-import { getBinaryName } from '@main/utils/binaryResolver'
 
 import { sanitizedCommandError } from './commandError'
+import { ensureOnDemandBinary } from './onDemandBinaries'
 
 /**
  * Cherry-owned CPython for the tools that need one (mise's pipx backend runs
@@ -40,8 +39,8 @@ function installDir(): string {
 }
 
 export async function runUv(args: string[], env: Record<string, string>, timeoutMs: number): Promise<string> {
-  const uvBin = application.getPath('cherry.bin', getBinaryName('uv'))
-  if (!fs.existsSync(uvBin)) throw new Error('Bundled uv is not available')
+  // Fork: Cherry's uv is downloaded on first use rather than bundled.
+  const uvBin = await ensureOnDemandBinary('uv')
   const cwd = application.getPath('app.temp')
   const { stdout } = await execFileAsync(uvBin, args, { cwd, env, timeout: timeoutMs })
   return stdout

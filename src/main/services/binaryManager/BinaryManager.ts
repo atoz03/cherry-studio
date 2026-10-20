@@ -46,6 +46,7 @@ import type {
 } from '@shared/types/binary'
 
 import { sanitizedCommandError } from './commandError'
+import { ensureOnDemandBinary, isOnDemandBinarySupported } from './onDemandBinaries'
 import { installToolDependencies } from './pipDependencies'
 import { provideManagedPython } from './pythonRuntime'
 
@@ -538,7 +539,7 @@ export class BinaryManager extends BaseService {
     // backend cannot answer, every name is `unknown` with the reason — never a
     // misleading `absent` inferred from an empty query. For backends that omit
     // recipe options, `applied` proves package identity, not optional capabilities.
-    const backendUnknown: BinaryApplication | null = !this.miseBin
+    const backendUnknown: BinaryApplication | null = this.backendUnavailable
       ? { status: 'unknown', reason: 'backend_unavailable' }
       : queryFailureMessage !== null
         ? { status: 'unknown', reason: 'query_failed', message: queryFailureMessage }
@@ -772,7 +773,7 @@ export class BinaryManager extends BaseService {
         [operation?.status === 'failed', 'failed'],
         [queryFailed || unobservable.has(name), 'unknown'],
         [runnable, 'ready'],
-        [!this.miseBin, 'unknown'],
+        [this.backendUnavailable, 'unknown'],
         [Boolean(installs?.length), 'failed']
       ]
       const status = statusRules.find(([matches]) => matches)?.[1] ?? 'not_installed'
@@ -803,6 +804,8 @@ export class BinaryManager extends BaseService {
         const versionPath = path.join(bundledDir, tool.versionFile)
         const bundledVersion = this.readVersionMarker(versionPath)
         if (!bundledVersion) {
+          // Fork: tools Cherry downloads on first use are not shipped.
+          if (isOnDemandBinarySupported(tool.name)) continue
           logger.error(`Expected bundled ${tool.name} version marker missing`, new Error(`Missing ${versionPath}`))
           continue
         }
@@ -880,6 +883,29 @@ export class BinaryManager extends BaseService {
     }
 
     return null
+  }
+
+  // Fork: without mise, the backend is unavailable only where Cherry cannot download one.
+  private get backendUnavailable(): boolean {
+    return !this.miseBin && !isOnDemandBinarySupported('mise')
+  }
+
+  /** Cherry's pinned mise, downloaded on first backend use; a system mise covers a failed download. */
+  private async ensureMiseBin(): Promise<void> {
+    if (!isOnDemandBinarySupported('mise')) return
+    try {
+      const miseBin = await ensureOnDemandBinary('mise')
+      if (miseBin === this.miseBin) return
+      this.miseBin = miseBin
+      // The isolated env puts mise's own directory on PATH.
+      this.isolatedEnv = null
+      this.isolatedEnvPromise = null
+    } catch (error) {
+      if (!this.miseBin) throw error
+      logger.warn('Using the existing mise; the pinned one could not be downloaded', {
+        error: this.errorMessage(error)
+      })
+    }
   }
 
   // Intentionally isolates HOME/XDG to prevent mise from reading user-level
@@ -1590,6 +1616,7 @@ export class BinaryManager extends BaseService {
     targetVersion: string | undefined,
     definitions: CustomToolDefinition[]
   ): Promise<void> {
+    await this.ensureMiseBin()
     const isRuntime = isRuntimeDependency(definition.tool)
     // Adoption stays deliberately looser than the post-install gate: it only asks
     // whether the runtime runs today, and `getInstalledVersion` below decides
@@ -1659,7 +1686,7 @@ export class BinaryManager extends BaseService {
         )
       )
     }
-    if (!this.miseBin) {
+    if (this.backendUnavailable) {
       const error = new Error('Binary backend not available')
       this.setOperation(name, {
         status: 'failed',
@@ -1708,6 +1735,11 @@ export class BinaryManager extends BaseService {
           // managed shadow copy over a bundled/system binary.
           if (status === 'absent' && (source === 'bundled' || source === 'system')) {
             logger.info('Skipping managed install; tool already available from an external source', { name, source })
+            return { kind: 'done' }
+          }
+          // Fork: bun/uv get the pinned copy that used to be bundled, not a mise install.
+          if (status === 'absent' && !targetVersion && isOnDemandBinarySupported(name)) {
+            await ensureOnDemandBinary(name)
             return { kind: 'done' }
           }
 
@@ -1921,12 +1953,13 @@ export class BinaryManager extends BaseService {
   }
 
   async searchRegistry(query: string): Promise<Array<{ name: string; tool: string }>> {
-    if (!this.miseBin || !query.trim()) {
+    if (this.backendUnavailable || !query.trim()) {
       return []
     }
 
     let registry: Array<{ name: string; tool: string }>
     try {
+      await this.ensureMiseBin()
       registry = await this.loadRegistry()
     } catch (err) {
       // A mise too old for `registry --json` (rejects the flag) or a malformed

@@ -21,6 +21,7 @@ describe('bundledGit', () => {
   const platformKey = `${process.platform}-${process.arch}`
   const expectedExe = ['/mock/app.root.resources.binaries', platformKey, 'git', 'cmd', 'git.exe'].join('\\')
   const expectedDir = ['/mock/app.root.resources.binaries', platformKey, 'git', 'cmd'].join('\\')
+  const downloadedExe = ['/mock/feature.binary.mingit', 'git', 'cmd', 'git.exe'].join('\\')
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -33,6 +34,12 @@ describe('bundledGit', () => {
       vi.mocked(fs.existsSync).mockImplementation((p) => p === expectedExe)
 
       expect(getBundledGitPath()).toBe(expectedExe)
+    })
+
+    it('prefers the MinGit downloaded on first need', () => {
+      vi.mocked(fs.existsSync).mockImplementation((p) => p === downloadedExe || p === expectedExe)
+
+      expect(getBundledGitPath()).toBe(downloadedExe)
     })
 
     it('returns null when the bundled git.exe is absent', () => {

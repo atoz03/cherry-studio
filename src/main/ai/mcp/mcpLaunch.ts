@@ -1,16 +1,21 @@
+import { application } from '@application'
 import type { LoggerService } from '@logger'
+import { isOnDemandBinarySupported } from '@main/services/binaryManager'
 import { getBinaryPath, isBinaryExists } from '@main/utils/binaryResolver'
 import { findCommandInShellEnv, findExecutableInEnv } from '@main/utils/commandResolver'
 
 type Runner = {
   /** Bundled binary to fall back on when the command is missing from PATH; defaults to the command. */
   bundled?: string
+  /** Dependencies tool that provides `bundled`; defaults to `bundled`. */
+  provider?: string
   transformArgs?: (args: string[]) => string[]
   registryEnv?: (url: string) => Record<string, string>
   notFound: (command: string) => string
 }
 
 const uvRunner: Runner = {
+  provider: 'uv',
   registryEnv: (url) => ({ UV_DEFAULT_INDEX: url, PIP_INDEX_URL: url }),
   notFound: (command) =>
     `${command} not found in PATH and bundled version is not available. This may indicate an installation issue.\n` +
@@ -62,7 +67,8 @@ export async function resolveLaunchCommand({
   loginShellEnv,
   logger,
   signal,
-  resolutionCache
+  resolutionCache,
+  downloadMissingRuntime = true
 }: {
   command: string
   args: string[]
@@ -71,6 +77,8 @@ export async function resolveLaunchCommand({
   logger: LoggerService
   signal?: AbortSignal
   resolutionCache?: LaunchResolutionCache
+  /** Fork: false for dry runs, where a runtime Cherry downloads at launch counts as resolvable. */
+  downloadMissingRuntime?: boolean
 }): Promise<LaunchCommand> {
   const normalizedCommand = command.trim()
   signal?.throwIfAborted()
@@ -89,11 +97,13 @@ export async function resolveLaunchCommand({
     if (systemPath) return { command: systemPath, resolution: 'system' }
     if (!runner) return { command: normalizedCommand, resolution: 'unresolved' }
     const bundled = runner.bundled ?? normalizedCommand
-    if (!(await isBinaryExists(bundled))) {
+    const problem = await ensureBundledRuntime(bundled, runner.provider ?? bundled, downloadMissingRuntime)
+    signal?.throwIfAborted()
+    if (problem !== null) {
       return {
         command: normalizedCommand,
         resolution: 'unresolved',
-        unavailableReason: runner.notFound(normalizedCommand)
+        unavailableReason: `${runner.notFound(normalizedCommand)}\n${problem}`
       }
     }
     const command = await getBinaryPath(bundled)
@@ -114,6 +124,21 @@ export async function resolveLaunchCommand({
     args: resolution.resolution === 'bundled' ? (runner?.transformArgs?.(args) ?? args) : args,
     env
   }
+}
+
+/**
+ * Fork: Cherry's bun/uv are downloaded on first use instead of shipped, so a
+ * missing copy is installed and awaited. Returns why it is still unavailable, or null.
+ */
+async function ensureBundledRuntime(binary: string, provider: string, download: boolean): Promise<string | null> {
+  if (await isBinaryExists(binary)) return null
+  if (!download) return isOnDemandBinarySupported(provider) ? null : `${binary} is not installed`
+  try {
+    await application.get('BinaryManager').installByName({ name: provider })
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error)
+  }
+  return (await isBinaryExists(binary)) ? null : `${binary} is still unavailable after installing ${provider}`
 }
 
 export function buildStdioEnvironment(

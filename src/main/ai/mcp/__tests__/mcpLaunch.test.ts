@@ -9,8 +9,20 @@ const commandMock = vi.hoisted(() => ({
   findCommandInShellEnv: vi.fn<(name: string, env: Record<string, string>) => Promise<string | null>>()
 }))
 
+const runtimeMock = vi.hoisted(() => ({
+  installByName: vi.fn<(request: { name: string }) => Promise<void>>(),
+  isOnDemandBinarySupported: vi.fn<(name: string) => boolean>()
+}))
+
 vi.mock('@main/utils/binaryResolver', () => binaryMock)
 vi.mock('@main/utils/commandResolver', () => commandMock)
+vi.mock('@main/services/binaryManager', () => ({
+  isOnDemandBinarySupported: runtimeMock.isOnDemandBinarySupported
+}))
+vi.mock('@application', async () => {
+  const { mockApplicationFactory } = await import('@test-mocks/main/application')
+  return mockApplicationFactory({ BinaryManager: { installByName: runtimeMock.installByName } } as never)
+})
 
 const { resolveLaunchCommand } = await import('../mcpLaunch')
 
@@ -40,6 +52,8 @@ describe('resolveLaunchCommand', () => {
     binaryMock.getBinaryPath.mockImplementation(async (name) => `/bundled/${name}`)
     commandMock.findExecutableInEnv.mockResolvedValue(null)
     commandMock.findCommandInShellEnv.mockResolvedValue(null)
+    runtimeMock.installByName.mockResolvedValue(undefined)
+    runtimeMock.isOnDemandBinarySupported.mockReturnValue(true)
   })
 
   it('prefers the user’s own npx over the bundled runtime', async () => {
@@ -88,6 +102,67 @@ describe('resolveLaunchCommand', () => {
       resolution: 'unresolved',
       unavailableReason: expect.stringMatching(/npx not found in PATH and bundled bun/)
     })
+  })
+
+  it('installs Cherry’s bun on first use and launches it once the install finishes', async () => {
+    runtimeMock.installByName.mockImplementation(async () => {
+      binaryMock.isBinaryExists.mockResolvedValue(true)
+    })
+
+    const launch = await resolve('npx', ['-y', 'example-mcp'])
+
+    expect(runtimeMock.installByName).toHaveBeenCalledWith({ name: 'bun' })
+    expect(launch).toMatchObject({ command: '/bundled/bun', args: ['x', '-y', 'example-mcp'], resolution: 'bundled' })
+  })
+
+  it.each(['uvx', 'uv'])('installs Cherry’s uv on first use of %s', async (command) => {
+    runtimeMock.installByName.mockImplementation(async () => {
+      binaryMock.isBinaryExists.mockResolvedValue(true)
+    })
+
+    const launch = await resolve(command, ['example'])
+
+    expect(runtimeMock.installByName).toHaveBeenCalledWith({ name: 'uv' })
+    expect(launch).toMatchObject({ command: `/bundled/${command}`, resolution: 'bundled' })
+  })
+
+  it('explains why the runtime could not be installed', async () => {
+    runtimeMock.installByName.mockRejectedValue(new Error('Couldn’t download bun 1.4.2: offline'))
+
+    const launch = await resolve('npx', ['example-mcp'])
+
+    expect(launch.resolution).toBe('unresolved')
+    expect(launch.unavailableReason).toMatch(/npx not found in PATH/)
+    expect(launch.unavailableReason).toContain('Couldn’t download bun 1.4.2: offline')
+  })
+
+  it('treats a runtime Cherry downloads at launch as resolvable in a dry run, without downloading it', async () => {
+    const launch = await resolveLaunchCommand({
+      command: 'npx',
+      args: ['example-mcp'],
+      loginShellEnv: { PATH: '/usr/bin' },
+      logger,
+      downloadMissingRuntime: false
+    })
+
+    expect(launch.resolution).toBe('bundled')
+    expect(runtimeMock.installByName).not.toHaveBeenCalled()
+  })
+
+  it('reports a dry run unresolved where Cherry cannot download the runtime', async () => {
+    runtimeMock.isOnDemandBinarySupported.mockReturnValue(false)
+
+    const launch = await resolveLaunchCommand({
+      command: 'uvx',
+      args: [],
+      loginShellEnv: { PATH: '/usr/bin' },
+      logger,
+      downloadMissingRuntime: false
+    })
+
+    expect(launch.resolution).toBe('unresolved')
+    expect(runtimeMock.isOnDemandBinarySupported).toHaveBeenCalledWith('uv')
+    expect(runtimeMock.installByName).not.toHaveBeenCalled()
   })
 
   it('falls back to the bundled binary of the same name for uv and uvx', async () => {

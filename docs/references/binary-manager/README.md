@@ -3,6 +3,7 @@ description: Lifecycle service that acquires third-party CLI binaries through mi
 sources:
   - src/main/services/binaryManager/BinaryManager.ts
   - src/main/services/binaryManager/pythonRuntime.ts
+  - src/main/services/binaryManager/onDemandBinaries.ts
   - src/shared/data/presets/binaryTools.ts
   - src/main/ipc/handlers/binary.ts
   - scripts/download-binaries.js
@@ -18,7 +19,7 @@ sources:
 
 BinaryManager is for a single CLI executable that mise can install (`npm:`, `pipx:`, `github:`, mise registry, and so on). It is not for multi-file server packages, hardware detection, generated configuration, or data/model downloads. Those remain with their domain service.
 
-Examples in scope: `uv`, `bun`, `ripgrep`, `gh`, `claude-code`, and npm/pipx CLI tools. The bundled `mise` executable is internal infrastructure, not a user-facing managed tool.
+Examples in scope: `uv`, `bun`, `ripgrep`, `gh`, `claude-code`, and npm/pipx CLI tools. Cherry's own `mise` executable is internal infrastructure, not a user-facing managed tool.
 
 ## Tool definitions and runtime facts
 
@@ -28,7 +29,17 @@ Only the main process writes `feature.binary.tools`, through `BinaryManager.addC
 
 mise is an availability backend, not a definition store. An executable visible to mise can have no custom definition; conversely, a defined custom tool can be unavailable after external deletion. Custom Add writes the definition first: if that write fails, no backend work starts; if backend application fails afterward, the definition remains and the snapshot carries a retryable failed operation.
 
-Bundled copies are a separate availability source. The app extracts its shipped binaries to `cherry.bin`. The runtime lookup order is mise shim, bundled binary, then the user's login-shell PATH.
+Bundled copies are a separate availability source: Cherry's own binaries in `cherry.bin`, whether extracted from the installer (ripgrep) or downloaded on first use (mise, bun, uv — see below). The runtime lookup order is mise shim, bundled binary, then the user's login-shell PATH.
+
+### Downloaded on first use (fork)
+
+The fork's installer ships ripgrep only. mise, bun, uv and, on Windows, MinGit are pinned in `scripts/download-binaries.js` (`ON_DEMAND_TOOL_NAMES`); `electron.vite.config.ts` injects those pins into the main bundle, and `onDemandBinaries.ts` downloads a tool the first time a flow needs it, never at boot. The user's GitHub mirror is tried first when set, transient failures are retried, the file must match the pinned sha256, and the tool is installed where the bundled copy used to be extracted (`cherry.bin`; MinGit into `feature.binary.mingit`), version marker last. Concurrent callers share one download. When a pin moves, the next use replaces the old copy, which keeps working for the session if that download fails. With no copy at all, the caller gets a localized error naming the cause (offline, HTTP status, checksum).
+
+- **mise** is fetched by the first backend operation (`installByName`, `addCustomTool`, registry search). Until then an uninstalled tool reads `absent`, not `backend_unavailable`, so its card offers Install. A mise already on the machine is used only when the download fails.
+- **bun / uv** are fetched by Install on their Dependencies card, by an MCP stdio launch that falls back to them (`npx` → `bun x`, `uvx`, `uv`) through `installByName`, and by Python provisioning for the pipx backend. A name-only install of an absent bun/uv lays down the pinned copy instead of a mise install, which then reads as the `bundled` source.
+- **MinGit** (Windows without git) is fetched by a Code CLI launch and by skill installs from GitHub (`ensureGitAvailable()`). Synchronous PATH probes (shell-env tail, `commandResolver`) see it only once it has been downloaded.
+
+The doctor's MCP launch check passes `downloadMissingRuntime: false`: a runtime Cherry would download at launch counts as resolvable, and the check starts no download.
 
 ### Portable definitions and machine-local state
 
@@ -88,7 +99,7 @@ Removing a runtime is guarded symmetrically. Under the mutation lock, removal of
 
 ### Python for the pipx backend
 
-Python is the one runtime BinaryManager does not ask mise for. mise installs Python from GitHub releases, which is unreachable from mainland China, and naming a Python runtime in `mise use` is what triggers that download — so `pythonRuntime.ts` provisions the interpreter with the bundled `uv` into `feature.binary.data.uv_python`, and `mise use` is given the `pipx:` tool alone. `UV_PYTHON` carries the interpreter into mise's pipx backend, which shells out to uv. In China the archive comes from npmmirror's `python-build-standalone` mirror first, the official source second; uv verifies both against its built-in catalog's checksums. Provisioning first asks `uv python find` for an interpreter and spawns it with `--version` — a half-written download is otherwise indistinguishable from a working one. Every install then passes `--reinstall` unconditionally: a plain `uv python install` treats any version uv still lists as already satisfied, and `uv python find` reports an interpreter it cannot inspect exactly as it reports an absent one, so there is no state in which the flag can be skipped safely. On an empty install directory it simply downloads.
+Python is the one runtime BinaryManager does not ask mise for. mise installs Python from GitHub releases, which is unreachable from mainland China, and naming a Python runtime in `mise use` is what triggers that download — so `pythonRuntime.ts` provisions the interpreter with Cherry's `uv` (downloaded on first use) into `feature.binary.data.uv_python`, and `mise use` is given the `pipx:` tool alone. `UV_PYTHON` carries the interpreter into mise's pipx backend, which shells out to uv. In China the archive comes from npmmirror's `python-build-standalone` mirror first, the official source second; uv verifies both against its built-in catalog's checksums. Provisioning first asks `uv python find` for an interpreter and spawns it with `--version` — a half-written download is otherwise indistinguishable from a working one. Every install then passes `--reinstall` unconditionally: a plain `uv python install` treats any version uv still lists as already satisfied, and `uv python find` reports an interpreter it cannot inspect exactly as it reports an absent one, so there is no state in which the flag can be skipped safely. On an empty install directory it simply downloads.
 
 After a successful `pipx:` install, BinaryManager drops the global `python` selection with `mise unuse -g --no-prune python`: earlier versions wrote that entry for themselves and leaving it behind keeps mise reporting a runtime it no longer owns as active. `--no-prune` is required, not cosmetic — plain `mise unuse` uninstalls the version as well, and a `pipx:` tool installed by an earlier version has a `pyvenv.cfg` pointing straight into that install directory. The step is skipped when the user added Python as a custom tool, since that selection is theirs, and a failure is logged rather than failing an install that already succeeded.
 
@@ -144,9 +155,9 @@ For a Code CLI, add its executable/specification to the Code CLI preset source. 
 
 Fixed npm presets that require lifecycle scripts must list the exact packages in `npmAllowBuilds`. BinaryManager passes that list to mise's per-tool `allow_builds` option; packages not listed keep mise's default script blocking, and broad allow-all execution is not exposed.
 
-To ship a bundled executable, add its platform download/checksum definition to `scripts/download-binaries.js` and its executable names/version marker to `BUNDLED_TOOLS` in `src/main/services/binaryManager/BinaryManager.ts`. Both entries are required: one supplies the artifact and the other makes extraction and snapshot availability aware of it.
+To ship a bundled executable, add its platform download/checksum definition to `scripts/download-binaries.js` and its executable names/version marker to `BUNDLED_TOOLS` in `src/main/services/binaryManager/BinaryManager.ts`. Both entries are required: one supplies the artifact and the other makes extraction and snapshot availability aware of it. To have the app download it on first use instead, also add its name to `ON_DEMAND_TOOL_NAMES` and to `OnDemandBinaryName` in `onDemandManifest.ts`, then call `ensureOnDemandBinary()` from the flow that needs it.
 
-`scripts/download-binaries.js` fills `resources/binaries/<platform>-<arch>/`, which is what the app extracts from at boot. During packaging (`before-pack.js` passes `--packaging`) it downloads there directly.
+`scripts/download-binaries.js` fills `resources/binaries/<platform>-<arch>/` with the tools that ship in the installer, which is what the app extracts from at boot, and removes anything an older checkout left there for a tool the app now downloads itself. During packaging (`before-pack.js` passes `--packaging`) it downloads there directly, and `verifyBundledBinaries` refuses a bundle that still carries an on-demand tool.
 
 A dev run instead downloads into a cache shared by every worktree of the checkout, at `<git-common-dir>/cherry-binaries/<platform>-<arch>/<tool>/<version>/`, and hard-links from it into `resources/binaries/` — so a second worktree costs links rather than a repeat download, and the runtime still reads the one path it always did. The version is part of the cache path, so two worktrees on branches with different tool versions each keep their own copy instead of overwriting each other. Version markers live only in the bundle, written per worktree; the cache holds binaries alone.
 
@@ -156,6 +167,6 @@ The cache reclaims itself: a version whose files are hard-linked into some workt
 
 ## Consuming a tool
 
-A service that needs to execute a CLI asks `getToolSnapshots([executableName])` and uses the current availability path. It may execute a `mise`, bundled, or system result; availability alone is sufficient for that decision. If availability is `none` and the executable is a fixed catalog tool, it calls `installByName({ name: executableName })`; main resolves the canonical recipe. An arbitrary user-supplied recipe goes through `addCustomTool(definition)`. Re-read the snapshot after installation before launching.
+A service that needs to execute a CLI asks `getToolSnapshots([executableName])` and uses the current availability path. It may execute a `mise`, bundled, or system result; availability alone is sufficient for that decision. If availability is `none` and the executable is a fixed catalog tool, it calls `installByName({ name: executableName })`; main resolves the canonical recipe (for bun and uv, the pinned download above). An arbitrary user-supplied recipe goes through `addCustomTool(definition)`. Re-read the snapshot after installation before launching.
 
 Do not recreate mise commands, custom registry writes, or binary search paths in a consumer. Use BinaryManager for install/remove and `application.getPath()` for main-process paths. `getBinaryPath()` and `isBinaryExists()` are narrower main-only helpers for Cherry search directories, not substitutes for snapshots when a consumer needs system-path availability.

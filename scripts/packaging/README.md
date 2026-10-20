@@ -2,7 +2,7 @@
 
 `electron-builder.yml` registers the hooks in this directory:
 
-- `before-pack.js`: prepares target native dependencies and bundled binaries, then filters foreign platform files.
+- `before-pack.js`: prepares target native dependencies and bundled binaries (ripgrep only; the fork's app downloads mise, bun, uv and MinGit on first use, and a bundle carrying them fails verification), then filters foreign platform files.
 - `after-pack.js`: installs the target Computer Use runtime from the SDK's matching npm platform package outside ASAR before signing, adjusts packaged license files and installs the pinned Linux SQLite artifact. Missing helpers or mismatched SDK/runtime versions fail the build; `.context` is only for development.
 - `notarize.js`: notarizes the signed macOS application when credentials are configured.
 - `mac-sign.js`: preserves the Electron signing policy and assigns empty entitlements to the system speech helper.

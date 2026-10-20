@@ -7,17 +7,20 @@ import { isWin } from '@main/core/platform'
 import { toAsarUnpackedPath } from './asar'
 
 /**
- * Resolve the bundled MinGit shipped under resources/binaries/<platform>/git.
- * Windows-only — other platforms have no bundled git package. Returns the path
- * to git.exe when present, or null (dev on non-Windows, or missing bundle).
+ * Resolve Cherry's MinGit: the copy downloaded on first need (fork; see
+ * binaryManager/onDemandBinaries), else one shipped under
+ * resources/binaries/<platform>/git. Windows-only — other platforms have no git
+ * package. Returns the path to git.exe when present, or null.
  *
- * MinGit is a multi-file tree run in place from resources (not copied into
- * cherry.bin), so this resolves through the asar.unpacked layout in production.
+ * MinGit is a multi-file tree run in place (not copied into cherry.bin), so the
+ * shipped copy resolves through the asar.unpacked layout in production.
  */
 export function getBundledGitPath(): string | null {
   if (!isWin) {
     return null
   }
+  const downloaded = path.join(application.getPath('feature.binary.mingit'), 'git', 'cmd', 'git.exe')
+  if (fs.existsSync(downloaded)) return downloaded
   const platformKey = `${process.platform}-${process.arch}`
   const gitExe = toAsarUnpackedPath(
     path.join(application.getPath('app.root.resources.binaries'), platformKey, 'git', 'cmd', 'git.exe')

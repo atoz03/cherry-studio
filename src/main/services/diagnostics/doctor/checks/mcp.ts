@@ -85,7 +85,9 @@ export const mcpLaunchCommands = defineDoctorCheck({
           args: [...(server.args ?? [])],
           logger,
           signal,
-          resolutionCache
+          resolutionCache,
+          // Fork: a check must not start the bun/uv download a real launch would.
+          downloadMissingRuntime: false
         })
         if (launch.resolution === 'unresolved') {
           failed.push(server)

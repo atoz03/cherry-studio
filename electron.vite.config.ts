@@ -27,6 +27,8 @@ import { getSentryBuildContext } from './src/shared/utils/sentry'
 const { buildSelectionPanel, sourcePath: selectionPanelSource } = createRequire(import.meta.url)(
   './native/darwin/build'
 )
+// Fork: pins for the binaries the app downloads on first use instead of bundling.
+const { onDemandBinaryManifest } = createRequire(import.meta.url)('./scripts/download-binaries')
 
 type ElectronBuilderConfig = {
   releaseInfo?: {
@@ -179,7 +181,8 @@ export default defineConfig({
   main: {
     define: {
       __APP_EDITION__: JSON.stringify(rendererEdition),
-      __CLAUDE_CODE_BINARY_MANIFEST__: JSON.stringify(claudeCodeBinaryManifest(__dirname))
+      __CLAUDE_CODE_BINARY_MANIFEST__: JSON.stringify(claudeCodeBinaryManifest(__dirname)),
+      __ON_DEMAND_BINARIES__: JSON.stringify(onDemandBinaryManifest())
     },
     plugins: [
       {

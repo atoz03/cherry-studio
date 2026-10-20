@@ -1,4 +1,5 @@
 import type * as NodeModule from 'node:module'
+import path from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,6 +41,17 @@ const { manifestRef, mockExecFileAsync, mockFs, mockFsp, mockPreferenceService, 
     set: vi.fn(),
     subscribeMultipleChanges: vi.fn(() => () => {})
   }
+}))
+
+const { mockEnsureOnDemandBinary, onDemandSupported } = vi.hoisted(() => ({
+  mockEnsureOnDemandBinary: vi.fn(),
+  // Empty by default: suites below exercise the backend as if Cherry could not download mise/bun/uv.
+  onDemandSupported: new Set<string>()
+}))
+
+vi.mock('../onDemandBinaries', () => ({
+  ensureOnDemandBinary: mockEnsureOnDemandBinary,
+  isOnDemandBinarySupported: (name: string) => onDemandSupported.has(name)
 }))
 
 vi.mock('node:module', async (importOriginal) => {
@@ -181,6 +193,9 @@ describe('BinaryManager', () => {
     mockPreferenceService.set.mockImplementation(async (key: string, value: typeof manifestRef.value) => {
       if (key === 'feature.binary.tools') manifestRef.value = value
     })
+    onDemandSupported.clear()
+    // Cherry's uv (pipx Python) is present unless a test says otherwise.
+    mockEnsureOnDemandBinary.mockReset().mockImplementation(async (name: string) => `/mock/cherry.bin/${name}`)
   })
 
   const runAllReadyTasks = async (service: InstanceType<typeof BinaryManager>) => {
@@ -2680,6 +2695,104 @@ describe('BinaryManager', () => {
 
       expect(reinstalled).toBe(true)
       expect(miseArgs()).toContainEqual(['use', '-g', '--minimum-release-age', '0s', 'npm:@deepseek-ai/dsh@latest'])
+    })
+  })
+
+  describe('tools Cherry downloads on first use', () => {
+    const CHERRY_MISE = '/mock/cherry.bin/mise'
+    const miseCalls = () => mockExecFileAsync.mock.calls.filter((call: any[]) => call[1][0] === 'use')
+
+    beforeEach(() => {
+      for (const name of ['mise', 'bun', 'uv']) onDemandSupported.add(name)
+      mockExecFileAsync.mockImplementation(async (_bin: string, args: string[]) => {
+        if (args[0] === 'ls' && args.length === 2) return { stdout: JSON.stringify({}), stderr: '' }
+        if (args[0] === 'ls')
+          return { stdout: JSON.stringify({ fd: [{ version: '10.0.0', active: true }] }), stderr: '' }
+        if (args[0] === 'which') return { stdout: '/mock/mise/shims/fd\n', stderr: '' }
+        if (args[0] === 'registry') return { stdout: JSON.stringify([{ short: 'fd', backends: ['fd'] }]), stderr: '' }
+        return { stdout: '', stderr: '' }
+      })
+    })
+
+    it('offers Install for an absent tool before mise has been downloaded, without downloading it', async () => {
+      const snapshots = await new BinaryManager().getToolSnapshots(['fd'])
+
+      expect(snapshots.fd.application).toEqual({ status: 'absent' })
+      expect(mockEnsureOnDemandBinary).not.toHaveBeenCalled()
+      expect(mockExecFileAsync).not.toHaveBeenCalled()
+    })
+
+    it('downloads mise before the first managed install', async () => {
+      mockEnsureOnDemandBinary.mockResolvedValue(CHERRY_MISE)
+
+      await new BinaryManager().installByName({ name: 'fd' })
+
+      expect(mockEnsureOnDemandBinary).toHaveBeenCalledWith('mise')
+      expect(miseCalls()).toHaveLength(1)
+      expect(miseCalls()[0][0]).toBe(CHERRY_MISE)
+      expect(miseCalls()[0][1]).toEqual(['use', '-g', 'fd@latest'])
+      expect(MockMainCacheServiceUtils.getCacheValue('feature.binary.install_states')).toEqual({})
+    })
+
+    it('fails the install with the download error when mise cannot be downloaded', async () => {
+      mockEnsureOnDemandBinary.mockRejectedValue(new Error("Couldn't download mise 2026.7.14: offline"))
+
+      await expect(new BinaryManager().installByName({ name: 'fd' })).rejects.toThrow(
+        "Couldn't download mise 2026.7.14: offline"
+      )
+
+      expect(mockExecFileAsync).not.toHaveBeenCalled()
+      expect(MockMainCacheServiceUtils.getCacheValue('feature.binary.install_states')).toEqual({
+        fd: { status: 'failed', action: 'install', error: "Couldn't download mise 2026.7.14: offline" }
+      })
+    })
+
+    it('falls back to a mise already on the machine when the download fails', async () => {
+      const service = new BinaryManager()
+      ;(service as any).miseBin = '/usr/local/bin/mise'
+      ;(service as any).isolatedEnv = { env: {}, usesDefaultChinaPipIndex: false }
+      mockEnsureOnDemandBinary.mockRejectedValue(new Error('offline'))
+
+      await service.installByName({ name: 'fd' })
+
+      expect(miseCalls()[0][0]).toBe('/usr/local/bin/mise')
+    })
+
+    it.each(['bun', 'uv'])('installs an absent %s as the pinned copy, without mise', async (name) => {
+      mockEnsureOnDemandBinary.mockResolvedValue(`/mock/cherry.bin/${name}`)
+
+      await new BinaryManager().installByName({ name })
+
+      expect(mockEnsureOnDemandBinary.mock.calls).toEqual([[name]])
+      expect(mockExecFileAsync).not.toHaveBeenCalled()
+      expect(MockMainCacheServiceUtils.getCacheValue('feature.binary.install_states')).toEqual({})
+    })
+
+    it('searches the registry through a freshly downloaded mise', async () => {
+      mockEnsureOnDemandBinary.mockResolvedValue(CHERRY_MISE)
+
+      const results = await new BinaryManager().searchRegistry('fd')
+
+      expect(results.map((result) => result.name)).toContain('fd')
+      expect(mockExecFileAsync.mock.calls[0][0]).toBe(CHERRY_MISE)
+    })
+
+    it('extracts the ripgrep-only bundle without expecting the tools downloaded on first use', async () => {
+      const { mockMainLoggerService } = await import('@test-mocks/MainLoggerService')
+      const inBundle = (candidate: string) =>
+        candidate.includes('binaries') && /[/\\](rg(\.exe)?|\.rg-version)$/.test(candidate)
+      ;(mockFs.existsSync as any).mockImplementation((candidate: string) => inBundle(candidate))
+      mockFs.readFileSync.mockImplementation((candidate: string) => {
+        if (inBundle(candidate)) return '14.1.1'
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+      })
+
+      await (new BinaryManager() as any).extractBundledBinaries()
+
+      expect(mockMainLoggerService.error).not.toHaveBeenCalled()
+      const copied = mockFsp.copyFile.mock.calls.map((call: unknown[]) => path.basename(String(call[0])))
+      expect(copied).toHaveLength(1)
+      expect(copied[0]).toMatch(/^rg(\.exe)?$/)
     })
   })
 
