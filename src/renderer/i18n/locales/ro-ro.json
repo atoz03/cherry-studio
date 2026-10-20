@@ -5434,6 +5434,8 @@
   "settings.provider.more_endpoints.toggle": "Mai multe puncte finale",
   "settings.provider.no_models_for_check": "Nu există modele disponibile pentru verificare (de ex. modele chat)",
   "settings.provider.not_checked": "Neverificat",
+  "settings.provider.note.label": "Notă",
+  "settings.provider.note.placeholder": "Adaugă o notă pentru acest furnizor",
   "settings.provider.notes.markdown_editor_default_value": "Zonă previzualizare",
   "settings.provider.notes.placeholder": "Introdu conținut Markdown...",
   "settings.provider.notes.title": "Note model",

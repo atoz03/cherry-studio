@@ -5434,6 +5434,8 @@
   "settings.provider.more_endpoints.toggle": "เอนด์พอยต์เพิ่มเติม",
   "settings.provider.no_models_for_check": "ไม่มีโมเดลสำหรับตรวจสอบ (เช่น โมเดลแชท)",
   "settings.provider.not_checked": "ยังไม่ได้ตรวจสอบ",
+  "settings.provider.note.label": "บันทึก",
+  "settings.provider.note.placeholder": "เพิ่มบันทึกสำหรับผู้ให้บริการนี้",
   "settings.provider.notes.markdown_editor_default_value": "พื้นที่พรีวิว",
   "settings.provider.notes.placeholder": "ป้อนเนื้อหา Markdown...",
   "settings.provider.notes.title": "บันทึกโมเดล",

@@ -6,6 +6,7 @@ import { isMac } from '@main/core/platform'
 import { openRequestPath } from '@main/services/file'
 import { regionService } from '@main/services/RegionService'
 import { isSafeExternalUrl } from '@main/utils/externalUrlSafety'
+import { getMacFontFamilies } from '@main/utils/macFonts'
 import {
   getScreenCapturePermissionStatus,
   openScreenCaptureSettings,
@@ -46,6 +47,10 @@ export const systemHandlers: IpcHandlersFor<typeof systemRequestSchemas> = {
     application.get('WindowManager').getWindow(senderId)?.webContents.toggleDevTools()
   },
   'system.get_fonts': async () => {
+    if (isMac) {
+      const families = await getMacFontFamilies()
+      if (families.length > 0) return families
+    }
     try {
       const { default: fontList } = await import('font-list')
       const fonts = await fontList.getFonts()

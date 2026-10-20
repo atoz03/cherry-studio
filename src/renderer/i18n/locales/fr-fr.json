@@ -5434,6 +5434,8 @@
   "settings.provider.more_endpoints.toggle": "Plus de points de terminaison",
   "settings.provider.no_models_for_check": "Aucun modèle détectable (par exemple, modèle de chat)",
   "settings.provider.not_checked": "Non vérifié",
+  "settings.provider.note.label": "Note",
+  "settings.provider.note.placeholder": "Ajouter une note pour ce fournisseur",
   "settings.provider.notes.markdown_editor_default_value": "Zone d'aperçu",
   "settings.provider.notes.placeholder": "Saisissez du contenu Markdown…",
   "settings.provider.notes.title": "Notes du modèle",

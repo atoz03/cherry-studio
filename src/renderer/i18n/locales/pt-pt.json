@@ -5434,6 +5434,8 @@
   "settings.provider.more_endpoints.toggle": "Mais Endpoints",
   "settings.provider.no_models_for_check": "Não há modelos disponíveis para verificação (por exemplo, modelos de conversa)",
   "settings.provider.not_checked": "Não verificado",
+  "settings.provider.note.label": "Nota",
+  "settings.provider.note.placeholder": "Adicione uma nota para este fornecedor",
   "settings.provider.notes.markdown_editor_default_value": "Área de Visualização",
   "settings.provider.notes.placeholder": "Por favor, introduza o conteúdo no formato Markdown...",
   "settings.provider.notes.title": "Observação do Modelo",

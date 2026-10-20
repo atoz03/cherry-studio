@@ -1,0 +1,14 @@
+System Fonts:
+	.AppleSystemUIFont
+	Menlo-Regular
+	PingFangSC-Regular
+	Songti-SC-Regular
+System Families:
+	.AppleSystemUIFont
+	Menlo
+	PingFang SC
+	Songti SC
+	Helvetica Neue
+	PingFang SC
+	STHeiti
+

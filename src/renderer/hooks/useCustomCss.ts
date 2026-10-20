@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 
 import { usePreference } from '@data/hooks/usePreference'
+import { withFontGuard } from '@renderer/utils/customCssFontGuard'
 import { hasV1CustomCssMarker } from '@shared/utils/customCssMigration'
 
 const CUSTOM_CSS_ELEMENT_ID = 'user-defined-custom-css'
@@ -42,5 +43,7 @@ export function useCustomCssInjection(cssText: string | undefined): void {
  */
 export function useCustomCss(): void {
   const [customCss] = usePreference('ui.custom_css')
-  useCustomCssInjection(customCss)
+  const [fontFamily] = usePreference('ui.theme_user.font_family')
+  const [codeFontFamily] = usePreference('ui.theme_user.code_font_family')
+  useCustomCssInjection(withFontGuard(customCss, { fontFamily, codeFontFamily }))
 }

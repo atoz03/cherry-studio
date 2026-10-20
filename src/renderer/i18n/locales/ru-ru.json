@@ -5434,6 +5434,8 @@
   "settings.provider.more_endpoints.toggle": "Больше конечных точек",
   "settings.provider.no_models_for_check": "Нет моделей для проверки (например, диалоговые модели)",
   "settings.provider.not_checked": "Не проверено",
+  "settings.provider.note.label": "Заметка",
+  "settings.provider.note.placeholder": "Добавьте заметку к этому провайдеру",
   "settings.provider.notes.markdown_editor_default_value": "Область предварительного просмотра",
   "settings.provider.notes.placeholder": "Введите содержимое в формате Markdown...",
   "settings.provider.notes.title": "Заметки модели",
