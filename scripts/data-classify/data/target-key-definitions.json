@@ -882,6 +882,20 @@
       "description": "Notes line-break rendering mode: a single newline renders as a line break (v2 new feature, no v1 source)"
     },
     {
+      "targetKey": "feature.notes.git.enabled",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Version the notes folder with a local git repository while the notes page is open: auto-commit, per-file history and restore (fork feature; migrated from v1 fork note.settings.enableGit)"
+    },
+    {
+      "targetKey": "feature.notes.git.commit_interval_minutes",
+      "type": "number",
+      "defaultValue": 5,
+      "status": "classified",
+      "description": "Minutes after a notes change before it is auto-committed; one of 1, 5, 10, 30, 60 (fork feature; migrated from v1 fork note.settings.gitCommitIntervalMinutes)"
+    },
+    {
       "targetKey": "chat.input.steer_shortcut",
       "type": "PreferenceTypes.ComposerShortcut",
       "defaultValue": "VALUE: null",

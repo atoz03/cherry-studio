@@ -417,6 +417,10 @@ export interface PreferenceSchemas {
     // redux/note/settings.isFullWidth
     'feature.notes.full_width': boolean
     // target-key-definitions/complex/complex
+    'feature.notes.git.commit_interval_minutes': number
+    // target-key-definitions/complex/complex
+    'feature.notes.git.enabled': boolean
+    // target-key-definitions/complex/complex
     'feature.notes.line_breaks': boolean
     // redux/note/notesPath
     'feature.notes.path': string
@@ -812,6 +816,8 @@ export const DefaultPreferences: PreferenceSchemas = {
     'feature.notes.font_family': 'default',
     'feature.notes.font_size': 16,
     'feature.notes.full_width': true,
+    'feature.notes.git.commit_interval_minutes': 5,
+    'feature.notes.git.enabled': false,
     'feature.notes.line_breaks': false,
     'feature.notes.path': '',
     'feature.notes.show_tab_status': true,
@@ -920,7 +926,7 @@ export const DefaultPreferences: PreferenceSchemas = {
 
 /**
  * 生成统计:
- * - 总配置项: 290
+ * - 总配置项: 292
  * - electronStore项: 2
  * - redux项: 173
  * - localStorage项: 0
