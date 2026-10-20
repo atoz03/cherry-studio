@@ -4587,6 +4587,8 @@
   "settings.general.emoji_picker": "Emoji-Auswahl",
   "settings.general.image_upload": "Bild-Upload",
   "settings.general.label": "Allgemeine Einstellungen",
+  "settings.general.model_catalog_auto_update.tip": "Lädt alle 6 Stunden aktualisierte Modellinformationen (Fähigkeiten, Kontextlimits, Preise) herunter, die vom Cherry-Studio-Projekt veröffentlicht werden. Wenn deaktiviert, bleibt der aktuelle Modellkatalog erhalten.",
+  "settings.general.model_catalog_auto_update.title": "Modellkatalog automatisch aktualisieren",
   "settings.general.restore.button": "Wiederherstellen",
   "settings.general.retry.enabled": "Wiederholungen aktivieren",
   "settings.general.sections.agent": "Agent-Verhalten",

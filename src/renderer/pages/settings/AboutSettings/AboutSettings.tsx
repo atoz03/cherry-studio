@@ -40,6 +40,10 @@ import { openExternalWebsite } from '@renderer/services/website'
 import { cn } from '@renderer/utils/style'
 import { UpgradeChannel } from '@shared/data/preference/preferenceTypes'
 import { DOCTOR_OPEN_QUERY_PARAM, type DoctorPanel } from '@shared/utils/doctor'
+import { FORK_TEST_PLAN_ENABLED } from '@shared/utils/forkFeatures'
+import { FORK_RELEASES_URL } from '@shared/utils/forkRelease'
+
+import { ModelCatalogAutoUpdateRow } from './ModelCatalogAutoUpdateRow'
 
 const AboutSettings: FC = () => {
   const [autoCheckUpdate, setAutoCheckUpdate] = usePreference('app.dist.auto_update.enabled')
@@ -252,7 +256,7 @@ const AboutSettings: FC = () => {
               <button
                 type="button"
                 aria-label={t('settings.about.releases.title')}
-                onClick={() => onOpenWebsite('https://github.com/CherryHQ/cherry-studio/releases')}
+                onClick={() => onOpenWebsite(FORK_RELEASES_URL)}
                 className="mt-1.5">
                 <Badge className="cursor-pointer rounded-md border-primary/20 bg-primary/10 px-1.5 py-0 text-[11px] leading-4 text-primary transition-colors hover:bg-primary/15">
                   v{version}
@@ -292,8 +296,8 @@ const AboutSettings: FC = () => {
               <Switch checked={autoCheckUpdate} onCheckedChange={(v) => setAutoCheckUpdate(v)} />
             </SettingRow>
 
-            <Divider className="my-3" />
-            <SettingRow className="flex-nowrap gap-6">
+            <Divider className="my-3" hidden={!FORK_TEST_PLAN_ENABLED} />
+            <SettingRow className="flex-nowrap gap-6" hidden={!FORK_TEST_PLAN_ENABLED}>
               <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
                 <SettingRowTitle>{t('settings.general.test_plan.title')}</SettingRowTitle>
                 {testPlan && (
@@ -320,6 +324,7 @@ const AboutSettings: FC = () => {
             </SettingRow>
           </>
         )}
+        <ModelCatalogAutoUpdateRow />
       </SettingGroup>
 
       {appUpdateState.info && appUpdateState.available && (

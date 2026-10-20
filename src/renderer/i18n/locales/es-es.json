@@ -4587,6 +4587,8 @@
   "settings.general.emoji_picker": "Selector de emojis",
   "settings.general.image_upload": "Carga de imágenes",
   "settings.general.label": "Configuración general",
+  "settings.general.model_catalog_auto_update.tip": "Cada 6 horas descarga la información actualizada de los modelos (capacidades, límites de contexto, precios) publicada por el proyecto Cherry Studio. Si está desactivado, se conserva el catálogo de modelos actual.",
+  "settings.general.model_catalog_auto_update.title": "Actualizar automáticamente el catálogo de modelos",
   "settings.general.restore.button": "Restaurar",
   "settings.general.retry.enabled": "Habilitar reintentos",
   "settings.general.sections.agent": "Comportamiento del agente",

@@ -13,6 +13,12 @@ export const entries: SettingsSearchEntry[] = [
     aliases: ['update', '更新']
   },
   {
+    anchorId: 'model-catalog-auto-update',
+    titleKey: 'settings.general.model_catalog_auto_update.title',
+    groupKey: 'settings.about.label',
+    aliases: ['model', 'catalog', '模型']
+  },
+  {
     anchorId: 'debug-tools',
     titleKey: 'settings.about.debug.title',
     groupKey: 'settings.about.label'

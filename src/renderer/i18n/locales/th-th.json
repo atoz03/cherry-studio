@@ -4587,6 +4587,8 @@
   "settings.general.emoji_picker": "ตัวเลือกอิโมจิ",
   "settings.general.image_upload": "อัปโหลดรูปภาพ",
   "settings.general.label": "การตั้งค่าทั่วไป",
+  "settings.general.model_catalog_auto_update.tip": "ดาวน์โหลดข้อมูลโมเดลล่าสุด (ความสามารถ ขีดจำกัดบริบท ราคา) ที่เผยแพร่โดยโครงการ Cherry Studio ทุก 6 ชั่วโมง เมื่อปิด จะคงแคตตาล็อกโมเดลปัจจุบันไว้",
+  "settings.general.model_catalog_auto_update.title": "อัปเดตแคตตาล็อกโมเดลอัตโนมัติ",
   "settings.general.restore.button": "กู้คืน",
   "settings.general.retry.enabled": "เปิดใช้การลองใหม่",
   "settings.general.sections.agent": "พฤติกรรมเอเจนต์",
