@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { SettingsContentColumn } from '@renderer/components/SettingsPrimitives'
 import { UserProfileEditor } from '@renderer/components/UserProfileEditor'
 import { getAppEdition } from '@renderer/utils/appEdition'
+import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 import { SubscriptionSettings } from './SubscriptionSettings'
 
@@ -16,7 +17,7 @@ export function ProfileSettings() {
         <div id="setting-profile-profile">
           <UserProfileEditor />
         </div>
-        {getAppEdition() === 'global' && <SubscriptionSettings />}
+        {FORK_CHERRY_CLOUD_ENABLED && getAppEdition() === 'global' && <SubscriptionSettings />}
       </div>
     </SettingsContentColumn>
   )

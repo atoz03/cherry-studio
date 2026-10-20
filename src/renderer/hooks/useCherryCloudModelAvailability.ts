@@ -6,6 +6,7 @@ import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { isManagedCherryCloudModel } from '@shared/data/presets/cherryai'
 import type { Model } from '@shared/data/types/model'
 import type { CherryCloudModelSyncResult } from '@shared/ipc/schemas/cherryCloud'
+import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 const CHERRY_CLOUD_AVAILABILITY_KEY = 'cherry-cloud/model-availability'
 const CHERRY_CLOUD_AVAILABILITY_REFRESH_INTERVAL_MS = 60_000
@@ -24,7 +25,7 @@ const EMPTY_CHERRY_CLOUD_AVAILABILITY: CherryCloudModelSyncResult = {
 export function useCherryCloudModelAvailability(enabled = true) {
   const { t } = useTranslation()
   const { data: cloudAvailability, mutate } = useSWR(
-    enabled ? CHERRY_CLOUD_AVAILABILITY_KEY : null,
+    enabled && FORK_CHERRY_CLOUD_ENABLED ? CHERRY_CLOUD_AVAILABILITY_KEY : null,
     () => ipcApi.request('cherry_cloud.models.sync'),
     {
       dedupingInterval: 5_000,

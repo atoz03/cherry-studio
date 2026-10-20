@@ -21,6 +21,7 @@ import type {
   CherryCloudModelSyncResult,
   CherryCloudStatus
 } from '@shared/ipc/schemas/cherryCloud'
+import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 import { cherryAccountCredentialStore } from './CherryAccountCredentialStore'
 import { CherryCloudLoopbackCallback } from './CherryCloudLoopbackCallback'
@@ -182,6 +183,7 @@ export class CherryCloudService extends BaseService {
       this.clearPendingExpiryTimer()
       this.clearSessionExpiryTimer()
     })
+    if (!FORK_CHERRY_CLOUD_ENABLED) return
     await this.restoreSession()
     if (this.cloudState.session) void this.syncEntitledModels().catch(() => undefined)
   }
@@ -212,6 +214,7 @@ export class CherryCloudService extends BaseService {
   }
 
   public async startLogin(): Promise<CherryCloudStatus> {
+    if (!FORK_CHERRY_CLOUD_ENABLED) throw new CherryCloudLoginUnavailableError()
     if (this.loginPromise) return this.loginPromise
     if (this.authorizationOperation) return this.getStatus()
 

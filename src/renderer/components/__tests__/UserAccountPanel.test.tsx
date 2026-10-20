@@ -10,6 +10,12 @@ import { UserAccountPanel } from '../UserAccountPanel'
 
 const showUserPopup = vi.hoisted(() => vi.fn())
 
+// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_CHERRY_CLOUD_ENABLED: true
+}))
+
 vi.mock('../UserPopup', () => ({ default: { show: showUserPopup } }))
 
 const request = vi.mocked(window.api.ipcApi.request)
