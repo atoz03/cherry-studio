@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -190,6 +190,15 @@ function isExecutableShim(shimPath: string): Promise<boolean> {
     () => true,
     () => false
   )
+}
+
+/** The first executable `name` on `searchPath`, found without spawning `which`. */
+async function findOnPath(name: string, searchPath = ''): Promise<string | null> {
+  for (const dir of searchPath.split(path.delimiter).filter(Boolean)) {
+    const candidate = path.join(dir, name)
+    if (await isExecutableShim(candidate)) return candidate
+  }
+  return null
 }
 
 // Single source of truth for tools shipped inside the app and extracted at
@@ -852,34 +861,26 @@ export class BinaryManager extends BaseService {
     }
   }
 
-  private async findMiseBin(): Promise<string | null> {
-    const binaryName = getBinaryName('mise')
-
-    const cherryBin = path.join(application.getPath('cherry.bin'), binaryName)
-    if (fs.existsSync(cherryBin)) {
-      return cherryBin
-    }
-
-    if (isWin) {
-      try {
-        return await findMiseExecutable()
-      } catch (err) {
-        logger.warn('mise lookup failed', { error: this.errorMessage(err) })
-        return null
-      }
-    }
-
+  private async findUserMise(env: Record<string, string | undefined>): Promise<string | null> {
     try {
-      const result = execFileSync('which', [binaryName], { encoding: 'utf-8', timeout: 5000 })
-      const systemPath = result.trim().split(/\r?\n/)[0]
-      if (systemPath && fs.existsSync(systemPath)) {
-        return systemPath
-      }
-    } catch {
-      // not on PATH
+      return isWin ? await findMiseExecutable(env) : await findOnPath(getBinaryName('mise'), env.PATH)
+    } catch (err) {
+      logger.warn('mise lookup failed', { error: this.errorMessage(err) })
+      return null
     }
+  }
 
-    return null
+  /** The user's own mise first, then the copy Cherry downloaded; boot reads only `process.env`, so nothing spawns. */
+  private async findMiseBin(): Promise<string | null> {
+    const userMise = await this.findUserMise(process.env)
+    if (userMise) return userMise
+
+    const cherryMise = path.join(application.getPath('cherry.bin'), getBinaryName('mise'))
+    return fs.existsSync(cherryMise) ? cherryMise : null
+  }
+
+  private isCherryMise(miseBin: string): boolean {
+    return path.dirname(miseBin) === application.getPath('cherry.bin')
   }
 
   // Fork: without mise, the backend is unavailable only where Cherry cannot download one.
@@ -887,11 +888,12 @@ export class BinaryManager extends BaseService {
     return !this.miseBin && !isOnDemandBinarySupported('mise')
   }
 
-  /** Cherry's pinned mise, downloaded on first backend use; a system mise covers a failed download. */
+  /** Cherry's pinned mise, downloaded on first backend use unless the user has their own mise. */
   private async ensureMiseBin(): Promise<void> {
-    if (!isOnDemandBinarySupported('mise')) return
+    if (!isOnDemandBinarySupported('mise') || (this.miseBin && !this.isCherryMise(this.miseBin))) return
     try {
-      const miseBin = await ensureOnDemandBinary('mise')
+      // A GUI launch's PATH can miss the user's mise (Homebrew on macOS); the login shell has it.
+      const miseBin = (await this.findUserMise(await getRawShellEnv())) ?? (await ensureOnDemandBinary('mise'))
       if (miseBin === this.miseBin) return
       this.miseBin = miseBin
       // The isolated env puts mise's own directory on PATH.
@@ -899,7 +901,7 @@ export class BinaryManager extends BaseService {
       this.isolatedEnvPromise = null
     } catch (error) {
       if (!this.miseBin) throw error
-      logger.warn('Using the existing mise; the pinned one could not be downloaded', {
+      logger.warn("Using Cherry's previous mise; the pinned update could not be downloaded", {
         error: this.errorMessage(error)
       })
     }

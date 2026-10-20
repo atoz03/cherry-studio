@@ -2704,6 +2704,7 @@ describe('BinaryManager', () => {
 
     beforeEach(() => {
       for (const name of ['mise', 'bun', 'uv']) onDemandSupported.add(name)
+      vi.mocked(getRawShellEnv).mockResolvedValue({ PATH: '' })
       mockExecFileAsync.mockImplementation(async (_bin: string, args: string[]) => {
         if (args[0] === 'ls' && args.length === 2) return { stdout: JSON.stringify({}), stderr: '' }
         if (args[0] === 'ls')
@@ -2747,15 +2748,59 @@ describe('BinaryManager', () => {
       })
     })
 
-    it('falls back to a mise already on the machine when the download fails', async () => {
+    it("uses the user's own mise and never downloads Cherry's", async () => {
       const service = new BinaryManager()
       ;(service as any).miseBin = '/usr/local/bin/mise'
+      ;(service as any).isolatedEnv = { env: {}, usesDefaultChinaPipIndex: false }
+
+      await service.installByName({ name: 'fd' })
+
+      expect(mockEnsureOnDemandBinary).not.toHaveBeenCalled()
+      expect(miseCalls()[0][0]).toBe('/usr/local/bin/mise')
+    })
+
+    it("switches to a mise on the login-shell PATH instead of downloading Cherry's", async () => {
+      const service = new BinaryManager()
+      ;(service as any).isolatedEnv = { env: {}, usesDefaultChinaPipIndex: false }
+      vi.mocked(getRawShellEnv).mockResolvedValue({ PATH: '/opt/homebrew/bin' })
+
+      await service.installByName({ name: 'fd' })
+
+      expect(mockEnsureOnDemandBinary).not.toHaveBeenCalled()
+      expect(miseCalls()[0][0]).toBe(path.join('/opt/homebrew/bin', 'mise'))
+    })
+
+    it("keeps Cherry's previously downloaded mise when its update cannot be downloaded", async () => {
+      const service = new BinaryManager()
+      ;(service as any).miseBin = CHERRY_MISE
       ;(service as any).isolatedEnv = { env: {}, usesDefaultChinaPipIndex: false }
       mockEnsureOnDemandBinary.mockRejectedValue(new Error('offline'))
 
       await service.installByName({ name: 'fd' })
 
-      expect(miseCalls()[0][0]).toBe('/usr/local/bin/mise')
+      expect(mockEnsureOnDemandBinary).toHaveBeenCalledWith('mise')
+      expect(miseCalls()[0][0]).toBe(CHERRY_MISE)
+    })
+
+    it("finds the user's mise on PATH before Cherry's copy, without spawning a process", async () => {
+      vi.stubEnv('PATH', ['/opt/empty', '/home/me/.local/bin'].join(path.delimiter))
+      ;(mockFsp.access as any).mockImplementation(async (candidate: string) => {
+        if (candidate !== path.join('/home/me/.local/bin', 'mise')) throw new Error('ENOENT')
+      })
+      ;(mockFs.existsSync as any).mockImplementation((candidate: string) => candidate === CHERRY_MISE)
+
+      await expect((new BinaryManager() as any).findMiseBin()).resolves.toBe(path.join('/home/me/.local/bin', 'mise'))
+      expect(mockExecFileAsync).not.toHaveBeenCalled()
+      vi.unstubAllEnvs()
+    })
+
+    it("falls back to Cherry's downloaded mise when none is on PATH", async () => {
+      vi.stubEnv('PATH', '/opt/empty')
+      mockFsp.access.mockRejectedValue(new Error('ENOENT'))
+      ;(mockFs.existsSync as any).mockImplementation((candidate: string) => candidate === CHERRY_MISE)
+
+      await expect((new BinaryManager() as any).findMiseBin()).resolves.toBe(CHERRY_MISE)
+      vi.unstubAllEnvs()
     })
 
     it.each(['bun', 'uv'])('installs an absent %s as the pinned copy, without mise', async (name) => {
