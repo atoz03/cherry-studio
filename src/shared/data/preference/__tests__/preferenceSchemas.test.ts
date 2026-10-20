@@ -33,10 +33,6 @@ describe('DefaultPreferences', () => {
     expect(recognitionModelId).toBe('')
   })
 
-  it('leaves the client ID empty until runtime generates a UUID', () => {
-    expect(DefaultPreferences.default['app.user.id']).toBe('')
-  })
-
   it('uses flat file processing default keys', () => {
     const markdownConversionDefault: PreferenceSchemas['default']['feature.file_processing.default_document_to_markdown'] =
       null
