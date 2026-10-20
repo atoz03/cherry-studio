@@ -6,6 +6,7 @@ const {
   getDeviceTypeMock,
   getCountryMock,
   getFontsMock,
+  getMacFontFamiliesMock,
   isTrustedMock,
   openPathMock,
   openRequestPathMock,
@@ -21,6 +22,7 @@ const {
   getDeviceTypeMock: vi.fn(),
   getCountryMock: vi.fn(),
   getFontsMock: vi.fn(),
+  getMacFontFamiliesMock: vi.fn(),
   isTrustedMock: vi.fn(),
   openPathMock: vi.fn(),
   openRequestPathMock: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock('@main/utils/system', () => ({ getDeviceType: getDeviceTypeMock }))
 vi.mock('@main/services/RegionService', () => ({ regionService: { getCountry: getCountryMock } }))
 vi.mock('@main/services/file', () => ({ openRequestPath: openRequestPathMock }))
 vi.mock('@main/utils/externalUrlSafety', () => ({ isSafeExternalUrl: isSafeMock }))
+vi.mock('@main/utils/macFonts', () => ({ getMacFontFamilies: getMacFontFamiliesMock }))
 vi.mock('@main/core/platform', () => ({
   get isMac() {
     return platform.isMac
@@ -68,6 +71,7 @@ const ctx = (senderId: string | null) => ({ senderId })
 beforeEach(() => {
   vi.clearAllMocks()
   platform.isMac = true
+  getMacFontFamiliesMock.mockResolvedValue([])
   nativeThemeMock.shouldUseDarkColors = false
   appGetMock.mockImplementation((name: string) => {
     if (name === 'WindowManager') return windowManager
@@ -92,6 +96,23 @@ describe('systemHandlers', () => {
   it('get_ip_country delegates to RegionService', async () => {
     getCountryMock.mockResolvedValue('US')
     expect(await systemHandlers['system.get_ip_country'](undefined, ctx('w1'))).toBe('US')
+  })
+
+  it('get_fonts prefers the macOS atsutil families and falls back to font-list when there are none', async () => {
+    getMacFontFamiliesMock.mockResolvedValueOnce(['PingFang SC', 'Songti SC'])
+    expect(await systemHandlers['system.get_fonts'](undefined, ctx('w1'))).toEqual(['PingFang SC', 'Songti SC'])
+    expect(getFontsMock).not.toHaveBeenCalled()
+
+    getMacFontFamiliesMock.mockResolvedValueOnce([])
+    getFontsMock.mockResolvedValue(['Arial'])
+    expect(await systemHandlers['system.get_fonts'](undefined, ctx('w1'))).toEqual(['Arial'])
+  })
+
+  it('get_fonts uses font-list only, without atsutil, off macOS', async () => {
+    platform.isMac = false
+    getFontsMock.mockResolvedValue(['Arial'])
+    expect(await systemHandlers['system.get_fonts'](undefined, ctx('w1'))).toEqual(['Arial'])
+    expect(getMacFontFamiliesMock).not.toHaveBeenCalled()
   })
 
   it('get_fonts strips wrapping quotes and drops empties', async () => {
