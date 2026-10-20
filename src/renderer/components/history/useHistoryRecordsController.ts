@@ -33,6 +33,7 @@ export interface HistoryRecordsController<T> {
   toggleSelectAll: (checked: boolean) => void
   handleBulkDelete: () => Promise<void>
   handleBulkMove: (targetId: string) => Promise<void>
+  handleBulkExport: () => Promise<void>
   handleTogglePin: (item: T) => Promise<void>
 }
 
@@ -60,6 +61,7 @@ export function useHistoryRecordsController<T>({
     onBulkDelete,
     onActiveRecordChange,
     onBulkMove,
+    onBulkExport,
     onTogglePin
   } = descriptor
 
@@ -199,6 +201,11 @@ export function useHistoryRecordsController<T>({
     [onBulkMove, selectedIds]
   )
 
+  const handleBulkExport = useCallback(async () => {
+    if (selectedIds.length === 0 || !onBulkExport) return
+    await onBulkExport(selectedIds)
+  }, [onBulkExport, selectedIds])
+
   return {
     searchText,
     setSearchText,
@@ -217,6 +224,7 @@ export function useHistoryRecordsController<T>({
     toggleSelectAll,
     handleBulkDelete,
     handleBulkMove,
+    handleBulkExport,
     handleTogglePin
   }
 }

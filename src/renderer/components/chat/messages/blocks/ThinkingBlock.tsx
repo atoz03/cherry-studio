@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import BeatLoader from 'react-spinners/BeatLoader'
 
 import { type MarkdownSource, Scrollbar } from '@cherrystudio/ui'
+import type { ReasoningEffortOption } from '@shared/types/aiSdk'
 
 import { getDistanceToBottom, getRealBottom } from '../list/scrollGeometry'
 import { VERTICAL_SCROLL_OVERFLOW_TOLERANCE_PX } from '../list/ScrollOwnershipContext'
@@ -10,6 +11,7 @@ import ChatMarkdown from '../markdown/ChatMarkdown'
 import { useMessageRenderConfig } from '../MessageListProvider'
 import ThinkingEffect from './ThinkingEffect'
 import { normalizeThinkingPreview, scanThinkingPreview, type ThinkingPreviewScanState } from './thinkingPreview'
+import { getThinkingTitle } from './thinkingTitle'
 import { useMinimumDisplayDuration } from './useMinimumDisplayDuration'
 import { useScrollAnchor } from './useScrollAnchor'
 
@@ -34,6 +36,10 @@ interface Props {
   isStreaming: boolean
   /** Whether to expose a one-line content preview in the title row */
   showTitlePreview?: boolean
+  /** Measured reasoning duration, shown in the title once thinking is done */
+  thinkingMs?: number
+  /** Reasoning effort of the turn, named in the title */
+  reasoningEffort?: ReasoningEffortOption
 }
 
 interface ThinkingBlockContentProps {
@@ -71,7 +77,14 @@ export const ThinkingBlockContent = memo(({ id, content, isStreaming }: Thinking
 })
 ThinkingBlockContent.displayName = 'ThinkingBlockContent'
 
-const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePreview = false }) => {
+const ThinkingBlock: React.FC<Props> = ({
+  id,
+  content,
+  isStreaming,
+  showTitlePreview = false,
+  thinkingMs,
+  reasoningEffort
+}) => {
   const { thoughtAutoCollapse } = useMessageRenderConfig()
   const [isExpanded, setIsExpanded] = useState(!thoughtAutoCollapse)
   const contentId = useId()
@@ -143,7 +156,9 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
           }
         }}>
         <ThinkingEffect
-          thinkingTimeText={<ThinkingTimeSeconds isThinking={isThinking} />}
+          thinkingTimeText={
+            <ThinkingTimeSeconds isThinking={isThinking} thinkingMs={thinkingMs} reasoningEffort={reasoningEffort} />
+          }
           trailing={
             isThinking ? (
               <>
@@ -188,11 +203,11 @@ const ThinkingBlock: React.FC<Props> = ({ id, content, isStreaming, showTitlePre
   )
 }
 
-const ThinkingTimeSeconds = memo(({ isThinking }: { isThinking: boolean }) => {
-  const { t } = useTranslation()
-
-  if (isThinking) return t('message.tools.placeholder.thinking')
-  return t('common.reasoning_content')
-})
+const ThinkingTimeSeconds = memo(
+  (props: { isThinking: boolean; thinkingMs?: number; reasoningEffort?: ReasoningEffortOption }) => {
+    const { t } = useTranslation()
+    return getThinkingTitle(t, props)
+  }
+)
 
 export default memo(ThinkingBlock)

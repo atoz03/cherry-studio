@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { Archive, BrushCleaning, Edit3, PinIcon, PinOffIcon, Smile, Tags } from 'lucide-react'
+import { Archive, BrushCleaning, Edit3, FolderInput, PinIcon, PinOffIcon, Smile, Tags } from 'lucide-react'
 
 import { createActionRegistry } from '@renderer/components/chat/actions/actionRegistry'
 import type { ResolvedAction } from '@renderer/components/chat/actions/actionTypes'
@@ -22,6 +22,7 @@ export interface AssistantGroupActionContext {
   onDeleteAssistant: (assistantId: string) => void | Promise<void>
   onDeleteAllTopics: (assistantId: string) => void | Promise<void>
   onEdit: (assistantId: string) => void
+  onMoveAllTopics?: (assistantId: string) => void | Promise<void>
   onSetAssistantIconType: (iconType: AssistantIconType) => void | Promise<void>
   onToggleGrouping: () => void | Promise<void>
   onTogglePin: (assistantId: string) => void | Promise<void>
@@ -51,6 +52,16 @@ assistantGroupActionRegistry.registerCommand({
 assistantGroupActionRegistry.registerCommand({
   id: 'assistant-group.toggle-sidebar',
   run: ({ assistantId, onToggleSidebar }) => onToggleSidebar(assistantId)
+})
+
+assistantGroupActionRegistry.registerCommand({
+  id: 'assistant-group.move-all-topics',
+  // Same preconditions as clearing: the assistant has topics and no topic deletion is running.
+  availability: ({ deleteTopicsDisabled, onMoveAllTopics }) => ({
+    visible: !!onMoveAllTopics,
+    enabled: !deleteTopicsDisabled
+  }),
+  run: ({ assistantId, onMoveAllTopics }) => onMoveAllTopics?.(assistantId)
 })
 
 assistantGroupActionRegistry.registerCommand({
@@ -105,6 +116,16 @@ assistantGroupActionRegistry.registerAction(
       sidebarPinned ? t('launchpad.unpin_from_sidebar') : t('launchpad.pin_to_sidebar'),
     icon: ({ sidebarPinned }) => <SidebarShortcutIcon size={14} pinned={sidebarPinned} />,
     order: 22
+  })
+)
+
+assistantGroupActionRegistry.registerAction(
+  buildResourceEntityMenuActionDescriptor({
+    id: 'assistant-group.move-all-topics',
+    commandId: 'assistant-group.move-all-topics',
+    label: ({ t }) => t('assistants.move_all.menu_title'),
+    icon: () => <FolderInput size={14} />,
+    order: 24
   })
 )
 
