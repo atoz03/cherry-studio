@@ -8,11 +8,12 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      # Version tags only: v1-final and other v-prefixed markers must not publish a release.
+      - "v[0-9]*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v2.1.8-atoz.1)"
+        description: "Release tag (e.g. v3.0.1)"
         required: true
       platform:
         description: "Build platform"
