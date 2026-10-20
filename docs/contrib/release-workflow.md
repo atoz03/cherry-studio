@@ -4,16 +4,15 @@ sources:
   - .github/workflows/release.yml
   - electron-builder.yml
   - src/main/services/forkUpdateFeed.ts
-  - .agents/skills/sync-upstream/SKILL.md
 ---
 
 # Release Workflow Operations
 
-This fork (`atoz03/cherry-studio`) does not use upstream's release branches, nightly, preview, backport, or post-release workflows. A release is a version tag on `main`, built by [`release.yml`](../../.github/workflows/release.yml) and published to this repository's GitHub Releases, which is also the auto-update feed.
+This fork (`atoz03/cherry-studio`) is developed independently of upstream and does not use upstream's release branches, nightly, preview, backport, or post-release workflows. A release is a version tag on `main`, built by [`release.yml`](../../.github/workflows/release.yml) and published to this repository's GitHub Releases, which is also the auto-update feed.
 
 ## Versions
 
-Fork versions are `<upstream release>-atoz.<n>`, for example `2.1.8-atoz.1`: the upstream tag the fork is based on, plus a fork counter that restarts at `1` after each upstream sync (see the [`sync-upstream`](../../.agents/skills/sync-upstream/SKILL.md) skill). Semver orders them as the updater needs: `2.1.8-atoz.1 < 2.1.8-atoz.2 < 2.1.9-atoz.1`.
+Fork versions are `2.1.8-atoz.<n>`: the upstream release the fork branched from, plus a fork counter that increases with every release. Semver orders them as the updater needs (`2.1.8-atoz.9 < 2.1.8-atoz.10`).
 
 ## Publish a release
 
