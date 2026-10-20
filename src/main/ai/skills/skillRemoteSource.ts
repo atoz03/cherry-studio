@@ -5,6 +5,7 @@ import { net } from 'electron'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
+import { ensureGitAvailable } from '@main/services/binaryManager'
 import { getProxyEnvironment } from '@main/services/proxy/proxyEnv'
 import { findExecutableInEnv } from '@main/utils/commandResolver'
 import { findSkillMdPath, parseSkillMetadata } from '@main/utils/markdownParser'
@@ -543,14 +544,17 @@ async function runGit(gitCommand: string, args: string[]): Promise<string> {
 }
 
 async function resolveGitCommand(): Promise<string> {
+  let found: string | null = null
   try {
-    return (await findExecutableInEnv('git')) ?? 'git'
+    found = await findExecutableInEnv('git')
   } catch (err) {
     logger.warn('git lookup failed, falling back to bare git', {
       error: err instanceof Error ? err.message : String(err)
     })
     return 'git'
   }
+  // Fork: Windows without git waits for the MinGit downloaded on first need.
+  return found ?? (await ensureGitAvailable()) ?? 'git'
 }
 
 async function reportInstall(owner: string, repo: string, skillName: string): Promise<void> {
