@@ -56,13 +56,14 @@ import { BaseService } from '@main/core/lifecycle/BaseService'
 import { markFirstFrame, trackFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
-import { QuickAssistantService } from '../QuickAssistantService'
+import { QUICK_ASSISTANT_IDLE_TEARDOWN_MS, QuickAssistantService } from '../QuickAssistantService'
 
 type MockQuickWindow = EventEmitter & {
   id: number
   visible: boolean
   show: ReturnType<typeof vi.fn>
   hide: ReturnType<typeof vi.fn>
+  minimize: ReturnType<typeof vi.fn>
   focus: ReturnType<typeof vi.fn>
 }
 
@@ -81,6 +82,7 @@ function createQuickWindow(id: number): MockQuickWindow {
     win.visible = false
     win.emit('hide')
   })
+  win.minimize = vi.fn(() => win.emit('minimize'))
   win.focus = vi.fn()
   Object.assign(win, {
     isDestroyed: () => false,
@@ -129,6 +131,7 @@ describe('QuickAssistantService — on-demand window', () => {
   afterEach(async () => {
     await svc._doDestroy()
     BaseService.resetInstances()
+    vi.useRealTimers()
   })
 
   /** Activate, open the window for the first time and let its UI render. */
@@ -236,5 +239,83 @@ describe('QuickAssistantService — on-demand window', () => {
     svc.showQuickAssistant()
 
     expect(mainWindow.focus).toHaveBeenCalledTimes(1)
+  })
+
+  describe('idle teardown', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    it('destroys the window once it has stayed hidden for the idle delay', async () => {
+      await showFirstTime()
+      svc.closeQuickAssistant()
+
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS - 1)
+      expect(wmMock.close).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(wmMock.close).toHaveBeenCalledExactlyOnceWith('qa-1')
+    })
+
+    it('builds a new window on the next show, again only once its UI has rendered', async () => {
+      await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      svc.showQuickAssistant()
+
+      expect(wmMock.open).toHaveBeenCalledTimes(2)
+      const recreated = createdWindows[1]
+      expect(recreated.show).not.toHaveBeenCalled()
+      reportFirstFrame(recreated)
+      expect(recreated.show).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the window when it is shown again before the delay runs out', async () => {
+      const win = await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS - 1)
+
+      svc.showQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      expect(win.visible).toBe(true)
+      expect(wmMock.close).not.toHaveBeenCalled()
+    })
+
+    it('arms no timer while the window is shown, nor after the feature is turned off', async () => {
+      await showFirstTime()
+      expect(vi.getTimerCount()).toBe(0)
+
+      svc.closeQuickAssistant()
+      expect(vi.getTimerCount()).toBe(1)
+
+      await svc._doDeactivate()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('[Windows] treats the minimized (hidden) window as idle', async () => {
+      platform.isWin = true
+      await showFirstTime()
+
+      svc.hideQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+
+      expect(wmMock.close).toHaveBeenCalledExactlyOnceWith('qa-1')
+    })
+
+    it('[macOS] hands focus back again when the window is rebuilt after a teardown', async () => {
+      platform.isMac = true
+      const mainWindow = { id: 1, isDestroyed: () => false, focus: vi.fn() }
+      await showFirstTime()
+      svc.closeQuickAssistant()
+      vi.advanceTimersByTime(QUICK_ASSISTANT_IDLE_TEARDOWN_MS)
+      electronMock.getFocusedWindow.mockReturnValue(mainWindow)
+
+      svc.showQuickAssistant()
+
+      expect(wmMock.open).toHaveBeenCalledTimes(2)
+      expect(mainWindow.focus).toHaveBeenCalledTimes(1)
+    })
   })
 })

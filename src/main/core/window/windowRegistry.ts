@@ -256,9 +256,9 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
   },
 
   // Quick Assistant window — singleton floating panel.
-  // Managed by QuickAssistantService: visibility is driven by showQuickAssistant()
-  // (cursor-follow, Windows opacity dance, macOS app.hide). Window position/size are
-  // restored by WindowManager via `rememberBounds`.
+  // Managed by QuickAssistantService: created on the first show, destroyed after 5 minutes hidden;
+  // visibility is driven by showQuickAssistant() (cursor-follow, Windows opacity dance, macOS
+  // app.hide). Window position/size are restored by WindowManager via `rememberBounds`.
   [WindowType.QuickAssistant]: {
     type: WindowType.QuickAssistant,
     lifecycle: 'singleton',
