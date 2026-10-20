@@ -144,7 +144,7 @@ export async function processMessage(config: MessageConfig): Promise<Response> {
   const isInternalRequest = config.requestHeaders
     ? application.get('ApiGatewayService').isInternalRequest(config.requestHeaders)
     : false
-  const resolvedAddress = await resolveGatewayModelAddress(modelString, isInternalRequest)
+  const resolvedAddress = await resolveGatewayModelAddress(modelString)
   const { providerId, apiModelId: modelId, uniqueModelId, provider: resolvedProvider, model } = resolvedAddress
   const agentSessionId = config.requestHeaders
     ? application.get('ApiGatewayService').getAgentSessionId(config.requestHeaders)

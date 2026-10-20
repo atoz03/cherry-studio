@@ -114,8 +114,6 @@ export interface UseModelSelectorDataOptions {
 
 export interface UseModelSelectorDataResult {
   availableTags: ModelSelectorTag[]
-  getModelDescription: (model: Model) => string | undefined
-  isModelUnavailable: (model: Model) => boolean
   isLoading: boolean
   isPinActionDisabled: boolean
   listItems: FlatListItem[]

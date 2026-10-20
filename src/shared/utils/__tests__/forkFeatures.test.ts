@@ -73,7 +73,6 @@ const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
       'wherearewe'
     ]
   },
-  FORK_CHERRY_CLOUD_ENABLED: { roots: [], excluded: [] },
   FORK_DIAGNOSTICS_UPLOAD_ENABLED: { roots: [], excluded: [] },
   FORK_TEST_PLAN_ENABLED: { roots: [], excluded: [] }
 }

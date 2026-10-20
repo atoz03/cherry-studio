@@ -10,7 +10,6 @@ import { recentLogFindings } from './checks/logs'
 import { mcpLaunchCommands, mcpServersConnected } from './checks/mcp'
 import {
   dnsResolution,
-  endpointCloud,
   endpointDiagnostics,
   endpointRegistry,
   endpointUpdate,
@@ -20,7 +19,7 @@ import {
   tlsHandshake
 } from './checks/network'
 import { accessibilityPermission, screenCapturePermission } from './checks/permission'
-import { cherryAccount, providerApiKey, providerModel } from './checks/provider'
+import { providerApiKey, providerModel } from './checks/provider'
 import { claudeLogin, managedTools } from './checks/runtime'
 import { diagnosticDataSize, diskSpace, userDataLocation } from './checks/storage'
 import type { DoctorCheckRegistry } from './types'
@@ -43,14 +42,12 @@ export const doctorCheckRegistry: DoctorCheckRegistry = {
   'config-hardware-acceleration': hardwareAcceleration,
   'provider-model': providerModel,
   'provider-api-key-present': providerApiKey,
-  'provider-cherry-account': cherryAccount,
   'network-online': online,
   'network-dns-resolution': dnsResolution,
   'network-tls-handshake': tlsHandshake,
   'network-proxy-applied': proxyApplied,
   'network-endpoint-update': endpointUpdate,
   'network-endpoint-registry': endpointRegistry,
-  'network-endpoint-cloud': endpointCloud,
   'network-endpoint-diagnostics': endpointDiagnostics,
   'network-provider-endpoint': providerEndpoint,
   'mcp-servers-connected': mcpServersConnected,

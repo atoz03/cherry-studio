@@ -236,10 +236,8 @@ shown: `ensureInternalGateway` returns one unrestricted key, and
 `createScopedCredential({ path, model })` issues a key for a single consumer run
 that only calls that path with that model and is revoked by `dispose`. The
 internal listener accepts only those keys, sent in a header, and the public
-listener accepts only the user's key. Cherry Cloud models are served only to
-internal requests; which Cloud models a feature may use is decided where the
-model is chosen, not here. Gateway requests run without Cherry's retries or
-fallback models, so a request is served only by the model it named.
+listener accepts only the user's key. Gateway requests run without Cherry's
+retries or fallback models, so a request is served only by the model it named.
 
 ## Request flow (generation routes)
 

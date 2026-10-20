@@ -2,11 +2,7 @@ import { MockUsePreferenceUtils } from '@test-mocks/renderer/usePreference'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  CHERRY_CLOUD_PROVIDER_ID,
-  CHERRYAI_DEFAULT_MODEL_ID,
-  CHERRYAI_PROVIDER_ID
-} from '@shared/data/presets/cherryai'
+import { CHERRYAI_DEFAULT_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { CLI_API_GATEWAY_PROVIDER_ID, CodeCli } from '@shared/types/codeCli'
@@ -157,17 +153,7 @@ describe('useConfigMetadata.makeModelFilter (gateway)', () => {
     expect(filter(model(CHERRYAI_PROVIDER_ID, 'some-other-model'))).toBe(true)
   })
 
-  it('excludes Cherry Cloud models because Code Mate has no cloud feature entitlement', () => {
-    const cloudProvider = enabledProvider(CHERRY_CLOUD_PROVIDER_ID)
-    const cloudModel = model(CHERRY_CLOUD_PROVIDER_ID, 'deepseek-free')
-    modelRecords.push(cloudModel)
-
-    const { result } = renderHook(() => useConfigMetadata(CodeCli.CLAUDE_CODE, [cloudProvider]))
-    expect(result.current.makeModelFilter(CLI_API_GATEWAY_PROVIDER_ID)(cloudModel)).toBe(false)
-    expect(result.current.gatewayModelsById.has(cloudModel.id)).toBe(false)
-  })
-
-  // The picker shares isPublicGatewayRoutableModel with the gateway's /v1/models listing, so every
+  // The picker shares isGatewayRoutableModel with the gateway's /v1/models listing, so every
   // non-chat class is excluded — not just embedding/rerank/text-to-image (audio/video generation
   // and transcription models would reach the chat runtime and fail).
   it('excludes non-chat audio/video generation and transcription models', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { API_KEY_OAUTH_PROVIDER_IDS, isProviderSupportAuth } from '../provider'
 
-describe('isProviderSupportAuth with FORK_CHERRY_CLOUD_ENABLED off', () => {
+describe('isProviderSupportAuth', () => {
   it.each(['aihubmix', 'ppio'])('hides the %s login, whose OAuth needs an upstream-only client secret', (id) => {
     expect(isProviderSupportAuth({ id })).toBe(false)
   })

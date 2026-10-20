@@ -34,10 +34,9 @@ import type { Model as LegacyModel, Provider as LegacyProvider } from '@main/dat
 import { isRetiredProvider } from '@main/data/retiredProviders'
 import type { ExecuteResult, PrepareResult, ValidateResult } from '@shared/data/migration/v2/types'
 import {
-  CHERRY_CLOUD_PROVIDER_ID,
   CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
   CHERRYAI_PROVIDER_ID,
-  isManagedCherryProviderId
+  isManagedCherryAiProviderId
 } from '@shared/data/presets/cherryai'
 import { providerLogoRef } from '@shared/data/types/file'
 import { createUniqueModelId, isUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
@@ -467,7 +466,7 @@ export class ProviderModelMigrator extends BaseMigrator {
           logger.warn('Provider with missing or empty id skipped', { name: provider?.name })
           continue
         }
-        if (isManagedCherryProviderId(provider.id)) {
+        if (isManagedCherryAiProviderId(provider.id)) {
           skippedManagedProviders++
           continue
         }
@@ -695,12 +694,12 @@ export class ProviderModelMigrator extends BaseMigrator {
       const providerResult = ctx.db
         .select({ count: sql<number>`count(*)` })
         .from(userProviderTable)
-        .where(notInArray(userProviderTable.providerId, [CHERRYAI_PROVIDER_ID, CHERRY_CLOUD_PROVIDER_ID]))
+        .where(notInArray(userProviderTable.providerId, [CHERRYAI_PROVIDER_ID]))
         .get()
       const modelResult = ctx.db
         .select({ count: sql<number>`count(*)` })
         .from(userModelTable)
-        .where(notInArray(userModelTable.providerId, [CHERRYAI_PROVIDER_ID, CHERRY_CLOUD_PROVIDER_ID]))
+        .where(notInArray(userModelTable.providerId, [CHERRYAI_PROVIDER_ID]))
         .get()
       const pinResult = ctx.db
         .select({ count: sql<number>`count(*)` })

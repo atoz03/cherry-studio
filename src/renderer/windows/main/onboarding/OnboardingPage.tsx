@@ -5,12 +5,6 @@ import { useTranslation } from 'react-i18next'
 
 import {
   Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Scrollbar,
   Select,
   SelectContent,
@@ -23,37 +17,29 @@ import { dataApiService } from '@data/DataApiService'
 import { useMultiplePreferences, usePreference } from '@data/hooks/usePreference'
 import AppLogo from '@renderer/assets/images/logo.png'
 import { WindowControls } from '@renderer/components/WindowControls'
-import { useCherryAccountSession } from '@renderer/hooks/useCherryAccountSession'
 import { useDefaultModel, useModels } from '@renderer/hooks/useModel'
 import { useProvider, useProviders } from '@renderer/hooks/useProvider'
 import { appLanguageOptions, isAppLanguage } from '@renderer/i18n/languages'
 import i18n from '@renderer/i18n/resolver'
-import { ipcApi } from '@renderer/ipc'
 import ModelSettings from '@renderer/pages/settings/ModelSettings/ModelSettings'
 import { ProviderSettingsPage, useProviderModelSync } from '@renderer/pages/settings/ProviderSettings'
 import { oauthWithCherryIn } from '@renderer/services/oauth'
 import { toast } from '@renderer/services/toast'
-import { getAppEdition } from '@renderer/utils/appEdition'
 import { isWin } from '@renderer/utils/platform'
 import { isProtectedBuiltinAgentRole } from '@shared/ai/builtinAgent'
 import type { OnboardingProviderSetupStatus } from '@shared/data/preference/preferenceTypes'
-import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, isManagedCherryProviderId } from '@shared/data/presets/cherryai'
+import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, isManagedCherryAiProviderId } from '@shared/data/presets/cherryai'
 import type { Model, UniqueModelId } from '@shared/data/types/model'
-import type { CherryCloudStatus } from '@shared/ipc/schemas/cherryCloud'
 import { defaultLanguage } from '@shared/utils/languages'
 import { isNonChatModel } from '@shared/utils/model'
 
 type OnboardingStep = 'welcome' | 'provider' | 'select-model'
 type OnboardingCompletionStatus = Exclude<OnboardingProviderSetupStatus, 'pending'>
-interface OnboardingPageProps {
-  enableCherryAccountLogin?: boolean
-}
 
-const ENABLE_CHERRY_ACCOUNT_LOGIN = false
 const CHERRYIN_OAUTH_SERVER = 'https://open.cherryin.ai'
 const CHERRYIN_LOGIN_LOADING_TIMEOUT_MS = 10_000
 const PESSIMISTIC_PREFERENCE_OPTIONS = { optimistic: false } as const
-const isOnboardingModel = (model: Model) => !isManagedCherryProviderId(model.providerId) && !isNonChatModel(model)
+const isOnboardingModel = (model: Model) => !isManagedCherryAiProviderId(model.providerId) && !isNonChatModel(model)
 const ONBOARDING_PREFERENCE_KEYS = {
   providerSetupStatus: 'app.onboarding.provider_setup.status'
 } as const
@@ -68,11 +54,8 @@ function OnboardingProviderSettings() {
   return <RouterProvider router={router} />
 }
 
-export default function OnboardingPage({
-  enableCherryAccountLogin = ENABLE_CHERRY_ACCOUNT_LOGIN
-}: OnboardingPageProps) {
+export default function OnboardingPage() {
   const { t } = useTranslation()
-  const appEdition = getAppEdition()
   const [language, setLanguage] = usePreference('app.language')
   const [, updateOnboardingPreferences] = useMultiplePreferences(
     ONBOARDING_PREFERENCE_KEYS,
@@ -86,23 +69,10 @@ export default function OnboardingPage({
   const [step, setStep] = useState<OnboardingStep>('welcome')
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
-  const [showNoCloudModelsDialog, setShowNoCloudModelsDialog] = useState(false)
   const loginAttemptRef = useRef(0)
   const loginLoadingTimeoutRef = useRef<number | null>(null)
-  const cloudStatusRef = useRef<CherryCloudStatus | null>(null)
-  const hasRoutedCloudLoginRef = useRef(false)
-  const isCnEdition = appEdition === 'cn'
-  const shouldUseCherryAccountLogin = isCnEdition && enableCherryAccountLogin
-  const {
-    status: cloudStatus,
-    login: handleCherryCloudLogin,
-    cancelLogin: handleCherryCloudLoginCancel,
-    isCancellingLogin: isCancellingCloudLogin,
-    isAuthorizing: isCloudAuthorizing
-  } = useCherryAccountSession(shouldUseCherryAccountLogin)
-  cloudStatusRef.current = cloudStatus
   const eligibleProviderIds = new Set(
-    enabledProviders.filter((provider) => !isManagedCherryProviderId(provider.id)).map((provider) => provider.id)
+    enabledProviders.filter((provider) => !isManagedCherryAiProviderId(provider.id)).map((provider) => provider.id)
   )
   const canCompleteModelSetup = [defaultModel, quickModel, translateModel].every(
     (model) => model && eligibleProviderIds.has(model.providerId) && isOnboardingModel(model)
@@ -188,66 +158,6 @@ export default function OnboardingPage({
     [defaultModel, t, updateOnboardingPreferences, updateSeededResourceModels]
   )
 
-  const completeWithCloudAgentModel = useCallback(
-    async (modelId: UniqueModelId, expectedStatus: CherryCloudStatus) => {
-      setIsCompleting(true)
-      try {
-        if (expectedStatus !== cloudStatusRef.current) return
-        await updateSeededAgentModels(modelId)
-        if (expectedStatus !== cloudStatusRef.current) return
-        await updateOnboardingPreferences({ providerSetupStatus: 'skipped' })
-      } catch {
-        if (expectedStatus === cloudStatusRef.current) {
-          toast.error(t('onboarding.toast.complete_failed'))
-        }
-      } finally {
-        setIsCompleting(false)
-      }
-    },
-    [t, updateOnboardingPreferences, updateSeededAgentModels]
-  )
-
-  const openProviderSetupAfterCloudModelUnavailable = () => {
-    setShowNoCloudModelsDialog(false)
-    setStep('provider')
-  }
-
-  useEffect(() => {
-    if (!shouldUseCherryAccountLogin || cloudStatus?.phase !== 'signed-in') {
-      hasRoutedCloudLoginRef.current = false
-      setShowNoCloudModelsDialog(false)
-      return
-    }
-    if (isProviderSetupLoading || hasRoutedCloudLoginRef.current) return
-
-    hasRoutedCloudLoginRef.current = true
-    const expectedStatus = cloudStatus
-    void ipcApi
-      .request('cherry_cloud.models.sync')
-      .then(({ availableModelIds, quotaExhaustedModelIds }) => {
-        if (expectedStatus !== cloudStatusRef.current) return
-
-        const exhaustedModelIds = new Set(quotaExhaustedModelIds)
-        const agentModelId = availableModelIds.agent.find((modelId) => !exhaustedModelIds.has(modelId))
-        if (agentModelId) {
-          void completeWithCloudAgentModel(agentModelId, expectedStatus)
-        } else {
-          setShowNoCloudModelsDialog(true)
-        }
-      })
-      .catch(() => {
-        if (expectedStatus === cloudStatusRef.current) {
-          setStep(canContinueProviderSetup ? 'select-model' : 'provider')
-        }
-      })
-  }, [
-    canContinueProviderSetup,
-    cloudStatus,
-    completeWithCloudAgentModel,
-    isProviderSetupLoading,
-    shouldUseCherryAccountLogin
-  ])
-
   useEffect(
     () => () => {
       if (loginLoadingTimeoutRef.current !== null) {
@@ -314,15 +224,6 @@ export default function OnboardingPage({
     }
   }, [addApiKey, syncProviderModels, t, updateProvider])
 
-  const isPrimaryLoginPending = shouldUseCherryAccountLogin ? isCloudAuthorizing : isLoggingIn
-  const primaryLoginLabel = shouldUseCherryAccountLogin
-    ? cloudStatus?.phase === 'signed-in'
-      ? t('settings.provider.cherry_cloud.logged_in')
-      : isCloudAuthorizing
-        ? t('settings.provider.cherry_cloud.signing_in')
-        : t('onboarding.welcome.login_cherry_cloud')
-    : t('onboarding.welcome.login_cherryin')
-
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-sidebar text-foreground">
       <div
@@ -377,25 +278,11 @@ export default function OnboardingPage({
                       type="button"
                       size="lg"
                       className="h-11 w-full rounded-xl"
-                      loading={isPrimaryLoginPending}
-                      disabled={shouldUseCherryAccountLogin && cloudStatus?.phase === 'signed-in'}
-                      onClick={() =>
-                        void (shouldUseCherryAccountLogin ? handleCherryCloudLogin() : handleCherryInLogin())
-                      }>
-                      {!isPrimaryLoginPending && <LogIn size={16} />}
-                      {primaryLoginLabel}
+                      loading={isLoggingIn}
+                      onClick={() => void handleCherryInLogin()}>
+                      {!isLoggingIn && <LogIn size={16} />}
+                      {t('onboarding.welcome.login_cherryin')}
                     </Button>
-                    {shouldUseCherryAccountLogin && cloudStatus?.phase === 'authorizing' ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="lg"
-                        className="h-11 w-full rounded-xl"
-                        loading={isCancellingCloudLogin}
-                        onClick={() => void handleCherryCloudLoginCancel()}>
-                        {t('common.cancel')}
-                      </Button>
-                    ) : null}
                     <Button
                       type="button"
                       variant="outline"
@@ -490,20 +377,6 @@ export default function OnboardingPage({
           </div>
         </section>
       </div>
-
-      <Dialog
-        open={showNoCloudModelsDialog}
-        onOpenChange={(open) => !open && openProviderSetupAfterCloudModelUnavailable()}>
-        <DialogContent size="sm" showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>{t('models.no_matches')}</DialogTitle>
-            <DialogDescription>{t('onboarding.cloud.no_available_models')}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={openProviderSetupAfterCloudModelUnavailable}>{t('common.confirm')}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

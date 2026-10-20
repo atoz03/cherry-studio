@@ -6,7 +6,6 @@ import { type BackupEventSchemas, backupRequestSchemas } from './backup'
 import { type BinaryEventSchemas, binaryRequestSchemas } from './binary'
 import { type BrowserEventSchemas, browserRequestSchemas } from './browser'
 import { type ChannelEventSchemas, channelRequestSchemas } from './channel'
-import { type CherryCloudEventSchemas, cherryCloudRequestSchemas } from './cherryCloud'
 import { cherryinRequestSchemas } from './cherryin'
 import { citationRequestSchemas } from './citation'
 import { codeCliRequestSchemas } from './codeCli'
@@ -66,7 +65,6 @@ export const ipcRequestSchemas = {
   ...browserRequestSchemas,
   ...channelRequestSchemas,
   ...cherryinRequestSchemas,
-  ...cherryCloudRequestSchemas,
   ...citationRequestSchemas,
   ...codeCliRequestSchemas,
   ...computerUseRequestSchemas,
@@ -124,7 +122,6 @@ export type IpcEventSchemas = AiEventSchemas &
   BinaryEventSchemas &
   BrowserEventSchemas &
   ChannelEventSchemas &
-  CherryCloudEventSchemas &
   FileEventSchemas &
   McpEventSchemas &
   MiniAppEventSchemas &

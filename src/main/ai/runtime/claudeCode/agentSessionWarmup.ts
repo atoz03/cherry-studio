@@ -47,7 +47,7 @@ import {
 
 import { resolveEffectiveEndpoint } from '../../provider/endpoint'
 import { getExtraHeaders, getProviderAppHeaders } from '../../utils/provider'
-import { gatewayCredentialsFingerprint, requiresAgentGateway, resolveApiGatewayRuntime } from '../agentApiGateway'
+import { gatewayCredentialsFingerprint, resolveApiGatewayRuntime } from '../agentApiGateway'
 import type { AgentSessionUsageCapture } from '../types'
 import type { WarmQueryRequest } from './ClaudeCodeWarmQueryManager'
 import { isAnthropicOfficialHost, with1mSuffix } from './contextWindowSuffix'
@@ -707,10 +707,7 @@ function deriveRouteFacts(
   }
 
   const shouldUseGateway = modelRefs.some(
-    (ref) =>
-      requiresAgentGateway(ref.providerId) ||
-      ref.providerId !== primaryProvider.id ||
-      !usesAnthropicMessagesEndpoint(ref)
+    (ref) => ref.providerId !== primaryProvider.id || !usesAnthropicMessagesEndpoint(ref)
   )
 
   if (shouldUseGateway) {

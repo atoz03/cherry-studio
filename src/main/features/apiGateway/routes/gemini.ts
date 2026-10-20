@@ -1,7 +1,6 @@
 import { bearer } from '@elysia/bearer'
 import { Elysia } from 'elysia'
 
-import { application } from '@application'
 import {
   ANTIGRAVITY_MODEL_PATH_SEPARATOR,
   isReservedGeminiGatewayModelId,
@@ -102,10 +101,7 @@ export const createGeminiRoutes = (surface: GatewaySurface) =>
         }
 
         if (method === 'countTokens') {
-          const isInternalRequest = application.get('ApiGatewayService').isInternalRequest(request.headers)
-          return {
-            totalTokens: await estimateGeminiRequestTokens(body, model, request.signal, isInternalRequest)
-          }
+          return { totalTokens: await estimateGeminiRequestTokens(body, model, request.signal) }
         }
         if (!GENERATE_METHODS.has(method)) {
           return status(400, invalidArgument(`Unsupported method: "${method}".`))

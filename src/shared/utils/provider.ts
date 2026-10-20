@@ -8,10 +8,9 @@ import {
   type ServerToolConfig,
   supportsServerToolFunctionMixing
 } from '@cherrystudio/provider-registry'
-import { CHERRYAI_PROVIDER_ID, isManagedCherryProviderId } from '@shared/data/presets/cherryai'
+import { CHERRYAI_PROVIDER_ID, isManagedCherryAiProviderId } from '@shared/data/presets/cherryai'
 import { ENDPOINT_TYPE, type EndpointType, type Model } from '@shared/data/types/model'
 import type { EndpointDialect, Provider } from '@shared/data/types/provider'
-import { FORK_CHERRY_CLOUD_ENABLED } from '@shared/utils/forkFeatures'
 
 import { getLowerBaseModelName, getRawModelId, isFunctionCallingModel, isGeminiModel, isNonChatModel } from './model'
 import { getProviderHostTopology } from './providerTopology'
@@ -92,7 +91,7 @@ export function isPerplexityProvider(provider: Provider): boolean {
 }
 
 export function isCherryAIProvider(provider: Provider): boolean {
-  return isManagedCherryProviderId(provider.id) || provider.presetProviderId === CHERRYAI_PROVIDER_ID
+  return isManagedCherryAiProviderId(provider.id) || provider.presetProviderId === CHERRYAI_PROVIDER_ID
 }
 
 export function isNewApiProvider(provider: Provider): boolean {
@@ -148,7 +147,7 @@ export const API_KEY_OAUTH_PROVIDER_IDS = ['302ai', 'silicon', 'aihubmix', 'ppio
 
 export function isProviderSupportAuth(provider: Pick<Provider, 'id'>): boolean {
   // Their OAuth needs a client secret that only upstream's release CI has; API keys still work.
-  if (!FORK_CHERRY_CLOUD_ENABLED && (provider.id === 'aihubmix' || provider.id === 'ppio')) return false
+  if (provider.id === 'aihubmix' || provider.id === 'ppio') return false
   return (API_KEY_OAUTH_PROVIDER_IDS as readonly string[]).includes(provider.id)
 }
 

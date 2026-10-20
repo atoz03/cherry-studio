@@ -2,7 +2,6 @@ import { first } from 'es-toolkit/compat'
 import { CircleSlash, Pin, Settings2 } from 'lucide-react'
 import {
   type KeyboardEvent,
-  type ReactNode,
   startTransition,
   useCallback,
   useDeferredValue,
@@ -169,7 +168,6 @@ function modelsFromSelectedIds(
 function ModelRow({
   item,
   disabled,
-  description,
   optionId,
   isFocused,
   onPin,
@@ -183,7 +181,6 @@ function ModelRow({
 }: {
   item: ModelSelectorModelItem
   disabled: boolean
-  description?: ReactNode
   optionId: string
   isFocused: boolean
   onPin: (modelId: UniqueModelId) => void
@@ -205,8 +202,6 @@ function ModelRow({
     : item.groupKind === 'pinned'
       ? providerName
       : undefined
-  const hasDescription = description != null && description !== '' && typeof description !== 'boolean'
-  const descriptionId = hasDescription ? `${optionId}-description` : undefined
 
   const leading = icon ? (
     <icon.Avatar size={24} className="border border-border" />
@@ -254,24 +249,9 @@ function ModelRow({
       <Pin className="size-3" />
     </ModelSelectorRowActionButton>
   ) : null
-  const actions =
-    pinAction || hasDescription ? (
-      <>
-        {pinAction}
-        {hasDescription ? (
-          <span id={descriptionId} className="sr-only">
-            {description}
-          </span>
-        ) : null}
-      </>
-    ) : null
 
   return (
-    <ModelSelectorDetailCard
-      item={item}
-      provider={item.provider}
-      portalContainer={detailPortalContainer}
-      description={description}>
+    <ModelSelectorDetailCard item={item} provider={item.provider} portalContainer={detailPortalContainer}>
       <ModelSelectorRow
         disabled={disabled}
         selected={isSelected}
@@ -280,14 +260,10 @@ function ModelRow({
         checkbox={checkbox}
         leading={leading}
         trailing={trailing}
-        actions={actions}
+        actions={pinAction}
         onSelect={() => onSelect(item)}
         rootProps={{ className: 'pr-0.5' }}
-        optionProps={{
-          id: optionId,
-          'aria-describedby': descriptionId,
-          'data-testid': `model-selector-item-${item.modelId}`
-        }}>
+        optionProps={{ id: optionId, 'data-testid': `model-selector-item-${item.modelId}` }}>
         <span className="min-w-0 max-w-full shrink-0 truncate" title={item.model.name}>
           {item.model.name}
         </span>
@@ -526,8 +502,6 @@ export function ModelSelector(props: ModelSelectorProps) {
 
   const {
     availableTags,
-    getModelDescription,
-    isModelUnavailable,
     isLoading,
     isPinActionDisabled,
     listItems,
@@ -556,8 +530,8 @@ export function ModelSelector(props: ModelSelectorProps) {
     showTagFilter
   })
   const isSelectionDisabled = useCallback(
-    (model: Model, provider?: Provider) => isModelUnavailable(model) || Boolean(isModelDisabled?.(model, provider)),
-    [isModelDisabled, isModelUnavailable]
+    (model: Model, provider?: Provider) => Boolean(isModelDisabled?.(model, provider)),
+    [isModelDisabled]
   )
   const listItemsRef = useRef(listItems)
   const modelItemsRef = useRef(modelItems)
@@ -910,7 +884,6 @@ export function ModelSelector(props: ModelSelectorProps) {
           <ModelRow
             item={item}
             disabled={isSelectionDisabled(item.model, item.provider)}
-            description={getModelDescription(item.model)}
             optionId={getModelSelectorOptionDomId(listboxId, item.key)}
             isFocused={focusedItemKey === item.key}
             isPinActionDisabled={isPinActionDisabled}
@@ -930,7 +903,6 @@ export function ModelSelector(props: ModelSelectorProps) {
       handleNavigateToProviderSettings,
       handleSelectItem,
       handleTogglePin,
-      getModelDescription,
       isPinActionDisabled,
       isSelectionDisabled,
       listboxId,

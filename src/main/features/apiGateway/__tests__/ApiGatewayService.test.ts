@@ -208,12 +208,12 @@ describe('ApiGatewayService internal gateway', () => {
     const service = new ApiGatewayService()
     const internal = await startInternalGateway(service)
     const first = await service.createScopedCredential(CHAT_SCOPE)
-    const second = await service.createScopedCredential({ ...CHAT_SCOPE, model: 'cherryai-subscription:qwen3.8-flash' })
+    const second = await service.createScopedCredential({ ...CHAT_SCOPE, model: 'openai:gpt-4o-mini' })
     const headers = (apiKey: string) => new Headers({ authorization: `Bearer ${apiKey}` })
 
     expect(first.apiKey).not.toBe(second.apiKey)
     expect(service.getCredentialScope(headers(first.apiKey))).toEqual(CHAT_SCOPE)
-    expect(service.getCredentialScope(headers(second.apiKey))?.model).toBe('cherryai-subscription:qwen3.8-flash')
+    expect(service.getCredentialScope(headers(second.apiKey))?.model).toBe('openai:gpt-4o-mini')
     expect(service.getCredentialScope(headers(internal.apiKey))).toBeUndefined()
 
     first.dispose()

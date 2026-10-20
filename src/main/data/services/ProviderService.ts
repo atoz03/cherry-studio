@@ -32,7 +32,7 @@ import { getAppEdition } from '@main/utils/appEdition'
 import { DataApiError, DataApiErrorFactory, ErrorCode } from '@shared/data/api/errors'
 import type { OrderBatchRequest, OrderRequest } from '@shared/data/api/schemas/_endpointHelpers'
 import type { CreateProviderDto, ListProvidersQuery, UpdateProviderDto } from '@shared/data/api/schemas/providers'
-import { isManagedCherryProviderId } from '@shared/data/presets/cherryai'
+import { isManagedCherryAiProviderId } from '@shared/data/presets/cherryai'
 import type { EndpointType } from '@shared/data/types/model'
 import type {
   ApiKeyEntry,
@@ -155,7 +155,7 @@ function maskApiKeyForSnapshot(key: string): string {
 }
 
 function assertManagedCherryProviderPatchAllowed(providerId: string, dto: UpdateProviderDto): void {
-  if (!isManagedCherryProviderId(providerId) || Object.keys(dto).length === 0) {
+  if (!isManagedCherryAiProviderId(providerId) || Object.keys(dto).length === 0) {
     return
   }
 
@@ -163,7 +163,7 @@ function assertManagedCherryProviderPatchAllowed(providerId: string, dto: Update
 }
 
 function assertManagedCherryProviderMutationAllowed(providerId: string, operation: string): void {
-  if (!isManagedCherryProviderId(providerId)) {
+  if (!isManagedCherryAiProviderId(providerId)) {
     return
   }
 

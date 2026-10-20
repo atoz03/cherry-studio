@@ -265,25 +265,6 @@ describe('API gateway routes (integration)', () => {
     })
   })
 
-  describe('Anthropic token counting', () => {
-    it('resolves Cherry Cloud models as an internal request', async () => {
-      const response = await post(
-        internalApp,
-        '/v1/messages/count_tokens',
-        { model: 'cherryai-subscription:claude', messages: [{ role: 'user', content: 'hello' }] },
-        { ...AUTH, 'x-api-key': 'internal-agent-key' }
-      )
-
-      expect(response.status).toBe(200)
-      expect(await response.json()).toEqual({ input_tokens: 42 })
-      expect(mockEstimateAnthropicRequestTokens).toHaveBeenCalledWith(
-        expect.objectContaining({ model: 'cherryai-subscription:claude' }),
-        expect.any(AbortSignal),
-        true
-      )
-    })
-  })
-
   describe('not found', () => {
     it('unmatched route → 404 Cherry REST envelope (does not crash onError)', async () => {
       const { status, body } = await read(await get(app, '/no-such-route', {}))
@@ -540,21 +521,6 @@ describe('API gateway routes (integration)', () => {
       expect(typeof body.totalTokens).toBe('number')
       expect(body.totalTokens).toBeGreaterThan(0)
       expect(mockProcessMessage).not.toHaveBeenCalled()
-    })
-
-    it('countTokens: resolves Cherry Cloud models as an internal request', async () => {
-      const response = await post(
-        internalApp,
-        '/v1beta/models/cherryai-subscription:gemini-2.5:countTokens',
-        geminiBody,
-        {
-          ...AUTH,
-          'x-api-key': 'internal-agent-key'
-        }
-      )
-
-      expect(response.status).toBe(200)
-      expect(mockResolveGatewayModelAddress).toHaveBeenCalledWith('cherryai-subscription:gemini-2.5', true)
     })
 
     // Media is now counted (converted → shared walker, or the provider's remote count) rather

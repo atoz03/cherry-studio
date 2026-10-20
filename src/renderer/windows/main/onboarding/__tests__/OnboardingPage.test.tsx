@@ -8,14 +8,9 @@ import {
   MockUsePreferenceUtils
 } from '@test-mocks/renderer/usePreference'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  CHERRY_CLOUD_PROVIDER_ID,
-  CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-  CHERRYAI_PROVIDER_ID
-} from '@shared/data/presets/cherryai'
+import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 
 const responsiveStyles = readFileSync(join(process.cwd(), 'src/renderer/assets/styles/responsive.css'), 'utf8')
 
@@ -26,17 +21,6 @@ const syncProviderModelsMock = vi.fn()
 const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
 const modelSettingsPropsMock = vi.fn()
-const cloudMocks = vi.hoisted(() => ({
-  appEdition: 'global' as 'cn' | 'global',
-  ipcRequest: vi.fn(),
-  statusListener: undefined as
-    | ((status: {
-        phase: 'signed-out' | 'authorizing' | 'signed-in'
-        accountId: string | null
-        displayName: string | null
-      }) => void)
-    | undefined
-}))
 const dataApiMocks = vi.hoisted(() => ({
   get: vi.fn(),
   patch: vi.fn()
@@ -66,22 +50,6 @@ vi.mock('@data/DataApiService', () => ({
 
 vi.mock('@renderer/i18n/resolver', () => ({
   default: i18nMock
-}))
-
-vi.mock('@renderer/utils/appEdition', () => ({
-  getAppEdition: () => cloudMocks.appEdition
-}))
-
-vi.mock('@renderer/ipc', () => ({
-  ipcApi: { request: cloudMocks.ipcRequest },
-  useIpcOn: vi.fn(
-    (
-      event: string,
-      listener: (status: { phase: 'signed-out' | 'authorizing' | 'signed-in'; displayName: string | null }) => void
-    ) => {
-      if (event === 'cherry_cloud.status_changed') cloudMocks.statusListener = listener
-    }
-  )
 }))
 
 vi.mock('@renderer/hooks/useProvider', () => ({
@@ -148,22 +116,6 @@ async function openModelSelection() {
 describe('OnboardingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    cloudMocks.appEdition = 'global'
-    cloudMocks.statusListener = undefined
-    cloudMocks.ipcRequest.mockImplementation(async (route: string) => {
-      if (route === 'cherry_cloud.status.get') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.login.start') return { phase: 'authorizing', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.login.cancel') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.models.sync') {
-        return {
-          entitledModelIds: [],
-          freeModelIds: [],
-          availableModelIds: { agent: [], general: [] },
-          quotaExhaustedModelIds: []
-        }
-      }
-      throw new Error(`Unexpected IPC route: ${route}`)
-    })
     if (defaultUsePreferenceImplementation) {
       mockUsePreference.mockImplementation(defaultUsePreferenceImplementation)
     }
@@ -415,7 +367,6 @@ describe('OnboardingPage', () => {
     expect(modelSettingsProps?.onDefaultModelSelected).toBeTypeOf('function')
     expect(modelSettingsProps?.showPaintingModel).toBe(false)
     expect(modelSettingsProps?.modelFilter?.({ providerId: CHERRYAI_PROVIDER_ID, capabilities: [] })).toBe(false)
-    expect(modelSettingsProps?.modelFilter?.({ providerId: CHERRY_CLOUD_PROVIDER_ID, capabilities: [] })).toBe(false)
     expect(modelSettingsProps?.modelFilter?.({ providerId: 'openai', capabilities: [] })).toBe(true)
     expect(screen.getByRole('button', { name: /onboarding\.select_model\.start/ })).toBeDisabled()
   })
@@ -511,112 +462,6 @@ describe('OnboardingPage', () => {
     await waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
     )
-  })
-
-  it('uses CherryIN in the CN edition when Cherry Account onboarding is disabled', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage />)
-
-    await user.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(cloudMocks.ipcRequest).not.toHaveBeenCalled()
-  })
-
-  it('keeps CherryIN in the global edition when Cherry Account onboarding is enabled', async () => {
-    const user = userEvent.setup()
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await user.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(cloudMocks.ipcRequest).not.toHaveBeenCalled()
-  })
-
-  it('uses cancellable Cherry Cloud login instead of CherryIN in the CN edition', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    expect(screen.queryByRole('button', { name: 'onboarding.welcome.login_cherryin' })).not.toBeInTheDocument()
-    await user.click(await screen.findByRole('button', { name: 'onboarding.welcome.login_cherry_cloud' }))
-
-    expect(cloudMocks.ipcRequest).toHaveBeenCalledWith('cherry_cloud.login.start')
-    expect(oauthWithCherryInMock).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'settings.provider.cherry_cloud.signing_in' })).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: 'common.cancel' }))
-
-    expect(cloudMocks.ipcRequest).toHaveBeenCalledWith('cherry_cloud.login.cancel')
-    expect(await screen.findByRole('button', { name: 'onboarding.welcome.login_cherry_cloud' })).toBeEnabled()
-  })
-
-  it('selects the first available Cherry Cloud Agent model and completes onboarding', async () => {
-    const chatOnlyCloudModelId = `${CHERRY_CLOUD_PROVIDER_ID}::chat-only-model`
-    const firstCloudAgentModelId = `${CHERRY_CLOUD_PROVIDER_ID}::first-agent-model`
-    const secondCloudAgentModelId = `${CHERRY_CLOUD_PROVIDER_ID}::second-agent-model`
-    cloudMocks.appEdition = 'cn'
-    cloudMocks.ipcRequest.mockImplementation(async (route: string) => {
-      if (route === 'cherry_cloud.status.get') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.models.sync') {
-        return {
-          entitledModelIds: [chatOnlyCloudModelId, firstCloudAgentModelId, secondCloudAgentModelId],
-          freeModelIds: [firstCloudAgentModelId, secondCloudAgentModelId],
-          availableModelIds: {
-            agent: [firstCloudAgentModelId, secondCloudAgentModelId],
-            general: [chatOnlyCloudModelId]
-          },
-          quotaExhaustedModelIds: []
-        }
-      }
-      throw new Error(`Unexpected IPC route: ${route}`)
-    })
-    dataApiMocks.get.mockImplementation(async (path: string) => {
-      if (path === '/agents') {
-        return {
-          items: [
-            { id: 'assistant-agent', model: null, configuration: { builtin_role: 'assistant' } },
-            { id: 'support-agent', model: null, configuration: { builtin_role: 'support' } }
-          ],
-          total: 2
-        }
-      }
-      throw new Error(`Unexpected path: ${path}`)
-    })
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await waitFor(() => expect(cloudMocks.statusListener).toBeDefined())
-    act(() => cloudMocks.statusListener?.({ phase: 'signed-in', accountId: 'account-1', displayName: 'Alice' }))
-
-    await waitFor(() => {
-      expect(dataApiMocks.patch).toHaveBeenCalledWith('/agents/assistant-agent', {
-        body: { model: firstCloudAgentModelId }
-      })
-      expect(dataApiMocks.patch).toHaveBeenCalledWith('/agents/support-agent', {
-        body: { model: firstCloudAgentModelId }
-      })
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    })
-    expect(dataApiMocks.patch).not.toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ body: { model: secondCloudAgentModelId } })
-    )
-  })
-
-  it('opens provider setup after the warning even when an ordinary chat model is available', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await waitFor(() => expect(cloudMocks.statusListener).toBeDefined())
-    act(() => cloudMocks.statusListener?.({ phase: 'signed-in', accountId: 'account-1', displayName: 'Alice' }))
-
-    expect(await screen.findByText('onboarding.cloud.no_available_models')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'common.confirm' }))
-
-    expect(await screen.findByTestId('provider-settings')).toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('pending')
   })
 
   it('shows an error when completing onboarding fails', async () => {

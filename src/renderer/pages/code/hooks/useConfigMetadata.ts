@@ -8,7 +8,7 @@ import type { CliProviderConfig } from '@shared/data/preference/preferenceTypes'
 import { isUniqueModelId, type Model, parseUniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { CodeCli, isApiGatewayProviderId } from '@shared/types/codeCli'
-import { isEmbeddingModel, isPublicGatewayRoutableModel, isRerankModel, isTextToImageModel } from '@shared/utils/model'
+import { isEmbeddingModel, isGatewayRoutableModel, isRerankModel, isTextToImageModel } from '@shared/utils/model'
 import { isAgentOnlyProvider, isCherryAIProvider, isLoginBasedProvider } from '@shared/utils/provider'
 
 import { CLI_TOOL_PROVIDER_MAP } from '../constants/cliTools'
@@ -40,7 +40,7 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
     () =>
       new Map(
         allModels
-          .filter((model) => gatewayProviderIds.has(model.providerId) && isPublicGatewayRoutableModel(model))
+          .filter((model) => gatewayProviderIds.has(model.providerId) && isGatewayRoutableModel(model))
           .map((model) => [model.id, model])
       ),
     [allModels, gatewayProviderIds]
@@ -69,10 +69,9 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
         if (isEmbeddingModel(model) || isRerankModel(model) || isTextToImageModel(model)) return false
         // The gateway does dialect conversion, so any chat model of any enabled provider is usable
         // regardless of the CLI tool — drop the per-tool endpoint gate and the single-provider scope,
-        // keeping only what Code Mate may route through the gateway. Cherry Cloud does not expose
-        // a Code Mate feature entitlement, so its managed models are never offered here.
+        // keeping only what Code Mate may route through the gateway.
         if (isApiGatewayProviderId(providerId)) {
-          return gatewayProviderIds.has(model.providerId) && isPublicGatewayRoutableModel(model)
+          return gatewayProviderIds.has(model.providerId) && isGatewayRoutableModel(model)
         }
         if (!modelSupportsCliTool(selectedCliTool, model)) return false
         return model.providerId === providerId

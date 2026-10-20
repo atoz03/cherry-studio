@@ -10,12 +10,6 @@
 /** Pairing the desktop with the mobile app over LAN/VPN ("Device Connections"). */
 export const FORK_REMOTE_ACCESS_ENABLED = false
 
-/**
- * Cherry Cloud account, subscription, and OAuth logins whose client secrets only exist in
- * upstream's release CI (CherryIN, AIHubMix, PPIO, free MinerU quota).
- */
-export const FORK_CHERRY_CLOUD_ENABLED = false
-
 /** Uploading diagnostic bundles to upstream's support backend. */
 export const FORK_DIAGNOSTICS_UPLOAD_ENABLED = false
 

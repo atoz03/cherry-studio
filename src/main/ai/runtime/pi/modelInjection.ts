@@ -40,7 +40,7 @@ import { SystemProviderIds } from '@shared/utils/systemProviderId'
 
 import { resolveEffectiveEndpoint } from '../../provider/endpoint'
 import { getProviderTransportAdapter, type ProviderTransportAdapter } from '../../provider/runtimeTransport'
-import { requiresAgentGateway, resolveApiGatewayRuntime } from '../agentApiGateway'
+import { resolveApiGatewayRuntime } from '../agentApiGateway'
 import { resolveAgentContextWindow } from '../agentContextWindow'
 import { toAgentProviderHeaders } from '../agentProviderHeaders'
 import type { AgentSessionUsageCapture } from '../types'
@@ -235,14 +235,14 @@ function toPiHeaders(headers: Record<string, string> | undefined): Record<string
   )
 }
 
-/** Whether this provider declares that Pi must use Cherry's local Gateway route. */
+/** Whether Pi must use Cherry's local Gateway route because it has no native API for this endpoint. */
 export function usesPiGateway(provider: Provider, model: Model): boolean {
   const endpoint = resolvePiEndpoint(provider, model).endpointType
   const api =
     isLoginBasedProvider(provider) && !hasRuntimeTransportAdapter(provider.id)
       ? undefined
       : mapEndpointToPiApi(endpoint, endpoint ? provider.endpointConfigs?.[endpoint]?.adapterFamily : undefined)
-  return requiresAgentGateway(provider.id) || api === undefined
+  return api === undefined
 }
 
 /** Build a Pi route targeting Cherry's local Gateway while preserving the model's wire protocol. */

@@ -91,7 +91,6 @@ export const DOCTOR_CHECK_IDS = [
   'config-hardware-acceleration',
   'provider-model',
   'provider-api-key-present',
-  'provider-cherry-account',
   'network-model-endpoint',
   'provider-model-list',
   'provider-model-conversation',
@@ -101,7 +100,6 @@ export const DOCTOR_CHECK_IDS = [
   'network-proxy-applied',
   'network-endpoint-update',
   'network-endpoint-registry',
-  'network-endpoint-cloud',
   'network-endpoint-diagnostics',
   'network-provider-endpoint',
   'mcp-servers-connected',
@@ -237,14 +235,6 @@ export const DOCTOR_CHECK_CATALOG = {
     details: ['missing', 'provider_unavailable'],
     requires: ['provider-model']
   },
-  'provider-cherry-account': {
-    domain: 'provider',
-    tier: 'quick',
-    scope: 'global',
-    fixes: [],
-    details: ['signed_out'],
-    requires: []
-  },
   'network-online': { domain: 'network', tier: 'quick', scope: 'any', fixes: [], details: ['offline'], requires: [] },
   'network-model-endpoint': {
     scope: ['providerId', 'modelId'],
@@ -309,14 +299,6 @@ export const DOCTOR_CHECK_CATALOG = {
     requires: ['network-online']
   },
   'network-endpoint-registry': {
-    domain: 'network',
-    tier: 'live',
-    scope: 'global',
-    fixes: [],
-    details: ENDPOINT_DETAILS,
-    requires: ['network-online']
-  },
-  'network-endpoint-cloud': {
     domain: 'network',
     tier: 'live',
     scope: 'global',
