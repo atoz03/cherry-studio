@@ -11,6 +11,7 @@ import { type Activatable, BaseService, DependsOn, Injectable, Phase, ServicePha
 import type { OutputFor } from '@shared/ipc/types'
 import type { ApiGatewayConfig, ApiGatewayStopOutcome } from '@shared/types/apiGateway'
 import { gatewayClientOrigin } from '@shared/utils/apiGateway'
+import { FORK_REMOTE_ACCESS_ENABLED } from '@shared/utils/forkFeatures'
 import { REDACTED } from '@shared/utils/redaction'
 
 import { isValidToken } from './middleware/auth'
@@ -175,7 +176,8 @@ export class ApiGatewayService extends BaseService implements Activatable {
 
   private listeningHost(): string {
     const config = this.getCurrentConfig()
-    return config.enabled && config.host === '0.0.0.0' ? '0.0.0.0' : '127.0.0.1'
+    // The LAN listener exists only for remote access; a build without it never leaves loopback.
+    return FORK_REMOTE_ACCESS_ENABLED && config.enabled && config.host === '0.0.0.0' ? '0.0.0.0' : '127.0.0.1'
   }
 
   /**
@@ -261,6 +263,7 @@ export class ApiGatewayService extends BaseService implements Activatable {
   }
 
   async setLanEnabled(enabled: boolean): Promise<void> {
+    if (enabled && !FORK_REMOTE_ACCESS_ENABLED) throw new Error('Device connections are disabled in this build')
     await this.lanMutex.runExclusive(async () => {
       const preferences = application.get('PreferenceService')
       if (!enabled) {

@@ -3,6 +3,7 @@ import type { AnyElysia } from 'elysia'
 import { application } from '@application'
 import { remoteConnectPath } from '@cherrystudio/remote-protocol'
 import type { RemoteSocket } from '@cherrystudio/remote-transport'
+import { FORK_REMOTE_ACCESS_ENABLED } from '@shared/utils/forkFeatures'
 
 export const REMOTE_CONNECT_PATH = remoteConnectPath
 
@@ -19,7 +20,7 @@ function underlyingSocket(raw: unknown): RemoteSocket | undefined {
  * rather than a detached `new Elysia()` instance, which would register a WebSocket the node adapter
  * never sees.
  */
-export const remoteRoutes = (app: AnyElysia) =>
+const mountRemoteRoutes = (app: AnyElysia) =>
   app.ws(REMOTE_CONNECT_PATH, {
     detail: { hide: true },
     // The transport loads on first use; finish before the 101 so the stream hears the first handshake frame.
@@ -35,3 +36,6 @@ export const remoteRoutes = (app: AnyElysia) =>
     message() {},
     close() {}
   })
+
+/** Fork: never mounted while remote access is switched off (see `forkFeatures.ts`). */
+export const remoteRoutes = (app: AnyElysia) => (FORK_REMOTE_ACCESS_ENABLED ? mountRemoteRoutes(app) : app)

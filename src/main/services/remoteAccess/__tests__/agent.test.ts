@@ -108,6 +108,11 @@ const fake = vi.hoisted(() => {
   }
 })
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@cherrystudio/remote-protocol', async (importOriginal) => {
   const original = await importOriginal<typeof RemoteProtocol>()
   return {

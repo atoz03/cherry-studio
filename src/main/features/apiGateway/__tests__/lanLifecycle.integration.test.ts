@@ -11,6 +11,11 @@ import type { UnifiedPreferenceKeyType } from '@shared/data/preference/preferenc
 const stream = vi.hoisted(() => ({ controller: undefined as ReadableStreamDefaultController<Uint8Array> | undefined }))
 const connections = vi.hoisted(() => new Set<RemoteSocket>())
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@application', async () => {
   const { mockApplicationFactory } = await import('@test-mocks/main/application')
   const { MockMainPreferenceServiceExport } = await import('@test-mocks/main/PreferenceService')

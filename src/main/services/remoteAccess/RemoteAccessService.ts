@@ -8,6 +8,7 @@ import { agentSessionService } from '@data/services/AgentSessionService'
 import { remoteCommandService } from '@data/services/RemoteCommandService'
 import { loggerService } from '@logger'
 import { BaseService, DependsOn, type Disposable, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
+import { FORK_REMOTE_ACCESS_ENABLED } from '@shared/utils/forkFeatures'
 
 import type { RemoteConnection } from './RemoteConnection'
 import type { RemoteRuntime } from './remoteRuntime'
@@ -50,6 +51,7 @@ export class RemoteAccessService extends BaseService {
   >()
 
   protected async onInit(): Promise<void> {
+    if (!FORK_REMOTE_ACCESS_ENABLED) return
     remoteCommandService.interruptPending()
     this.registerDisposable(
       agentSessionService.onSessionUpdated(({ sessionId }) => this.runtime?.hub.publishSession(sessionId))
@@ -185,6 +187,7 @@ export class RemoteAccessService extends BaseService {
 
   /** A disabled build never loads the transport or mDNS modules. */
   private loadRuntime(): Promise<RemoteRuntime> {
+    if (!FORK_REMOTE_ACCESS_ENABLED) return Promise.reject(new Error('Device connections are disabled in this build'))
     this.runtimeLoading ??= import('./remoteRuntime')
       .then(({ createRemoteRuntime }) => {
         this.runtime ??= createRemoteRuntime((status) =>

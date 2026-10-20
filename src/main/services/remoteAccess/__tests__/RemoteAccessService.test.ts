@@ -39,6 +39,11 @@ const factories = vi.hoisted(() => ({
   }
 }))
 
+// Exercises upstream remote access; the fork ships it switched off (see forkFeatures.ts).
+vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  FORK_REMOTE_ACCESS_ENABLED: true
+}))
 vi.mock('@application', async () => {
   const { mockApplicationFactory } = await import('@test-mocks/main/application')
   return mockApplicationFactory()
