@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ipcApi } from '@renderer/ipc'
 
 const mocks = vi.hoisted(() => ({
-  decrypt: vi.fn(),
-  getLanguageCode: vi.fn(async () => 'en-US'),
   loggerError: vi.fn(),
   toastError: vi.fn(),
   translate: vi.fn((key: string) => key)
@@ -21,8 +19,7 @@ vi.mock('@logger', () => ({
 }))
 
 vi.mock('@renderer/i18n/resolver', () => ({
-  default: { t: mocks.translate },
-  getLanguageCode: mocks.getLanguageCode
+  default: { t: mocks.translate }
 }))
 
 vi.mock('@renderer/ipc', () => ({
@@ -36,15 +33,7 @@ vi.mock('@renderer/services/toast', () => ({
   toast: { error: mocks.toastError }
 }))
 
-import {
-  oauthWith302AI,
-  oauthWithAihubmix,
-  oauthWithAiOnly,
-  oauthWithPPIO,
-  oauthWithSiliconFlow,
-  providerBills,
-  providerCharge
-} from '../oauth'
+import { oauthWith302AI, oauthWithAiOnly, oauthWithSiliconFlow, providerBills, providerCharge } from '../oauth'
 
 interface MockPopup {
   closed: boolean
@@ -79,13 +68,6 @@ describe('popup message OAuth flows', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     openedPopups.length = 0
-    mocks.getLanguageCode.mockResolvedValue('en-US')
-    mocks.decrypt.mockResolvedValue(JSON.stringify({ api_keys: [{ value: 'aihubmix-key' }] }))
-
-    Object.defineProperty(window, 'api', {
-      configurable: true,
-      value: { aes: { decrypt: mocks.decrypt } }
-    })
     vi.spyOn(window, 'open').mockImplementation(() => createPopup() as unknown as Window)
   })
 
@@ -182,86 +164,45 @@ describe('popup message OAuth flows', () => {
     expect(setKey).not.toHaveBeenCalled()
   })
 
-  it('cleans up a recognized malformed Aihubmix callback', async () => {
-    const setKey = vi.fn()
-    await oauthWithAihubmix(setKey)
+  it('closes the popup and stops listening when storing the key fails', async () => {
+    const setKey = vi.fn().mockRejectedValue(new Error('save failed'))
+    await oauthWithSiliconFlow(setKey)
     const popup = openedPopups[0]
 
-    dispatchPopupMessage(popup, 'https://console.inferera.com', {
-      key: 'cherry_studio_oauth_callback',
-      data: { iv: 42 }
-    })
-    await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalledWith('settings.provider.oauth.error'))
-
-    expect(mocks.decrypt).not.toHaveBeenCalled()
-    expect(setKey).not.toHaveBeenCalled()
+    dispatchPopupMessage(popup, 'https://account.siliconflow.cn', [{ secretKey: 'silicon-key' }])
+    await vi.waitFor(() => expect(mocks.loggerError).toHaveBeenCalledOnce())
     expect(popup.close).toHaveBeenCalledOnce()
 
-    dispatchPopupMessage(popup, 'https://console.inferera.com', {
-      key: 'cherry_studio_oauth_callback',
-      data: { iv: 'iv', encryptedData: 'ciphertext' }
-    })
-    expect(mocks.decrypt).not.toHaveBeenCalled()
+    dispatchPopupMessage(popup, 'https://account.siliconflow.cn', [{ secretKey: 'retry-key' }])
+    expect(setKey).toHaveBeenCalledOnce()
   })
 
   it('finishes processing a valid callback after its popup closes', async () => {
-    let resolveDecryption: (value: string) => void = () => undefined
-    mocks.decrypt.mockReturnValueOnce(
-      new Promise<string>((resolve) => {
-        resolveDecryption = resolve
-      })
-    )
     const setKey = vi.fn()
-    await oauthWithAihubmix(setKey)
+    await oauthWith302AI(setKey)
     const popup = openedPopups[0]
 
-    dispatchPopupMessage(popup, 'https://console.inferera.com', {
-      key: 'cherry_studio_oauth_callback',
-      data: { iv: 'iv', encryptedData: 'ciphertext' }
-    })
-    await vi.waitFor(() => expect(mocks.decrypt).toHaveBeenCalledOnce())
-
+    dispatchPopupMessage(popup, 'https://dash.302.ai', { data: { apikey: 'callback-key' } })
     popup.closed = true
     vi.advanceTimersByTime(500)
-    resolveDecryption(JSON.stringify({ api_keys: [{ value: 'callback-key' }] }))
 
     await vi.waitFor(() => expect(setKey).toHaveBeenCalledWith('callback-key'))
   })
 
-  it('preserves successful Aihubmix decryption and AiOnly key handling', async () => {
-    const setAihubmixKey = vi.fn()
-    await oauthWithAihubmix(setAihubmixKey)
-    const aihubmixPopup = openedPopups[0]
+  it('accepts the AiOnly key from its login popup', async () => {
+    const setKey = vi.fn()
+    await oauthWithAiOnly(setKey)
+    const popup = openedPopups[0]
 
-    dispatchPopupMessage(aihubmixPopup, 'https://console.inferera.com', {
-      key: 'cherry_studio_oauth_callback',
-      data: { iv: 'iv', encryptedData: 'ciphertext' }
-    })
-    await vi.waitFor(() => expect(setAihubmixKey).toHaveBeenCalledWith('aihubmix-key'))
+    dispatchPopupMessage(popup, 'https://maas.aiionly.com', [{ secretKey: 'aionly-key' }])
+    await vi.waitFor(() => expect(setKey).toHaveBeenCalledWith('aionly-key'))
 
-    expect(mocks.decrypt).toHaveBeenCalledWith('ciphertext', 'iv', '')
-
-    const setAiOnlyKey = vi.fn()
-    await oauthWithAiOnly(setAiOnlyKey)
-    const aiOnlyPopup = openedPopups[1]
-    dispatchPopupMessage(aiOnlyPopup, 'https://maas.aiionly.com', [{ secretKey: 'aionly-key' }])
-    await vi.waitFor(() => expect(setAiOnlyKey).toHaveBeenCalledWith('aionly-key'))
-
-    expect(aiOnlyPopup.close).toHaveBeenCalledOnce()
+    expect(popup.close).toHaveBeenCalledOnce()
   })
 })
 
 describe('provider websites', () => {
   afterEach(() => vi.clearAllMocks())
-
-  it('opens PPIO protocol-callback authorization in the system browser', async () => {
-    await oauthWithPPIO(undefined)
-    const [route, url] = vi.mocked(ipcApi.request).mock.calls[0]
-    expect(route).toBe('system.shell.open_external_website')
-    const authorization = new URL(url as string)
-    expect(authorization.origin).toBe('https://ppio.com')
-    expect(authorization.searchParams.get('redirect_uri')).toBe('cherrystudio://')
-  })
 
   it.each([
     ['charge', providerCharge, 'https://tokendance.space/credits'],

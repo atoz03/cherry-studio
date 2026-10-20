@@ -37,14 +37,12 @@ import { FileProcessingService, TesseractRuntimeService } from '@main/features/f
 import { KnowledgeService, KnowledgeVectorStoreService } from '@main/features/knowledge'
 import { MiniAppRuntimeService } from '@main/features/miniApp/runtime/MiniAppRuntimeService'
 import { IpcApiService } from '@main/ipc/IpcApiService'
-import { AnalyticsService } from '@main/services/AnalyticsService'
 import { AppMenuService } from '@main/services/AppMenuService'
 import { AppService } from '@main/services/AppService'
 import { AppUpdaterService } from '@main/services/AppUpdaterService'
 import { AutoBackupService } from '@main/services/AutoBackupService'
 import { AutomationReplService } from '@main/services/automation'
 import { BinaryManager } from '@main/services/binaryManager'
-import { CherryCloudService } from '@main/services/cherryCloud/CherryCloudService'
 import { CitationPreviewService } from '@main/services/CitationPreviewService'
 import { CodeCliService } from '@main/services/codeCli'
 import { CommandService } from '@main/services/CommandService'
@@ -73,7 +71,6 @@ import { AttachmentPresenceService, RemoteAccessService } from '@main/services/r
 import { ScreenshotOverlayService } from '@main/services/screenshot'
 import { ScreenshotChatService } from '@main/services/ScreenshotChatService'
 import { SelectionService } from '@main/services/selection/SelectionService'
-import { SentryLogService } from '@main/services/SentryLogService'
 import { ShortcutService } from '@main/services/ShortcutService'
 import { StorageMonitorService } from '@main/services/StorageMonitorService'
 import { SubWindowService } from '@main/services/SubWindowService'
@@ -119,16 +116,13 @@ export const services = {
   IpcApiService,
   SubWindowService,
   PreferenceService,
-  SentryLogService,
   TesseractRuntimeService,
-  AnalyticsService,
   AppMenuService,
   AppService,
   CodeCliService,
   CommandService,
   ConversationNavigationService,
   CitationPreviewService,
-  CherryCloudService,
   DeepSeekHarnessService,
   HermesDashboardService,
   FileManager,

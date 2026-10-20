@@ -4,18 +4,18 @@ import { caseDefinition } from '../../../scripts/e2e/regression/cases'
 import { validateFileEvidence } from '../../../scripts/e2e/regression/fileEvidence'
 import { saveNativeFile } from '../../../scripts/e2e/regression/systemAutomation'
 import { selectChatModel, sendChatMarker } from './chat'
-import { addCherryInModel, ensureCherryInSignedIn } from './cherryIn'
+import { addCherryInModel, ensureCherryInApiKey } from './cherryIn'
 import { expect, test } from './fixture'
 import { selectVisibleModel } from './models'
 import { dismissOnboarding, selectSidebarApp } from './navigation'
-import { closeSettings, openSettingsSection } from './settings'
+import { closeSettings } from './settings'
 
 const IMAGE_PROMPT = 'A red cherry robot holding a blue umbrella in a bright workshop, detailed illustration.'
 
 test(...caseDefinition('M-01'), async ({ app, mainWindow: _mainWindow }) => {
-  let page = await app.restart('authenticated')
+  const page = await app.restart('authenticated')
   await dismissOnboarding(page)
-  await ensureCherryInSignedIn(app, page)
+  await ensureCherryInApiKey(app, page)
   await addCherryInModel(page, app.config.cherryIn.chatModel)
   await closeSettings(page)
   await selectSidebarApp(page, 'Chat')
@@ -24,17 +24,11 @@ test(...caseDefinition('M-01'), async ({ app, mainWindow: _mainWindow }) => {
   await chatView.getByRole('button', { name: 'New Chat', exact: true }).last().click()
   await selectChatModel(page, app.config.cherryIn.chatModel)
   await sendChatMarker(page, 'Reply with exactly CHERRYIN_CHAT_PASS and nothing else.', 'CHERRYIN_CHAT_PASS', false)
-
-  page = await app.restart('authenticated')
-  await dismissOnboarding(page)
-  await openSettingsSection(page, 'Model Provider')
-  await page.getByTestId('provider-list-item-cherryin').click()
-  await expect(page.getByRole('button', { name: 'Logout', exact: true })).toBeVisible({ timeout: 60_000 })
 })
 
 async function generateAndSaveImage(
-  app: Parameters<typeof ensureCherryInSignedIn>[0],
-  page: Parameters<typeof ensureCherryInSignedIn>[1],
+  app: Parameters<typeof ensureCherryInApiKey>[0],
+  page: Parameters<typeof ensureCherryInApiKey>[1],
   model: string,
   outputName: string
 ): Promise<void> {
@@ -83,7 +77,7 @@ async function generateAndSaveImage(
 }
 
 test(...caseDefinition('P-01'), async ({ app, mainWindow: page }) => {
-  await ensureCherryInSignedIn(app, page)
+  await ensureCherryInApiKey(app, page)
   await addCherryInModel(page, app.config.cherryIn.imageModel, 'Image')
   await generateAndSaveImage(app, page, app.config.cherryIn.imageModel, 'image.png')
 })

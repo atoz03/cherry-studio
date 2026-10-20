@@ -145,7 +145,6 @@ export function createMockApplication(overrides: ServiceOverrides = {}) {
   return {
     get: vi.fn((name: string) => container.get(name)),
     getOptional: vi.fn((name: string) => container.getOptional(name)),
-    getExisting: vi.fn((name: string) => container.getInstance(name)),
     getContainer: vi.fn(() => container),
     // Deterministic stub for path lookups — returns "/mock/<key>" (or
     // "/mock/<key>/<filename>") so tests that instantiate services with

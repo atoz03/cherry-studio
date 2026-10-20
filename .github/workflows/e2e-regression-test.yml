@@ -205,8 +205,7 @@ jobs:
           CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL: ${{ vars.CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL }}
           CHERRY_TEST_CHERRYIN_CHAT_MODEL: ${{ vars.CHERRY_TEST_CHERRYIN_CHAT_MODEL }}
           CHERRY_TEST_CHERRYIN_IMAGE_MODEL: ${{ vars.CHERRY_TEST_CHERRYIN_IMAGE_MODEL }}
-          CHERRY_TEST_CHERRYIN_ACCOUNT: ${{ secrets.CHERRY_TEST_CHERRYIN_ACCOUNT }}
-          CHERRY_TEST_CHERRYIN_PASSWORD: ${{ secrets.CHERRY_TEST_CHERRYIN_PASSWORD }}
+          CHERRY_TEST_CHERRYIN_API_KEY: ${{ secrets.CHERRY_TEST_CHERRYIN_API_KEY }}
         run: pnpm exec tsx scripts/e2e/regression/cli.ts preflight --task '${{ needs.resolve.outputs.task }}'
 
       - name: Install application dependencies
@@ -256,8 +255,7 @@ jobs:
           CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL: ${{ vars.CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL }}
           CHERRY_TEST_CHERRYIN_CHAT_MODEL: ${{ vars.CHERRY_TEST_CHERRYIN_CHAT_MODEL }}
           CHERRY_TEST_CHERRYIN_IMAGE_MODEL: ${{ vars.CHERRY_TEST_CHERRYIN_IMAGE_MODEL }}
-          CHERRY_TEST_CHERRYIN_ACCOUNT: ${{ secrets.CHERRY_TEST_CHERRYIN_ACCOUNT }}
-          CHERRY_TEST_CHERRYIN_PASSWORD: ${{ secrets.CHERRY_TEST_CHERRYIN_PASSWORD }}
+          CHERRY_TEST_CHERRYIN_API_KEY: ${{ secrets.CHERRY_TEST_CHERRYIN_API_KEY }}
         run: |
           names=(
             CHERRY_TEST_CUSTOM_PROVIDER_BASE_URL
@@ -269,8 +267,7 @@ jobs:
             CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL
             CHERRY_TEST_CHERRYIN_CHAT_MODEL
             CHERRY_TEST_CHERRYIN_IMAGE_MODEL
-            CHERRY_TEST_CHERRYIN_ACCOUNT
-            CHERRY_TEST_CHERRYIN_PASSWORD
+            CHERRY_TEST_CHERRYIN_API_KEY
           )
           for name in "${names[@]}"; do
             printf '%s=%s\n' "$name" "${!name}" >> "$GITHUB_ENV"
@@ -390,8 +387,7 @@ jobs:
             CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_MODEL
             CHERRY_TEST_CHERRYIN_CHAT_MODEL
             CHERRY_TEST_CHERRYIN_IMAGE_MODEL
-            CHERRY_TEST_CHERRYIN_ACCOUNT
-            CHERRY_TEST_CHERRYIN_PASSWORD
+            CHERRY_TEST_CHERRYIN_API_KEY
           )
           for name in "${names[@]}"; do
             echo "$name=" >> "$GITHUB_ENV"
@@ -408,8 +404,7 @@ jobs:
         env:
           CHERRY_TEST_CUSTOM_PROVIDER_API_KEY: ${{ secrets.CHERRY_TEST_CUSTOM_PROVIDER_API_KEY }}
           CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_API_KEY: ${{ secrets.CHERRY_TEST_CUSTOM_PROVIDER_EMBEDDING_API_KEY }}
-          CHERRY_TEST_CHERRYIN_ACCOUNT: ${{ secrets.CHERRY_TEST_CHERRYIN_ACCOUNT }}
-          CHERRY_TEST_CHERRYIN_PASSWORD: ${{ secrets.CHERRY_TEST_CHERRYIN_PASSWORD }}
+          CHERRY_TEST_CHERRYIN_API_KEY: ${{ secrets.CHERRY_TEST_CHERRYIN_API_KEY }}
         run: pnpm exec tsx scripts/e2e/regression/cli.ts finalize --run-dir "$RUN_DIR"
 
       - name: Upload platform report and evidence

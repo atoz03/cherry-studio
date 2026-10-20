@@ -8,8 +8,8 @@ import type { CliProviderConfig } from '@shared/data/preference/preferenceTypes'
 import { isUniqueModelId, type Model, parseUniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { CodeCli, isApiGatewayProviderId } from '@shared/types/codeCli'
-import { isEmbeddingModel, isPublicGatewayRoutableModel, isRerankModel, isTextToImageModel } from '@shared/utils/model'
-import { isAgentOnlyProvider, isCherryAIProvider, isLoginBasedProvider } from '@shared/utils/provider'
+import { isEmbeddingModel, isGatewayRoutableModel, isRerankModel, isTextToImageModel } from '@shared/utils/model'
+import { isAgentOnlyProvider, isLoginBasedProvider } from '@shared/utils/provider'
 
 import { CLI_TOOL_PROVIDER_MAP } from '../constants/cliTools'
 import { modelSupportsCliTool } from '../utils/modelSupport'
@@ -40,7 +40,7 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
     () =>
       new Map(
         allModels
-          .filter((model) => gatewayProviderIds.has(model.providerId) && isPublicGatewayRoutableModel(model))
+          .filter((model) => gatewayProviderIds.has(model.providerId) && isGatewayRoutableModel(model))
           .map((model) => [model.id, model])
       ),
     [allModels, gatewayProviderIds]
@@ -53,9 +53,7 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
     // Exclude login-based providers (Claude Code / Codex OAuth, etc.): they carry no API
     // key/baseUrl to inject into the CLI config, and their "own login" is already surfaced by
     // the synthetic own-login card. `isLoginBasedProvider` keeps api-key-capable mixed providers.
-    return filterFn
-      ? filterFn(providers).filter((p) => p.isEnabled && !isCherryAIProvider(p) && !isLoginBasedProvider(p))
-      : []
+    return filterFn ? filterFn(providers).filter((p) => p.isEnabled && !isLoginBasedProvider(p)) : []
   }, [])
   const filterProviders = useCallback(
     (providers: Provider[]): Provider[] => filterProvidersForTool(selectedCliTool, providers),
@@ -69,10 +67,9 @@ export function useConfigMetadata(selectedCliTool: CodeCli, providers: Provider[
         if (isEmbeddingModel(model) || isRerankModel(model) || isTextToImageModel(model)) return false
         // The gateway does dialect conversion, so any chat model of any enabled provider is usable
         // regardless of the CLI tool — drop the per-tool endpoint gate and the single-provider scope,
-        // keeping only what Code Mate may route through the gateway. Cherry Cloud does not expose
-        // a Code Mate feature entitlement, so its managed models are never offered here.
+        // keeping only what Code Mate may route through the gateway.
         if (isApiGatewayProviderId(providerId)) {
-          return gatewayProviderIds.has(model.providerId) && isPublicGatewayRoutableModel(model)
+          return gatewayProviderIds.has(model.providerId) && isGatewayRoutableModel(model)
         }
         if (!modelSupportsCliTool(selectedCliTool, model)) return false
         return model.providerId === providerId

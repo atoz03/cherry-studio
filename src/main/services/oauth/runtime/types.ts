@@ -33,15 +33,12 @@ export interface OAuthTokenStore {
     options?: { expectedRefreshToken?: string }
   ): Promise<void>
   /**
-   * Drop the stored OAuth tokens. `disableProvider` also flips the provider to
-   * disabled — correct for providers whose only credential is the OAuth session
-   * (Codex, Grok), but wrong for one that can also hold a manual API key
-   * (CherryIN), where disabling would take the manual key down with it.
+   * Drop the stored OAuth tokens and disable the provider — the OAuth session is
+   * its only credential.
    */
   clear(
     providerId: string,
     options?: {
-      disableProvider?: boolean
       /**
        * Conditional clear (a terminal refresh failure): only drop the session
        * when it still carries this refresh token, so a re-login that landed
@@ -63,35 +60,11 @@ export interface LoopbackCallbackConfig {
   redirectUri: string
 }
 
-export interface OAuthRuntimeProviderContext {
-  forceRefresh?: boolean
-  signal?: AbortSignal
-}
-
-export interface OAuthRuntimeProviderDefinition<
-  TContext extends OAuthRuntimeProviderContext = OAuthRuntimeProviderContext,
-  TSideEffect extends object = object
-> {
+export interface OAuthRuntimeProviderDefinition {
   providerId: string
   clientId: string
-  /**
-   * Whether clearing the OAuth session (logout / unrecoverable token loss) also
-   * disables the provider. `true` for OAuth-only providers (Codex, Grok) where
-   * no credential remains; `false`/omitted for providers that can fall back to a
-   * manual API key (CherryIN), so logout never strips that key's enablement.
-   */
-  clearDisablesProvider?: boolean
   transport: LoopbackCallbackConfig
-  createClient(context?: TContext): PkceOAuthClient | Promise<PkceOAuthClient>
+  /** `signal` aborts any discovery the client needs before the flow starts (Grok). */
+  createClient(context?: { signal?: AbortSignal }): PkceOAuthClient | Promise<PkceOAuthClient>
   extractAccountId?(accessToken: string): string | null
-  matchesSignInContext?(current: TContext, requested: TContext): boolean
-  /**
-   * Post-exchange side effect, run *after* the tokens are persisted so a failure
-   * here never discards a valid token (CherryIN fetches the user's API keys).
-   * Its result is returned only to the initiator window, after the HTTP callback.
-   */
-  afterPersistTokens?(
-    tokenData: { access_token: string; refresh_token?: string; expires_in?: number },
-    context: TContext
-  ): Promise<TSideEffect | void>
 }

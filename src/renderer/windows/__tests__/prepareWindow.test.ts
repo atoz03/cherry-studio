@@ -10,16 +10,9 @@ vi.mock('@renderer/i18n/resolver', () => ({ initI18n: initI18nMock }))
 const { exposeControlSurfaceMock } = vi.hoisted(() => ({ exposeControlSurfaceMock: vi.fn() }))
 vi.mock('@data/utils/dataApiDevtools', () => ({ DataApiDevtools: { exposeControlSurface: exposeControlSurfaceMock } }))
 
-const { initSentryMock } = vi.hoisted(() => ({ initSentryMock: vi.fn() }))
-vi.mock('@renderer/services/sentry', () => ({ initSentry: initSentryMock }))
-
-const { forkFeatures } = vi.hoisted(() => ({ forkFeatures: { FORK_SENTRY_ENABLED: false } }))
-vi.mock('@shared/utils/forkFeatures', () => forkFeatures)
-
 describe('prepareWindow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    forkFeatures.FORK_SENTRY_ENABLED = false
   })
 
   it("warms the full preference cache and initializes i18n for preference: 'all'", async () => {
@@ -43,22 +36,6 @@ describe('prepareWindow', () => {
 
     expect(exposeControlSurfaceMock).toHaveBeenCalledTimes(1)
     return pending
-  })
-
-  it('arms renderer error capture before the preference warm-up when the fork ships Sentry', async () => {
-    forkFeatures.FORK_SENTRY_ENABLED = true
-    await prepareWindow({ preference: 'all' })
-
-    expect(initSentryMock).toHaveBeenCalledTimes(1)
-    expect(initSentryMock.mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(preferenceService.preloadAll).mock.invocationCallOrder[0]
-    )
-  })
-
-  it('never arms renderer error capture while the fork ships without Sentry', async () => {
-    await prepareWindow({ preference: 'all' })
-
-    expect(initSentryMock).not.toHaveBeenCalled()
   })
 
   it('resolves only after both i18n and the preference warm-up complete', async () => {

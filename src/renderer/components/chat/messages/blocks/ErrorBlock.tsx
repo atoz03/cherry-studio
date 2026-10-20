@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { AlertTriangle, ChevronRight, X } from 'lucide-react'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 
 import { Button } from '@cherrystudio/ui'
@@ -10,7 +10,7 @@ import { useTimer } from '@renderer/hooks/useTimer'
 import { getHttpMessageLabelKey, getProviderLabelKey } from '@renderer/i18n/label'
 import type { SerializedError } from '@renderer/types/error'
 import { formatErrorMessageWithPrefix, providerErrorText } from '@renderer/utils/error'
-import { classifyError, getClaudeCodeExitCategory, getClaudeCodeExitInfo } from '@renderer/utils/errorClassifier'
+import { classifyError, getClaudeCodeExitInfo } from '@renderer/utils/errorClassifier'
 
 import { useMessageListActions } from '../MessageListProvider'
 import type { MessageListItem } from '../types'
@@ -103,16 +103,12 @@ const MessageErrorInfo: React.FC<{
   error: Props['error']
   message: MessageListItem
 }> = ({ partId, error, message }) => {
-  const { diagnoseMessageError, removeMessageErrorPart, openErrorDetail, navigateErrorTarget, notifyError } =
-    useMessageListActions()
+  const { removeMessageErrorPart, openErrorDetail, navigateErrorTarget, notifyError } = useMessageListActions()
   const { setTimeoutTimer } = useTimer()
   const { t, i18n } = useTranslation()
-  const [aiSummary, setAiSummary] = useState<string>('')
 
-  const errorMessage = error?.message ?? undefined
   const errorProviderId = (error as Record<string, unknown> | undefined)?.providerId as string | undefined
   const errorI18nKey = (error as Record<string, unknown> | undefined)?.i18nKey
-  const claudeCodeExitCategory = getClaudeCodeExitCategory(error)
   const appOwnedErrorKey = typeof errorI18nKey === 'string' ? `error.${errorI18nKey}` : ''
   const hasAppOwnedI18nKey = appOwnedErrorKey !== '' && i18n.exists(appOwnedErrorKey)
 
@@ -130,45 +126,6 @@ const MessageErrorInfo: React.FC<{
         : t(classification.i18nKey, providerId ? { provider: t(getProviderLabelKey(providerId)) } : undefined),
     [hasAppOwnedI18nKey, appOwnedErrorKey, classification.i18nKey, providerId, t]
   )
-
-  useEffect(() => {
-    if (
-      claudeCodeExitCategory !== undefined ||
-      hasAppOwnedI18nKey ||
-      classification.category !== 'unknown' ||
-      !errorMessage ||
-      !error ||
-      !diagnoseMessageError
-    )
-      return
-    let cancelled = false
-    diagnoseMessageError({
-      message,
-      partId,
-      error,
-      language: i18n.language
-    })
-      .then((result) => {
-        const summary = typeof result === 'string' ? result : (result?.summary ?? '')
-        if (!cancelled && summary) setAiSummary(summary)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-    // Intentionally exclude `error` from deps — its identity changes per render
-    // but the action input's scalar message/language fields are both stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    claudeCodeExitCategory,
-    classification.category,
-    diagnoseMessageError,
-    errorMessage,
-    hasAppOwnedI18nKey,
-    i18n.language,
-    message,
-    partId
-  ])
 
   const onRemoveErrorPart = useCallback(
     (e: React.MouseEvent) => {
@@ -233,7 +190,7 @@ const MessageErrorInfo: React.FC<{
         <div className="flex shrink-0 items-center justify-center text-error">
           <AlertTriangle size={15} className="lucide-custom" />
         </div>
-        <div className="pr-5 font-medium text-[13px] leading-[1.4]">{aiSummary || localizedErrorMessage}</div>
+        <div className="pr-5 font-medium text-[13px] leading-[1.4]">{localizedErrorMessage}</div>
       </div>
 
       {/* Description */}

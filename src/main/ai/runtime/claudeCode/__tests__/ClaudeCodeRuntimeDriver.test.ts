@@ -553,7 +553,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
@@ -572,7 +571,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
@@ -1972,14 +1970,12 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
           },
           {
             modelId: 'haiku',
-            apiModelId: 'haiku-sdk',
             modelName: 'Haiku',
             pricingSnapshot: null,
             aliases: ['haiku-sdk']
@@ -2148,7 +2144,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
@@ -2222,7 +2217,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
@@ -2305,7 +2299,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'LongCat-2.0',
-            apiModelId: 'LongCat-2.0',
             modelName: 'LongCat 2.0',
             pricingSnapshot: null,
             aliases: ['LongCat-2.0']
@@ -2624,7 +2617,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']
@@ -2736,7 +2728,6 @@ describe('ClaudeCodeRuntimeDriver', () => {
         frozenModels: [
           {
             modelId: 'sonnet',
-            apiModelId: 'sonnet-sdk',
             modelName: 'Sonnet',
             pricingSnapshot: null,
             aliases: ['sonnet-sdk']

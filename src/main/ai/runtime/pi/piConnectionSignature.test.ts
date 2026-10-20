@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as AgentApiGateway from '@main/ai/runtime/agentApiGateway'
 import type { AgentEntity } from '@shared/data/api/schemas/agents'
-import { CHERRY_CLOUD_MODEL_GROUP, CHERRY_CLOUD_PROVIDER_ID } from '@shared/data/presets/cherryai'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -222,22 +221,6 @@ describe('capturePiConnectionSnapshot', () => {
     })
   })
 
-  it('rebuilds a Cloud route when the gateway connection identity changes', async () => {
-    mocks.usesPiGateway.mockReturnValue(true)
-    mocks.getProvider.mockReturnValue({ id: CHERRY_CLOUD_PROVIDER_ID })
-    mocks.getModel.mockReturnValue({
-      id: `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free`,
-      providerId: CHERRY_CLOUD_PROVIDER_ID,
-      group: CHERRY_CLOUD_MODEL_GROUP
-    })
-    const captureCloud = () =>
-      capturePiConnectionSnapshot('session-1', agent.id, `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free`)
-    const initialSignature = (await captureCloud()).signature
-
-    mocks.gatewayFingerprint = 'gateway-2'
-
-    expect((await captureCloud()).signature).not.toBe(initialSignature)
-  })
   it('rebuilds a gateway fallback connection when its local credential changes', async () => {
     mocks.usesPiGateway.mockReturnValue(true)
     const initial = await capturePiConnectionSnapshot('session-1', agent.id, 'provider::model')

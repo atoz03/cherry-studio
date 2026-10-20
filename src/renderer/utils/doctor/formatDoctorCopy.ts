@@ -1,7 +1,7 @@
 import type { DoctorBasics, DoctorCheckId, DoctorCheckStatus, DoctorReport } from '@shared/types/doctor'
 import { projectDoctorReport } from '@shared/utils/doctor'
 
-type CopyBasic = 'version' | 'edition' | 'channel' | 'system' | 'osRelease' | 'isPackaged' | 'isPortable'
+type CopyBasic = 'version' | 'edition' | 'system' | 'osRelease' | 'isPackaged' | 'isPortable'
 
 export interface DoctorCopyLabels {
   readonly heading: string
@@ -18,7 +18,6 @@ function formatBasics(basics: DoctorBasics, labels: DoctorCopyLabels): readonly 
   const lines = [
     `${labels.basics.version}: ${basics.version}`,
     `${labels.basics.edition}: ${basics.edition}`,
-    `${labels.basics.channel}: ${basics.channel}`,
     `${labels.basics.system}: ${basics.platform} ${basics.arch}`,
     `${labels.basics.osRelease}: ${basics.osRelease}`,
     `${labels.basics.isPackaged}: ${labels.boolean(basics.isPackaged)}`,

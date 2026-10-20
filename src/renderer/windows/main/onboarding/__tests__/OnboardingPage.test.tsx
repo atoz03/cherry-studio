@@ -8,36 +8,12 @@ import {
   MockUsePreferenceUtils
 } from '@test-mocks/renderer/usePreference'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import {
-  CHERRY_CLOUD_PROVIDER_ID,
-  CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-  CHERRYAI_PROVIDER_ID
-} from '@shared/data/presets/cherryai'
-import { LATEST_PRIVACY_POLICY_VERSION } from '@shared/utils/constants'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const responsiveStyles = readFileSync(join(process.cwd(), 'src/renderer/assets/styles/responsive.css'), 'utf8')
 
-const addApiKeyMock = vi.fn()
-const updateProviderMock = vi.fn()
-const oauthWithCherryInMock = vi.fn()
-const syncProviderModelsMock = vi.fn()
-const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
 const modelSettingsPropsMock = vi.fn()
-const cloudMocks = vi.hoisted(() => ({
-  appEdition: 'global' as 'cn' | 'global',
-  ipcRequest: vi.fn(),
-  statusListener: undefined as
-    | ((status: {
-        phase: 'signed-out' | 'authorizing' | 'signed-in'
-        accountId: string | null
-        displayName: string | null
-      }) => void)
-    | undefined
-}))
 const dataApiMocks = vi.hoisted(() => ({
   get: vi.fn(),
   patch: vi.fn()
@@ -57,12 +33,6 @@ const selectedModelsMock: {
 const defaultUsePreferenceImplementation = mockUsePreference.getMockImplementation()
 const defaultUseMultiplePreferencesImplementation = mockUseMultiplePreferences.getMockImplementation()
 
-// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
-vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FORK_DATA_COLLECTION_ENABLED: true
-}))
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key })
 }))
@@ -75,27 +45,7 @@ vi.mock('@renderer/i18n/resolver', () => ({
   default: i18nMock
 }))
 
-vi.mock('@renderer/utils/appEdition', () => ({
-  getAppEdition: () => cloudMocks.appEdition
-}))
-
-vi.mock('@renderer/ipc', () => ({
-  ipcApi: { request: cloudMocks.ipcRequest },
-  useIpcOn: vi.fn(
-    (
-      event: string,
-      listener: (status: { phase: 'signed-out' | 'authorizing' | 'signed-in'; displayName: string | null }) => void
-    ) => {
-      if (event === 'cherry_cloud.status_changed') cloudMocks.statusListener = listener
-    }
-  )
-}))
-
 vi.mock('@renderer/hooks/useProvider', () => ({
-  useProvider: () => ({
-    addApiKey: addApiKeyMock,
-    updateProvider: updateProviderMock
-  }),
   useProviders: () => ({ providers: enabledProvidersMock, isLoading: false })
 }))
 
@@ -104,13 +54,8 @@ vi.mock('@renderer/hooks/useModel', () => ({
   useModels: () => ({ models: enabledModelsMock, isLoading: false })
 }))
 
-vi.mock('@renderer/services/oauth', () => ({
-  oauthWithCherryIn: (...args: unknown[]) => oauthWithCherryInMock(...args)
-}))
-
 vi.mock('@renderer/services/toast', () => ({
   toast: {
-    success: (...args: unknown[]) => toastSuccessMock(...args),
     error: (...args: unknown[]) => toastErrorMock(...args)
   }
 }))
@@ -120,11 +65,7 @@ vi.mock('@renderer/components/WindowControls', () => ({
 }))
 
 vi.mock('@renderer/pages/settings/ProviderSettings', () => ({
-  ProviderSettingsPage: () => <div data-testid="provider-settings" />,
-  useProviderModelSync: () => ({
-    syncProviderModels: syncProviderModelsMock,
-    isSyncingModels: false
-  })
+  ProviderSettingsPage: () => <div data-testid="provider-settings" />
 }))
 
 vi.mock('@renderer/pages/settings/ModelSettings/ModelSettings', () => ({
@@ -139,32 +80,10 @@ vi.mock('@renderer/pages/settings/ModelSettings/ModelSettings', () => ({
   }
 }))
 
-vi.mock('../../privacy/PrivacyPolicyDialog', () => ({
-  PrivacyPolicyDialog: ({
-    open,
-    onAccept,
-    onDecline
-  }: {
-    open: boolean
-    onAccept: () => void
-    onDecline?: () => void
-  }) =>
-    open ? (
-      <div data-testid="privacy-policy-dialog">
-        <button type="button" onClick={onAccept}>
-          accept-policy
-        </button>
-        <button type="button" onClick={onDecline}>
-          decline-policy
-        </button>
-      </div>
-    ) : null
-}))
-
 import OnboardingPage from '../OnboardingPage'
 
 async function openProviderSetup() {
-  fireEvent.click(screen.getByRole('button', { name: /onboarding\.welcome\.other_provider/ }))
+  fireEvent.click(screen.getByRole('button', { name: /onboarding\.provider_setup\.title/ }))
   await screen.findByTestId('provider-settings')
 }
 
@@ -177,22 +96,6 @@ async function openModelSelection() {
 describe('OnboardingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    cloudMocks.appEdition = 'global'
-    cloudMocks.statusListener = undefined
-    cloudMocks.ipcRequest.mockImplementation(async (route: string) => {
-      if (route === 'cherry_cloud.status.get') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.login.start') return { phase: 'authorizing', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.login.cancel') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.models.sync') {
-        return {
-          entitledModelIds: [],
-          freeModelIds: [],
-          availableModelIds: { agent: [], general: [] },
-          quotaExhaustedModelIds: []
-        }
-      }
-      throw new Error(`Unexpected IPC route: ${route}`)
-    })
     if (defaultUsePreferenceImplementation) {
       mockUsePreference.mockImplementation(defaultUsePreferenceImplementation)
     }
@@ -201,10 +104,6 @@ describe('OnboardingPage', () => {
     }
     MockUsePreferenceUtils.resetMocks()
     i18nMock.changeLanguage.mockResolvedValue(undefined)
-    oauthWithCherryInMock.mockResolvedValue('sk-test')
-    addApiKeyMock.mockResolvedValue(undefined)
-    updateProviderMock.mockResolvedValue(undefined)
-    syncProviderModelsMock.mockResolvedValue([{ id: 'cherryin::gpt-4o-mini', providerId: 'cherryin', isEnabled: true }])
     dataApiMocks.get.mockImplementation(async (path: string) => {
       if (path === '/assistants') return { items: [], total: 0 }
       if (path === '/agents') return { items: [], total: 0 }
@@ -222,15 +121,9 @@ describe('OnboardingPage', () => {
     selectedModelsMock.quickModel = { id: 'quick-model', providerId: 'openai', capabilities: [] }
     selectedModelsMock.translateModel = { id: 'translate-model', providerId: 'openai', capabilities: [] }
     MockUsePreferenceUtils.setPreferenceValue('app.onboarding.provider_setup.status', 'pending')
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.data_collection.enabled', true)
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', LATEST_PRIVACY_POLICY_VERSION)
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('shows provider setup when choosing another provider', async () => {
+  it('shows provider setup from the welcome step', async () => {
     render(<OnboardingPage />)
 
     await openProviderSetup()
@@ -252,8 +145,6 @@ describe('OnboardingPage', () => {
     await waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('completed')
     )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(true)
   })
 
   it('waits for official resources to use the selected model before completing', async () => {
@@ -366,27 +257,6 @@ describe('OnboardingPage', () => {
     expect(dataApiMocks.patch).toHaveBeenCalledTimes(2)
   })
 
-  it('does not allow CherryAI to satisfy the provider setup requirements', async () => {
-    enabledProvidersMock.splice(0, enabledProvidersMock.length, { id: 'cherryai', isEnabled: true })
-    enabledModelsMock.splice(0, enabledModelsMock.length, {
-      id: 'cherryai::qwen',
-      providerId: 'cherryai',
-      isEnabled: true,
-      capabilities: []
-    })
-    render(<OnboardingPage />)
-
-    await openProviderSetup()
-
-    const nextButton = screen.getByRole('button', { name: 'onboarding.provider_setup.next' })
-    expect(nextButton).toHaveAttribute('aria-disabled', 'true')
-    nextButton.focus()
-    expect(nextButton).toHaveFocus()
-    fireEvent.click(nextButton)
-    expect(screen.getByRole('heading', { name: 'onboarding.provider_setup.title' })).toBeInTheDocument()
-    expect(nextButton.parentElement).toHaveAttribute('data-title', 'onboarding.provider_setup.missing_provider')
-  })
-
   it('explains when an enabled provider has no enabled model', async () => {
     enabledModelsMock.splice(0)
     render(<OnboardingPage />)
@@ -435,10 +305,7 @@ describe('OnboardingPage', () => {
     expect(screen.getByRole('button', { name: /onboarding\.select_model\.start/ })).toBeDisabled()
   })
 
-  it('excludes CherryAI models, hides painting, and rejects built-in selections', async () => {
-    selectedModelsMock.defaultModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.quickModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.translateModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
+  it('hides painting and offers only chat models', async () => {
     render(<OnboardingPage />)
 
     await openModelSelection()
@@ -447,28 +314,23 @@ describe('OnboardingPage', () => {
     expect(modelSettingsProps?.autoFillEmptyModels).toBe(true)
     expect(modelSettingsProps?.onDefaultModelSelected).toBeTypeOf('function')
     expect(modelSettingsProps?.showPaintingModel).toBe(false)
-    expect(modelSettingsProps?.modelFilter?.({ providerId: CHERRYAI_PROVIDER_ID, capabilities: [] })).toBe(false)
-    expect(modelSettingsProps?.modelFilter?.({ providerId: CHERRY_CLOUD_PROVIDER_ID, capabilities: [] })).toBe(false)
+    expect(modelSettingsProps?.modelFilter?.({ providerId: 'openai', capabilities: ['embedding'] })).toBe(false)
     expect(modelSettingsProps?.modelFilter?.({ providerId: 'openai', capabilities: [] })).toBe(true)
-    expect(screen.getByRole('button', { name: /onboarding\.select_model\.start/ })).toBeDisabled()
   })
 
-  it.each([
-    ['an unconfigured seeded agent', null],
-    ['a legacy CherryAI-seeded agent', CHERRYAI_DEFAULT_UNIQUE_MODEL_ID]
-  ])('configures %s after the user selects a default model', async (_description, seededAgentModel) => {
+  it('configures the unconfigured seeded assistant and agents after the user selects a default model', async () => {
     dataApiMocks.get.mockImplementation(async (path: string) => {
       if (path === '/assistants') {
         return {
-          items: [{ id: 'assistant-1', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID }],
+          items: [{ id: 'assistant-1', modelId: null }],
           total: 1
         }
       }
       if (path === '/agents') {
         return {
           items: [
-            { id: 'assistant-agent', model: seededAgentModel, configuration: { builtin_role: 'assistant' } },
-            { id: 'support-agent', model: seededAgentModel, configuration: { builtin_role: 'support' } }
+            { id: 'assistant-agent', model: null, configuration: { builtin_role: 'assistant' } },
+            { id: 'support-agent', model: null, configuration: { builtin_role: 'support' } }
           ],
           total: 2
         }
@@ -503,8 +365,8 @@ describe('OnboardingPage', () => {
       if (path === '/assistants') {
         return {
           items: [
-            { id: 'assistant-1', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID },
-            { id: 'assistant-2', modelId: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID }
+            { id: 'assistant-1', modelId: null },
+            { id: 'assistant-2', modelId: null }
           ],
           total: 2
         }
@@ -544,343 +406,17 @@ describe('OnboardingPage', () => {
     await waitFor(() =>
       expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
     )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-  })
-
-  it('persists the privacy choice before leaving onboarding', async () => {
-    let resolvePrivacyUpdate: (() => void) | undefined
-    const updatePreferences = vi
-      .fn()
-      .mockImplementationOnce(
-        () =>
-          new Promise<void>((resolve) => {
-            resolvePrivacyUpdate = resolve
-          })
-      )
-      .mockResolvedValueOnce(undefined)
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    expect(updatePreferences).toHaveBeenCalledExactlyOnceWith({
-      policyVersion: LATEST_PRIVACY_POLICY_VERSION
-    })
-
-    resolvePrivacyUpdate?.()
-
-    await waitFor(() =>
-      expect(updatePreferences).toHaveBeenNthCalledWith(2, {
-        providerSetupStatus: 'skipped'
-      })
-    )
-  })
-
-  it('does not rewrite an already-current privacy agreement before leaving onboarding', async () => {
-    const updatePreferences = vi.fn((updates: Record<string, unknown>) => {
-      if (updates.policyVersion !== undefined) {
-        return Promise.reject(new Error('privacy write unavailable'))
-      }
-      return Promise.resolve()
-    })
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: LATEST_PRIVACY_POLICY_VERSION
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() => expect(updatePreferences).toHaveBeenCalledWith({ providerSetupStatus: 'skipped' }))
-    expect(updatePreferences).toHaveBeenCalledTimes(1)
-    expect(toastErrorMock).not.toHaveBeenCalled()
-  })
-
-  it('shows the privacy control only on the welcome step', async () => {
-    render(<OnboardingPage />)
-
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /onboarding\.welcome\.other_provider/ }))
-    await screen.findByTestId('provider-settings')
-    expect(screen.queryByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.provider_setup.next' }))
-    await screen.findByTestId('model-settings')
-    expect(screen.queryByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeInTheDocument()
-  })
-
-  it('checks privacy acceptance by default for a new user without a stored policy version', () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-  })
-
-  it('opens provider setup without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    await openProviderSetup()
-
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
-  it('starts CherryIN login without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    oauthWithCherryInMock.mockImplementation(async (setKey: (keys: string) => Promise<void>) => {
-      await setKey('sk-one')
-      return 'sk-one'
-    })
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
-  it('uses CherryIN in the CN edition when Cherry Account onboarding is disabled', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage />)
-
-    await user.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(cloudMocks.ipcRequest).not.toHaveBeenCalled()
-  })
-
-  it('keeps CherryIN in the global edition when Cherry Account onboarding is enabled', async () => {
-    const user = userEvent.setup()
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await user.click(screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' }))
-
-    await waitFor(() => expect(oauthWithCherryInMock).toHaveBeenCalledTimes(1))
-    expect(cloudMocks.ipcRequest).not.toHaveBeenCalled()
-  })
-
-  it('uses cancellable Cherry Cloud login instead of CherryIN in the CN edition', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    expect(screen.queryByRole('button', { name: 'onboarding.welcome.login_cherryin' })).not.toBeInTheDocument()
-    await user.click(await screen.findByRole('button', { name: 'onboarding.welcome.login_cherry_cloud' }))
-
-    expect(cloudMocks.ipcRequest).toHaveBeenCalledWith('cherry_cloud.login.start')
-    expect(oauthWithCherryInMock).not.toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'settings.provider.cherry_cloud.signing_in' })).toBeDisabled()
-
-    await user.click(screen.getByRole('button', { name: 'common.cancel' }))
-
-    expect(cloudMocks.ipcRequest).toHaveBeenCalledWith('cherry_cloud.login.cancel')
-    expect(await screen.findByRole('button', { name: 'onboarding.welcome.login_cherry_cloud' })).toBeEnabled()
-  })
-
-  it('selects the first available Cherry Cloud Agent model and completes onboarding', async () => {
-    const chatOnlyCloudModelId = `${CHERRY_CLOUD_PROVIDER_ID}::chat-only-model`
-    const firstCloudAgentModelId = `${CHERRY_CLOUD_PROVIDER_ID}::first-agent-model`
-    const secondCloudAgentModelId = `${CHERRY_CLOUD_PROVIDER_ID}::second-agent-model`
-    cloudMocks.appEdition = 'cn'
-    cloudMocks.ipcRequest.mockImplementation(async (route: string) => {
-      if (route === 'cherry_cloud.status.get') return { phase: 'signed-out', accountId: null, displayName: null }
-      if (route === 'cherry_cloud.models.sync') {
-        return {
-          entitledModelIds: [chatOnlyCloudModelId, firstCloudAgentModelId, secondCloudAgentModelId],
-          freeModelIds: [firstCloudAgentModelId, secondCloudAgentModelId],
-          availableModelIds: {
-            agent: [firstCloudAgentModelId, secondCloudAgentModelId],
-            general: [chatOnlyCloudModelId]
-          },
-          quotaExhaustedModelIds: []
-        }
-      }
-      throw new Error(`Unexpected IPC route: ${route}`)
-    })
-    dataApiMocks.get.mockImplementation(async (path: string) => {
-      if (path === '/agents') {
-        return {
-          items: [
-            { id: 'assistant-agent', model: null, configuration: { builtin_role: 'assistant' } },
-            { id: 'support-agent', model: null, configuration: { builtin_role: 'support' } }
-          ],
-          total: 2
-        }
-      }
-      throw new Error(`Unexpected path: ${path}`)
-    })
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await waitFor(() => expect(cloudMocks.statusListener).toBeDefined())
-    act(() => cloudMocks.statusListener?.({ phase: 'signed-in', accountId: 'account-1', displayName: 'Alice' }))
-
-    await waitFor(() => {
-      expect(dataApiMocks.patch).toHaveBeenCalledWith('/agents/assistant-agent', {
-        body: { model: firstCloudAgentModelId }
-      })
-      expect(dataApiMocks.patch).toHaveBeenCalledWith('/agents/support-agent', {
-        body: { model: firstCloudAgentModelId }
-      })
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    })
-    expect(dataApiMocks.patch).not.toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ body: { model: secondCloudAgentModelId } })
-    )
-  })
-
-  it('opens provider setup after the warning even when an ordinary chat model is available', async () => {
-    const user = userEvent.setup()
-    cloudMocks.appEdition = 'cn'
-    render(<OnboardingPage enableCherryAccountLogin />)
-
-    await waitFor(() => expect(cloudMocks.statusListener).toBeDefined())
-    act(() => cloudMocks.statusListener?.({ phase: 'signed-in', accountId: 'account-1', displayName: 'Alice' }))
-
-    expect(await screen.findByText('onboarding.cloud.no_available_models')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'common.confirm' }))
-
-    expect(await screen.findByTestId('provider-settings')).toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('pending')
-  })
-
-  it('skips onboarding without privacy acceptance and disables data collection', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' }))
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    )
-    expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-  })
-
-  it('persists a checked agreement only when leaving the welcome page', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    const agreement = screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })
-
-    expect(agreement).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-
-    await openProviderSetup()
-
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(LATEST_PRIVACY_POLICY_VERSION)
-  })
-
-  it('opens the full policy and updates the required agreement choice before closing', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.privacy.policy' }))
-    expect(screen.getByTestId('privacy-policy-dialog')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'decline-policy' }))
-
-    await waitFor(() => expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument())
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).not.toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.privacy.policy' }))
-    fireEvent.click(screen.getByRole('button', { name: 'accept-policy' }))
-
-    await waitFor(() => expect(screen.queryByTestId('privacy-policy-dialog')).not.toBeInTheDocument())
-    expect(screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })).toBeChecked()
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe('')
-  })
-
-  it('stays on the welcome page when saving privacy acceptance fails', async () => {
-    const updatePreferences = vi.fn().mockRejectedValue(new Error('write failed'))
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.welcome.other_provider' }))
-
-    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('onboarding.privacy.update_failed'))
-    expect(updatePreferences).toHaveBeenCalledWith({ policyVersion: LATEST_PRIVACY_POLICY_VERSION })
-    expect(screen.queryByTestId('provider-settings')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'onboarding.welcome.other_provider' })).toBeInTheDocument()
-  })
-
-  it('keeps anonymous data collection independent from required privacy acceptance', async () => {
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.policy_version', '')
-    MockUsePreferenceUtils.setPreferenceValue('app.privacy.data_collection.enabled', false)
-    render(<OnboardingPage />)
-
-    const agreement = screen.getByRole('checkbox', { name: 'onboarding.privacy.accept_policy' })
-    expect(agreement).toBeChecked()
-    fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
-
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.onboarding.provider_setup.status')).toBe('skipped')
-    )
-    await waitFor(() =>
-      expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.policy_version')).toBe(
-        LATEST_PRIVACY_POLICY_VERSION
-      )
-    )
-    expect(MockUsePreferenceUtils.getPreferenceValue('app.privacy.data_collection.enabled')).toBe(false)
   })
 
   it('shows an error when completing onboarding fails', async () => {
-    const updatePreferences = vi.fn().mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('write failed'))
-    mockUseMultiplePreferences.mockReturnValueOnce([
-      {
-        providerSetupStatus: 'pending',
-        dataCollectionEnabled: true,
-        policyVersion: ''
-      },
-      updatePreferences
-    ])
+    const updatePreferences = vi.fn().mockRejectedValueOnce(new Error('write failed'))
+    mockUseMultiplePreferences.mockReturnValueOnce([{ providerSetupStatus: 'pending' }, updatePreferences])
     render(<OnboardingPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'onboarding.skip' }))
 
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('onboarding.toast.complete_failed'))
-    expect(updatePreferences).toHaveBeenNthCalledWith(1, { policyVersion: LATEST_PRIVACY_POLICY_VERSION })
-    expect(updatePreferences).toHaveBeenNthCalledWith(2, { providerSetupStatus: 'skipped' })
+    expect(updatePreferences).toHaveBeenCalledWith({ providerSetupStatus: 'skipped' })
     expect(screen.getByRole('button', { name: 'onboarding.skip' })).toBeEnabled()
   })
 
@@ -905,70 +441,5 @@ describe('OnboardingPage', () => {
 
     expect(i18nMock.changeLanguage).toHaveBeenCalledWith('zh-CN')
     await waitFor(() => expect(MockUsePreferenceUtils.getPreferenceValue('app.language')).toBe('zh-CN'))
-  })
-
-  it('hides the login icon while loading and restores the action after ten seconds', async () => {
-    vi.useFakeTimers()
-    oauthWithCherryInMock.mockImplementation(() => new Promise<string>(() => {}))
-    render(<OnboardingPage />)
-
-    const loginButton = screen.getByRole('button', { name: 'onboarding.welcome.login_cherryin' })
-    await act(async () => fireEvent.click(loginButton))
-
-    expect(loginButton).toBeDisabled()
-    expect(loginButton.querySelector('.lucide-log-in')).not.toBeInTheDocument()
-
-    await act(() => vi.advanceTimersByTime(9_999))
-    expect(loginButton).toBeDisabled()
-
-    await act(() => vi.advanceTimersByTime(1))
-    expect(loginButton).toBeEnabled()
-    expect(loginButton.querySelector('.lucide-log-in')).toBeInTheDocument()
-  })
-
-  it('syncs CherryIN models before moving a fresh install to model selection', async () => {
-    enabledProvidersMock.splice(0, enabledProvidersMock.length, { id: 'cherryai', isEnabled: true })
-    enabledModelsMock.splice(0, enabledModelsMock.length, {
-      id: 'cherryai::qwen',
-      providerId: 'cherryai',
-      isEnabled: true,
-      capabilities: []
-    })
-    selectedModelsMock.defaultModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.quickModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    selectedModelsMock.translateModel = { id: 'cherryai::qwen', providerId: CHERRYAI_PROVIDER_ID, capabilities: [] }
-    oauthWithCherryInMock.mockImplementation(async (setKey: (keys: string) => Promise<void>) => {
-      await setKey('sk-one, sk-two')
-      return 'sk-one, sk-two'
-    })
-
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: /onboarding\.welcome\.login_cherryin/ }))
-
-    await waitFor(() => expect(screen.getByTestId('model-settings')).toBeInTheDocument())
-    expect(addApiKeyMock).toHaveBeenCalledWith('sk-one', 'OAuth')
-    expect(addApiKeyMock).toHaveBeenCalledWith('sk-two', 'OAuth')
-    expect(updateProviderMock).toHaveBeenCalledWith({ isEnabled: true })
-    expect(syncProviderModelsMock).toHaveBeenCalledTimes(1)
-    expect(toastSuccessMock).toHaveBeenCalledWith('onboarding.toast.connected')
-  })
-
-  it('returns to provider setup when CherryIN sync finds no enabled model', async () => {
-    syncProviderModelsMock.mockResolvedValue([])
-    oauthWithCherryInMock.mockImplementation(async (setKey: (keys: string) => Promise<void>) => {
-      await setKey('sk-one')
-      return 'sk-one'
-    })
-
-    render(<OnboardingPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: /onboarding\.welcome\.login_cherryin/ }))
-
-    expect(await screen.findByTestId('provider-settings')).toBeInTheDocument()
-    expect(syncProviderModelsMock).toHaveBeenCalledTimes(1)
-    expect(screen.queryByTestId('model-settings')).not.toBeInTheDocument()
-    expect(toastErrorMock).toHaveBeenCalledWith('onboarding.provider_setup.missing_model')
-    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 })

@@ -148,10 +148,6 @@ const api = {
     ): Promise<NativePopupMenuResult<CommandId> | undefined> =>
       ipcRenderer.invoke(IpcChannel.NativeCommandPopupMenu_Show, model, anchor)
   },
-  aes: {
-    decrypt: (encryptedData: string, iv: string, secretKey: string) =>
-      ipcRenderer.invoke(IpcChannel.Aes_Decrypt, encryptedData, iv, secretKey)
-  },
   shell: {
     openExternal: (url: string, options?: Electron.OpenExternalOptions) => {
       // Defense-in-depth: validate URL scheme before forwarding to shell.openExternal
@@ -177,8 +173,7 @@ const api = {
     logout: () => ipcRenderer.invoke(IpcChannel.Copilot_Logout),
     getUser: (token: string) => ipcRenderer.invoke(IpcChannel.Copilot_GetUser, token)
   },
-  // CherryIN OAuth + Codex / Grok CLI OAuth migrated to IpcApi — see
-  // `ipcApi.request('oauth.*' | 'cherryin.*')`.
+  // Codex / Grok CLI OAuth migrated to IpcApi — see `ipcApi.request('oauth.*')`.
   // BinaryManager tool manager was migrated to IpcApi — see `window.api.ipcApi` / `ipcApi.request('binary.*')`.
   nutstore: {
     getSSOUrl: () => ipcRenderer.invoke(IpcChannel.Nutstore_GetSsoUrl),

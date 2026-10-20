@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const h = vi.hoisted(() => {
   const providerStore = new Map<string, { authConfig?: unknown; isEnabled?: boolean }>()
   const refreshMock = vi.fn()
-  const afterPersistMock = vi.fn()
   const clientMock = {
     refresh: refreshMock,
     createAuthorizationRequest: vi.fn(() => ({ authUrl: 'https://auth/x', state: 'st', codeVerifier: 'cv' })),
@@ -16,7 +15,6 @@ const h = vi.hoisted(() => {
   return {
     providerStore,
     refreshMock,
-    afterPersistMock,
     createClientMock,
     // One controllable fake OAuth client shared by every provider definition.
     clientMock,
@@ -60,17 +58,9 @@ vi.mock('../providerDefinitions', () => ({
     codex: {
       providerId: 'codex',
       clientId: 'codex-client',
-      clearDisablesProvider: true,
       transport: { hosts: ['127.0.0.1'], port: 0, path: '/cb', redirectUri: 'http://127.0.0.1/cb' },
       createClient: (context?: { signal?: AbortSignal }) => h.createClientMock(context),
       extractAccountId: () => null
-    },
-    cherryin: {
-      providerId: 'cherryin',
-      clientId: 'cherryin-client',
-      transport: { hosts: ['127.0.0.1'], port: 0, path: '/cb', redirectUri: 'http://127.0.0.1/cb' },
-      createClient: () => h.clientMock,
-      afterPersistTokens: (tokenData: unknown, context: unknown) => h.afterPersistMock(tokenData, context)
     }
   }
 }))
@@ -103,7 +93,6 @@ describe('OAuthRuntimeService', () => {
     h.providerStore.clear()
     vi.clearAllMocks()
     h.refreshMock.mockReset()
-    h.afterPersistMock.mockReset()
     h.createClientMock.mockReset().mockReturnValue(h.clientMock)
     h.transportMock.tryAcquire.mockReset().mockReturnValue(true)
     h.transportMock.waitForAuthorizationCode.mockReset().mockResolvedValue('auth-code')
@@ -126,21 +115,6 @@ describe('OAuthRuntimeService', () => {
     listening()
     await expect(login).resolves.toEqual({ accountId: null })
     expect(shell.openExternal).toHaveBeenCalledWith('https://auth/x')
-  })
-
-  it('returns provisioned API keys after loopback login without exposing OAuth tokens', async () => {
-    h.clientMock.exchangeCode.mockResolvedValue({ access_token: 'private-token', refresh_token: 'private-refresh' })
-    h.afterPersistMock.mockImplementation(async (_tokens, context) => {
-      expect(context.apiHost).toBe('https://open.cherryin.dev')
-      expect(h.providerStore.get('cherryin')?.authConfig).toMatchObject({ accessToken: 'private-token' })
-      return { apiKeys: 'provisioned-key' }
-    })
-    await expect(
-      service.signIn('win-1', 'cherryin', 'http-login', { apiHost: 'https://open.cherryin.dev' })
-    ).resolves.toEqual({
-      accountId: null,
-      apiKeys: 'provisioned-key'
-    })
   })
 
   it('returns a still-valid token without refreshing', async () => {
@@ -180,17 +154,6 @@ describe('OAuthRuntimeService', () => {
     const stored = h.providerStore.get('codex')
     expect(stored?.authConfig).toEqual({ type: 'api-key' })
     expect(stored?.isEnabled).toBe(false)
-  })
-
-  // B1: the same terminal clear for a provider with a manual key must keep it enabled.
-  it('clears but does NOT disable a provider that can hold a manual API key', async () => {
-    seedOAuth('cherryin', { accessToken: 'old', refreshToken: 'r', expiresAt: PAST() })
-    h.refreshMock.mockRejectedValue(new OAuthHttpError('bad', 400, '{}'))
-
-    expect(await service.getValidAccessToken('cherryin')).toBeNull()
-    const stored = h.providerStore.get('cherryin')
-    expect(stored?.authConfig).toEqual({ type: 'api-key' })
-    expect(stored?.isEnabled).toBeUndefined()
   })
 
   // B1 race: a logout that lands while a refresh is in flight must win — the
@@ -345,44 +308,28 @@ describe('OAuthRuntimeService', () => {
     expect(doFetch).toHaveBeenCalledTimes(1)
   })
 
-  // CherryIN path: still 401 after the forced-refresh retry → onUnauthorized fires
-  // once with the final response, and the 401 is returned (not thrown) for the
-  // caller to surface. `context` is accepted and threaded into token refresh.
-  it('authenticatedFetch reports a persistent 401 to onUnauthorized and returns it', async () => {
-    seedOAuth('cherryin', { accessToken: 'tok', refreshToken: 'r', expiresAt: FUTURE(), accountId: null })
+  // Still 401 after the forced-refresh retry: the 401 is returned (not thrown)
+  // for the caller to surface, and the refresh is not repeated.
+  it('authenticatedFetch returns a persistent 401 after one forced refresh', async () => {
+    seedOAuth('codex', { accessToken: 'tok', refreshToken: 'r', expiresAt: FUTURE(), accountId: null })
     h.refreshMock.mockResolvedValue({ access_token: 'tok2', refresh_token: 'r2', expires_in: 3600 })
 
     const doFetch = vi
       .fn()
       .mockResolvedValueOnce({ status: 401, body: { cancel: vi.fn() } })
       .mockResolvedValueOnce({ status: 401 })
-    const onUnauthorized = vi.fn()
 
-    const res = await service.authenticatedFetch(
-      'cherryin',
-      () => ({ input: 'http://example/api', init: {} }),
-      doFetch,
-      {
-        context: { apiHost: 'https://open.cherryin.ai' },
-        onUnauthorized
-      }
-    )
+    const res = await service.authenticatedFetch('codex', () => ({ input: 'http://example/api', init: {} }), doFetch)
 
     expect(res.status).toBe(401)
     expect(doFetch).toHaveBeenCalledTimes(2)
     expect(h.refreshMock).toHaveBeenCalledTimes(1)
-    expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 
-  // B1 via logout: codex disables, cherryin stays enabled.
-  it('logout disables an OAuth-only provider but not one with a manual key', async () => {
+  it('logout clears the session and disables the provider', async () => {
     seedOAuth('codex', { accessToken: 'tok' })
     await service.logout('codex')
-    expect(h.providerStore.get('codex')?.isEnabled).toBe(false)
-
-    seedOAuth('cherryin', { accessToken: 'tok' })
-    await service.logout('cherryin')
-    expect(h.providerStore.get('cherryin')?.isEnabled).toBeUndefined()
+    expect(h.providerStore.get('codex')).toEqual({ authConfig: { type: 'api-key' }, isEnabled: false })
   })
 
   // The loopback happy path: exchange the code, persist tokens, enable the

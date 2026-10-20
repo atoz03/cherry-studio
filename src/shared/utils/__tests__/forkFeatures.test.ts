@@ -6,7 +6,7 @@ import { parse, parseAllDocuments } from 'yaml'
 
 import * as forkFeatureModule from '../forkFeatures'
 
-type ForkSwitch = Exclude<keyof typeof forkFeatureModule, 'FORK_DATA_COLLECTION_ENABLED'>
+type ForkSwitch = keyof typeof forkFeatureModule
 const forkFeatures: Record<ForkSwitch, boolean> = { ...forkFeatureModule }
 
 interface FeaturePackages {
@@ -24,20 +24,6 @@ interface FeaturePackages {
  * here is a type error; a feature whose code is bundled (devDependencies) has nothing to exclude.
  */
 const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
-  FORK_SENTRY_ENABLED: {
-    roots: ['@sentry/electron'],
-    excluded: [
-      '@sentry',
-      '@opentelemetry',
-      'import-in-the-middle',
-      'require-in-the-middle',
-      'module-details-from-path',
-      'cjs-module-lexer',
-      'es-module-lexer'
-    ]
-  },
-  // @cherrystudio/analytics-client is a devDependency, bundled into a chunk loaded only on activation.
-  FORK_ANALYTICS_ENABLED: { roots: [], excluded: [] },
   FORK_REMOTE_ACCESS_ENABLED: {
     roots: ['@cherrystudio/remote-transport'],
     excluded: [
@@ -86,10 +72,7 @@ const FEATURE_PACKAGES: Record<ForkSwitch, FeaturePackages> = {
       'weald',
       'wherearewe'
     ]
-  },
-  FORK_CHERRY_CLOUD_ENABLED: { roots: [], excluded: [] },
-  FORK_DIAGNOSTICS_UPLOAD_ENABLED: { roots: [], excluded: [] },
-  FORK_TEST_PLAN_ENABLED: { roots: [], excluded: [] }
+  }
 }
 
 type DependencyEntry = readonly [name: string, version: string, importer: string]

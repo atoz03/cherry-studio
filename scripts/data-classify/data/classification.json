@@ -1102,17 +1102,17 @@
           "originalKey": "testPlan",
           "type": "boolean",
           "defaultValue": false,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "testChannel",
           "type": "PreferenceTypes.UpgradeChannel",
           "defaultValue": "VALUE: PreferenceTypes.UpgradeChannel.LATEST",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.channel"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "renderInputMessageAsMarkdown",
@@ -1901,17 +1901,17 @@
           "originalKey": "enableDataCollection",
           "type": "boolean",
           "defaultValue": true,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.data_collection.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "privacyPolicyVersion",
           "type": "string",
           "defaultValue": "",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.policy_version"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         },
         {
           "originalKey": "enableSpellCheck",
@@ -3256,9 +3256,9 @@
           "originalKey": "TestPlan",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "TestChannel": [
@@ -3266,9 +3266,9 @@
           "originalKey": "TestChannel",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.dist.test_plan.channel"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "EnableDataCollection": [
@@ -3276,9 +3276,9 @@
           "originalKey": "EnableDataCollection",
           "type": "unknown",
           "defaultValue": null,
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.privacy.data_collection.enabled"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "SelectionAssistantEnabled": [
@@ -3386,9 +3386,9 @@
           "originalKey": "clientId",
           "type": "string",
           "defaultValue": "",
-          "status": "classified",
-          "category": "preferences",
-          "targetKey": "app.user.id"
+          "status": "deleted",
+          "category": null,
+          "targetKey": null
         }
       ],
       "GitBashPath": [

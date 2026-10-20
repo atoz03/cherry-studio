@@ -29,10 +29,6 @@ vi.mock('@renderer/hooks/useModel', () => ({
   useModels: () => ({ models: [] })
 }))
 
-vi.mock('@renderer/components/ModelSelector', () => ({
-  useIsModelSelectable: () => () => true
-}))
-
 vi.mock('@renderer/hooks/agent/useAgentModelFilter', () => ({
   useAgentModelFilter: () => () => true
 }))

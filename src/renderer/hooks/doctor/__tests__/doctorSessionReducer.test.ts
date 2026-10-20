@@ -67,16 +67,6 @@ describe('doctorSessionReducer', () => {
     expect(secondRun.evidenceGrant).toEqual({ runId: 'run-2', checkIds: ['runtime-claude-login'] })
   })
 
-  it('keeps one report draft while switching panels', () => {
-    let state = createDoctorSession({ initialPanel: 'report', initialDescription: 'safe draft' })
-
-    state = doctorSessionReducer(state, { type: 'set-description', description: 'reviewed draft' })
-    state = doctorSessionReducer(state, { type: 'set-panel', panel: 'checks' })
-    state = doctorSessionReducer(state, { type: 'set-panel', panel: 'report' })
-
-    expect(state.descriptionDraft).toBe('reviewed draft')
-  })
-
   it('records each successfully fixed check once', () => {
     const initial = createDoctorSession({ initialPanel: 'checks' })
     const fixed = doctorSessionReducer(initial, {
@@ -104,7 +94,7 @@ describe('doctorSessionReducer', () => {
     })
     expect(state.interaction).toEqual({ kind: 'fixing', request: fixRequest })
 
-    state = doctorSessionReducer(state, { type: 'finish-interaction', kind: 'report-operation' })
+    state = doctorSessionReducer(state, { type: 'finish-interaction', kind: 'bundle-operation' })
     expect(state.interaction.kind).toBe('fixing')
 
     state = doctorSessionReducer(state, { type: 'finish-interaction', kind: 'fixing' })

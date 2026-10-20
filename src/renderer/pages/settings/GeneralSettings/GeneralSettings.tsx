@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 
 import { Button, Flex, InfoTooltip, Input, InputNumber, Switch } from '@cherrystudio/ui'
 import { useMultiplePreferences, usePreference } from '@data/hooks/usePreference'
-import CopyButton from '@renderer/components/CopyButton'
 import { ModelSelector, type ModelSelectorFilter } from '@renderer/components/ModelSelector'
 import { AgentLanguageField } from '@renderer/components/resourceCatalog/dialogs/components/AgentLanguageField'
 import Selector from '@renderer/components/Selector'
@@ -62,7 +61,6 @@ const GeneralSettings: FC = () => {
   const [remoteDebuggingPort, setRemoteDebuggingPort] = usePreference('BootConfig.app.remote_debugging.port', {
     optimistic: false
   })
-  const [clientId] = usePreference('app.user.id')
   const [retryEnabled, setRetryEnabled] = usePreference('chat.retry.enabled')
   const [retryMaxAttempts, setRetryMaxAttempts] = usePreference('chat.retry.max_attempts')
   const [retryBackoffEnabled, setRetryBackoffEnabled] = usePreference('chat.retry.backoff_enabled')
@@ -434,20 +432,6 @@ const GeneralSettings: FC = () => {
             </SettingRow>
           </>
         )}
-        {enableDeveloperMode && clientId ? (
-          <>
-            <SettingDivider />
-            <SettingRow className="gap-3">
-              <SettingRowTitle>{t('settings.developer.client_id')}</SettingRowTitle>
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="select-text break-all text-right font-mono text-foreground-tertiary text-xs">
-                  {clientId}
-                </span>
-                <CopyButton textToCopy={clientId} successFeedback="icon" />
-              </div>
-            </SettingRow>
-          </>
-        ) : null}
       </SettingGroup>
     </SettingsContentColumn>
   )

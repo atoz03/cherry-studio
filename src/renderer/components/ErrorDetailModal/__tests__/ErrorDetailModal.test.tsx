@@ -7,20 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Dialog, DialogContent } from '@cherrystudio/ui'
 import type * as DoctorComponents from '@renderer/components/doctor'
 import type { SerializedError } from '@renderer/types/error'
-import type { DiagnosisResult } from '@renderer/utils/errorDiagnosis'
 import type { DoctorCheckResult, DoctorPendingCheck, DoctorState } from '@shared/types/doctor'
 
 import type { ErrorDetailContentProps } from '../ErrorDetailModal'
 
 vi.unmock('@cherrystudio/ui')
 vi.mock('@renderer/services/popup', async (importOriginal) => await importOriginal())
-
-const aiDiagnosis: DiagnosisResult = {
-  category: 'runtime',
-  explanation: 'Check the provider configuration',
-  steps: [],
-  summary: 'Provider failed'
-}
 
 const providerError = {
   name: 'ProviderError',
@@ -30,7 +22,7 @@ const providerError = {
 } satisfies SerializedError
 
 const passingVersionResult: DoctorCheckResult = {
-  id: 'install-version-channel',
+  id: 'install-architecture-match',
   status: 'pass',
   durationMs: 1
 }
@@ -90,7 +82,6 @@ const chatSubject = { kind: 'chat' as const, providerId: 'deepseek', modelId: 'd
 
 const mocks = vi.hoisted(() => ({
   cacheReady: true,
-  diagnoseError: vi.fn(),
   doctorState: { status: 'idle' } as DoctorState,
   openSettingsTab: vi.fn(),
   request: vi.fn(),
@@ -153,7 +144,7 @@ const translations: Record<string, string> = {
   'settings.doctor.checks.provider-model-list.title': 'Remote model availability',
   'settings.doctor.checks.storage-disk-space.detail.low': 'Available disk space is low.',
   'settings.doctor.checks.storage-disk-space.title': 'Available disk space',
-  'settings.doctor.checks.install-version-channel.title': 'Version and release channel',
+  'settings.doctor.checks.install-architecture-match.title': 'Architecture match',
   'settings.doctor.checks.pending': 'Awaiting check',
   'settings.doctor.checks.skipped': 'Skipped because {{check}} did not pass.',
   'settings.doctor.empty.description': 'Run basic checks, or a full check that includes network and service checks.',
@@ -216,7 +207,6 @@ vi.mock('@renderer/services/mainWindowNavigation', () => ({
   openSettingsTab: (...args: unknown[]) => mocks.openSettingsTab(...args)
 }))
 vi.mock('@renderer/services/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
-vi.mock('@renderer/utils/errorDiagnosis', () => ({ diagnoseError: mocks.diagnoseError }))
 
 vi.mock('@renderer/i18n/resolver', () => ({ default: { t: (key: string) => translations[key] ?? key } }))
 
@@ -281,7 +271,6 @@ function completedDoctorState(
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',
@@ -311,7 +300,6 @@ describe('ErrorDetailContent diagnostics', () => {
     vi.clearAllMocks()
     mocks.cacheReady = true
     mocks.doctorState = { status: 'idle' }
-    mocks.diagnoseError.mockResolvedValue(aiDiagnosis)
     mocks.request.mockResolvedValue({ status: 'completed' })
   })
 
@@ -407,7 +395,6 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(outerDialog).toBeInTheDocument()
     expect(await screen.findByRole('region', { name: 'Diagnostic result' })).toBeInTheDocument()
     await waitFor(() => expect(viewDetails).toHaveFocus())
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
     expect(mocks.request).not.toHaveBeenCalledWith('diagnostics.doctor.cancel', expect.anything())
   })
 
@@ -514,11 +501,9 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(result).not.toHaveTextContent('Fixed: None')
     expect(attention).toHaveClass('text-warning')
     expect(result).toHaveAttribute('data-variant', 'sectioned')
-    expect(result).not.toHaveTextContent(aiDiagnosis.summary)
     expect(screen.queryByText(/AI summary/i)).not.toBeInTheDocument()
     expect(screen.queryByText('AI unavailable')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
     expect(screen.queryByRole('region', { name: 'Action required' })).not.toBeInTheDocument()
   })
 
@@ -554,7 +539,6 @@ describe('ErrorDetailContent diagnostics', () => {
       subject: { kind: 'global' },
       tier: 'quick'
     })
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
   })
 
   it('shows only user-fixable rows in Diagnostic result without local diagnostic dumps', async () => {
@@ -586,7 +570,7 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(within(result).queryByRole('button', { name: 'Local details' })).not.toBeInTheDocument()
     expect(within(result).queryByText('/Users/local/CherryStudio')).not.toBeInTheDocument()
     expect(within(result).getByRole('button', { name: /Startup configuration/ })).toBeInTheDocument()
-    expect(within(result).queryByRole('button', { name: /Version and release channel/ })).not.toBeInTheDocument()
+    expect(within(result).queryByRole('button', { name: /Architecture match/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Recent findings/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Network availability/ })).not.toBeInTheDocument()
     expect(within(result).queryByRole('button', { name: /Native components/ })).not.toBeInTheDocument()
@@ -609,7 +593,6 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(within(diagnosing).queryByText('Needs attention')).not.toBeInTheDocument()
     expect(within(diagnosing).getByRole('button', { name: 'Cancel checks' })).toBeEnabled()
     expect(screen.queryByRole('region', { name: 'Action required' })).not.toBeInTheDocument()
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
   })
 
   it('orders Doctor results and basic information', () => {
@@ -625,7 +608,6 @@ describe('ErrorDetailContent diagnostics', () => {
     expect(result).toHaveTextContent('needs attention: 1 item')
     expect(within(result).getByRole('button', { name: /Available disk space/ })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Action required' })).not.toBeInTheDocument()
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
   })
 
   it('refreshes conversation diagnostics from the header', async () => {
@@ -711,7 +693,6 @@ describe('ErrorDetailContent diagnostics', () => {
     await waitFor(() =>
       expect(mocks.request.mock.calls.filter(([route]) => route === 'diagnostics.doctor.run')).toHaveLength(1)
     )
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
   })
 
   it.each(['quick', 'live'] as const)('cancels an active %s run from the diagnostics header', async (tier) => {
@@ -727,40 +708,7 @@ describe('ErrorDetailContent diagnostics', () => {
     })
   })
 
-  it('shows only problem reporting in the footer and excludes diagnostic results from its prefill', async () => {
-    const user = userEvent.setup()
-    const onOpenDiagnosticReport = vi.fn()
-    mocks.doctorState = completedDoctorState([
-      {
-        id: 'logs-recent-findings',
-        status: 'warn',
-        durationMs: 1,
-        attribution: 'app-bug',
-        detail: { variant: 'findings' },
-        evidence: [{ key: 'request-body', value: 'private Doctor evidence', dataClass: 'consent_required' }],
-        actions: [{ kind: 'report' }]
-      }
-    ])
-    renderErrorDetailContent({
-      diagnosticReport: { location: 'Agent conversation' },
-      error: providerError,
-      onOpenDiagnosticReport
-    })
-
-    expect(screen.getByRole('region', { name: 'Diagnostic result' })).toBeInTheDocument()
-    const reportProblem = screen.getByRole('button', { name: 'Report a problem' })
-    expect(screen.queryByRole('group', { name: 'Error Details' })).not.toBeInTheDocument()
-    await user.click(reportProblem)
-
-    const description = onOpenDiagnosticReport.mock.calls[0][0]
-    expect(description).toContain('Error message: ProviderError: failed')
-    expect(description).toContain('Location: Agent conversation')
-    expect(description).not.toContain('private Doctor evidence')
-    expect(description).not.toContain('private stack')
-    expect(mocks.diagnoseError).not.toHaveBeenCalled()
-  })
-
-  it('waits for error details to finish closing before opening report review', async () => {
+  it('waits for error details to finish closing before opening the diagnostic export', async () => {
     vi.useFakeTimers()
     render(<PopupHost />)
 
@@ -785,10 +733,7 @@ describe('ErrorDetailContent diagnostics', () => {
       vi.advanceTimersByTime(1)
     })
     await act(async () => {})
-    expect(mocks.showDoctor).toHaveBeenCalledWith({
-      initialPanel: 'report',
-      initialDescription: expect.stringContaining('Location: Home conversation')
-    })
+    expect(mocks.showDoctor).toHaveBeenCalledWith({ initialPanel: 'export' })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

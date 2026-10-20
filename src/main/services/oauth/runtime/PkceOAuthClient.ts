@@ -66,7 +66,7 @@ function base64UrlEncode(buffer: Buffer): string {
  * Deliberately transport-agnostic: how the authorization `code` travels back
  * from the browser — a custom-protocol deep link, a loopback HTTP server, … —
  * is the caller's concern. The client only turns a `code` into tokens. Token
- * persistence and any post-auth side effects (account extraction, key fetch,
+ * persistence and any post-auth side effects (account extraction,
  * enabling the provider) also stay with the caller.
  */
 export class PkceOAuthClient {

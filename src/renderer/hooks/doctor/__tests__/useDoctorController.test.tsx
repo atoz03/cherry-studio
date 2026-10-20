@@ -22,12 +22,6 @@ const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn()
 }))
 
-// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
-vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FORK_DIAGNOSTICS_UPLOAD_ENABLED: true
-}))
-
 vi.mock('@data/CacheService', () => ({
   cacheService: {
     isSharedCacheReady: () => mocks.cacheReady,
@@ -62,10 +56,7 @@ vi.mock('@renderer/services/toast', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, values?: Record<string, unknown>) =>
-      key === 'settings.doctor.report.check_description' ? `${String(values?.title)} [${String(values?.checkId)}]` : key
-  })
+  useTranslation: () => ({ t: (key: string) => key })
 }))
 
 import { useDoctorController } from '../useDoctorController'
@@ -86,7 +77,6 @@ function completedDoctorState(): DoctorState {
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',
@@ -180,7 +170,6 @@ describe('useDoctorController', () => {
         basics: {
           version: '2.0.0',
           edition: 'global',
-          channel: 'latest',
           platform: 'darwin',
           arch: 'arm64',
           osRelease: '25.0.0',
@@ -262,25 +251,19 @@ describe('useDoctorController', () => {
     )
   })
 
-  it('switches a report action to the report panel without copying Doctor results into the draft', async () => {
+  it('switches a report action to the local export panel without building a bundle', async () => {
     mocks.doctorState = { status: 'canceled', runId: 'run-1', selectedCheckIds: [] }
     const { result } = renderHook(() =>
-      useDoctorController({
-        subject: { kind: 'global' },
-        initialPanel: 'checks',
-        initialDescription: 'confirmed safe description',
-        onNavigate: vi.fn()
-      })
+      useDoctorController({ subject: { kind: 'global' }, initialPanel: 'checks', onNavigate: vi.fn() })
     )
 
     await act(async () => result.current.executeAction('install-native-modules', { kind: 'report' }))
 
-    expect(result.current.session.activePanel).toBe('report')
-    expect(result.current.session.descriptionDraft).toBe('confirmed safe description')
+    expect(result.current.session.activePanel).toBe('export')
     expect(mocks.request.mock.calls.some(([route]) => String(route).startsWith('diagnostics.bundle.'))).toBe(false)
   })
 
-  it('hands an empty report draft to an embedded host using only public check identity', async () => {
+  it('hands a report action to an embedded host instead of switching panels', async () => {
     mocks.doctorState = { status: 'canceled', runId: 'run-1', selectedCheckIds: [] }
     const onReportProblem = vi.fn()
     const { result } = renderHook(() =>
@@ -289,9 +272,7 @@ describe('useDoctorController', () => {
 
     await act(async () => result.current.executeAction('logs-recent-findings', { kind: 'report' }, 'run-1'))
 
-    expect(onReportProblem).toHaveBeenCalledWith(
-      'settings.doctor.checks.logs-recent-findings.title [logs-recent-findings]'
-    )
+    expect(onReportProblem).toHaveBeenCalledOnce()
     expect(result.current.session.activePanel).toBe('checks')
   })
 

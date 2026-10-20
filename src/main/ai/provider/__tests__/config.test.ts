@@ -5,15 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { readProviderRegistry } from '@cherrystudio/provider-registry/node'
 import {
-  CHERRY_CLOUD_MODEL_GROUP,
-  CHERRY_CLOUD_PROVIDER_ID,
-  CHERRYAI_API_BASE_URL,
-  CHERRYAI_DEFAULT_MODEL_ID,
-  CHERRYAI_DEFAULT_MODEL_NAME,
-  CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-  CHERRYAI_PROVIDER_ID
-} from '@shared/data/presets/cherryai'
-import {
   LOCAL_EMBEDDING_MODEL_ID,
   LOCAL_EMBEDDING_PROVIDER_ID,
   LOCAL_EMBEDDING_UNIQUE_MODEL_ID
@@ -37,9 +28,7 @@ const { resolveApiKeyMock, getAuthConfigMock, getByProviderIdMock } = vi.hoisted
   getAuthConfigMock: vi.fn<(providerId: string) => AuthConfig | null>(),
   getByProviderIdMock: vi.fn()
 }))
-const { buildCherryCloudProviderConfigMock, generateSignatureMock, getCopilotTokenMock } = vi.hoisted(() => ({
-  buildCherryCloudProviderConfigMock: vi.fn(),
-  generateSignatureMock: vi.fn(),
+const { getCopilotTokenMock } = vi.hoisted(() => ({
   getCopilotTokenMock: vi.fn()
 }))
 
@@ -49,14 +38,6 @@ vi.mock('@main/data/services/ProviderService', () => ({
     getAuthConfig: getAuthConfigMock,
     getByProviderId: getByProviderIdMock
   }
-}))
-
-vi.mock('@main/ai/provider/cherryai', () => ({
-  generateSignature: generateSignatureMock
-}))
-
-vi.mock('@main/ai/provider/cherryCloud', () => ({
-  buildCherryCloudProviderConfig: buildCherryCloudProviderConfigMock
 }))
 
 vi.mock('@main/services/CopilotService', () => ({
@@ -77,10 +58,6 @@ beforeEach(() => {
       : { attribution: 'explicit', id: 'test-key', masked: 'sk-t****-key' }
   }))
   getAuthConfigMock.mockReturnValue(null)
-  buildCherryCloudProviderConfigMock.mockReturnValue({
-    providerId: 'anthropic',
-    providerSettings: { baseURL: 'https://cloud.cherryai.com.cn/v1', apiKey: 'managed-session' }
-  })
   getCopilotTokenMock.mockResolvedValue({ token: 'copilot-token' })
 })
 
@@ -89,57 +66,6 @@ afterEach(() => {
 })
 
 describe('providerToAiSdkConfig — builder dispatch matrix', () => {
-  it.each([ENDPOINT_TYPE.ANTHROPIC_MESSAGES, ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS])(
-    'passes managed Cherry Cloud %s models to its credential-free transport',
-    async (endpointType) => {
-      const provider = makeProvider({ id: CHERRY_CLOUD_PROVIDER_ID, presetProviderId: CHERRYAI_PROVIDER_ID })
-      const model = makeModel({
-        id: `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-go`,
-        apiModelId: 'deepseek-go',
-        providerId: CHERRY_CLOUD_PROVIDER_ID,
-        group: CHERRY_CLOUD_MODEL_GROUP,
-        endpointTypes: [endpointType]
-      })
-
-      const resolved = await resolveProviderAiSdkConfig(provider, model)
-
-      expect(resolved.credentialReceipt).toEqual({ attribution: 'unknown' })
-      expect(buildCherryCloudProviderConfigMock.mock.calls[0][0]).toBe(endpointType)
-      expect(resolveApiKeyMock).not.toHaveBeenCalled()
-    }
-  )
-
-  it('does not route an ordinary CherryAI model from its display group', async () => {
-    const provider = makeProvider({ id: CHERRYAI_PROVIDER_ID })
-    const model = makeModel({
-      id: `${CHERRYAI_PROVIDER_ID}::custom-model`,
-      apiModelId: 'custom-model',
-      providerId: CHERRYAI_PROVIDER_ID,
-      group: CHERRY_CLOUD_MODEL_GROUP
-    })
-
-    await resolveProviderAiSdkConfig(provider, model)
-
-    expect(buildCherryCloudProviderConfigMock).not.toHaveBeenCalled()
-    expect(resolveApiKeyMock).toHaveBeenCalledWith(CHERRYAI_PROVIDER_ID, undefined)
-  })
-
-  it('keeps the managed CherryAI default model on its API-key HMAC transport', async () => {
-    const provider = makeProvider({ id: CHERRYAI_PROVIDER_ID })
-    const model = makeModel({
-      id: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-      apiModelId: CHERRYAI_DEFAULT_MODEL_ID,
-      providerId: CHERRYAI_PROVIDER_ID,
-      group: 'Qwen'
-    })
-
-    const resolved = await resolveProviderAiSdkConfig(provider, model)
-
-    expect(resolved.config.providerId).toBe('openai-compatible')
-    expect(buildCherryCloudProviderConfigMock).not.toHaveBeenCalled()
-    expect(resolveApiKeyMock).toHaveBeenCalledWith(CHERRYAI_PROVIDER_ID, undefined)
-  })
-
   it('uses an explicit API key override instead of the provider rotation key', async () => {
     const provider = makeProvider({ id: 'openai' })
     const model = makeModel({ id: 'openai::gpt-4o', apiModelId: 'gpt-4o', providerId: 'openai' })
@@ -1020,62 +946,6 @@ describe('providerToAiSdkConfig — builder dispatch matrix', () => {
       // The fix: relay base URLs come from THIS instance, not open.cherryin.net.
       expect(settings.geminiBaseURL).toBe(`${host}/v1beta`)
       expect(settings.anthropicBaseURL).toBe(`${host}/v1`)
-    })
-  })
-
-  describe('CherryAI routing', () => {
-    it('uses custom fetch to sign chat completions requests', async () => {
-      resolveApiKeyMock.mockReturnValue({ value: '', apiKeySelection: { attribution: 'unknown' } })
-      generateSignatureMock.mockReturnValue({
-        'X-Client-ID': 'cherry-studio',
-        'X-Timestamp': '1700000000',
-        'X-Signature': 'signed'
-      })
-      // The signing wrapper composes onto customFetch (net.fetch), so the request
-      // routes through Chromium's proxy-aware network stack rather than globalThis.fetch.
-      vi.mocked(net.fetch).mockResolvedValue(new Response('{}'))
-
-      const provider = makeProvider({
-        id: CHERRYAI_PROVIDER_ID,
-        presetProviderId: CHERRYAI_PROVIDER_ID,
-        endpointConfigs: {
-          [ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]: {
-            baseUrl: CHERRYAI_API_BASE_URL
-          }
-        },
-        defaultChatEndpoint: ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS
-      })
-      const model = makeModel({
-        id: CHERRYAI_DEFAULT_UNIQUE_MODEL_ID,
-        providerId: CHERRYAI_PROVIDER_ID,
-        name: CHERRYAI_DEFAULT_MODEL_NAME
-      })
-
-      const config = await providerToAiSdkConfig(provider, model)
-      await (config.providerSettings as { fetch: typeof fetch }).fetch(`${CHERRYAI_API_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: { Existing: 'yes' },
-        body: JSON.stringify({ model: CHERRYAI_DEFAULT_MODEL_ID })
-      })
-
-      expect(config.providerId).toBe('openai-compatible')
-      expect(generateSignatureMock).toHaveBeenCalledWith({
-        method: 'POST',
-        path: '/chat/completions',
-        query: '',
-        body: { model: CHERRYAI_DEFAULT_MODEL_ID }
-      })
-      expect(net.fetch).toHaveBeenCalledWith(
-        `${CHERRYAI_API_BASE_URL}/chat/completions`,
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Existing: 'yes',
-            'X-Client-ID': 'cherry-studio',
-            'X-Timestamp': '1700000000',
-            'X-Signature': 'signed'
-          })
-        })
-      )
     })
   })
 

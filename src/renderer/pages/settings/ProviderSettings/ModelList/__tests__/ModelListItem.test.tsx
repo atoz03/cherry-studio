@@ -50,10 +50,6 @@ vi.mock('@renderer/utils/model', async (importOriginal) => ({
   getModelLogoRef: () => undefined
 }))
 
-vi.mock('../../components/FreeTrialModelTag', () => ({
-  FreeTrialModelTag: () => null
-}))
-
 vi.mock('../../components/ModelTagsWithLabel', () => ({
   default: () => null
 }))

@@ -1,14 +1,9 @@
-import { ArrowLeft, History } from 'lucide-react'
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@cherrystudio/ui'
 import { cn } from '@cherrystudio/ui/lib/utils'
-import { DiagnosticHistoryDialog } from '@renderer/components/feedback/DiagnosticHistoryDialog'
-import {
-  DiagnosticUploadPanel,
-  type DiagnosticUploadPanelHandle
-} from '@renderer/components/feedback/DiagnosticUploadPanel'
 import { useDoctorController } from '@renderer/hooks/doctor'
 import { openSettingsTab } from '@renderer/services/mainWindowNavigation'
 import { POPUP_EXIT_MS, type PopupInjectedProps } from '@renderer/services/popup'
@@ -20,49 +15,34 @@ import { DoctorChecksPanel } from './DoctorChecksPanel'
 const DiagnosticBundlePanel = lazy(() => import('@renderer/components/feedback/DiagnosticBundlePanel'))
 const PANEL_DESCRIPTION_KEYS = {
   checks: 'settings.doctor.panel_descriptions.checks',
-  export: 'settings.doctor.panel_descriptions.export',
-  report: 'settings.doctor.panel_descriptions.report'
+  export: 'settings.doctor.panel_descriptions.export'
 } as const satisfies Record<DoctorPanel, string>
 const PANEL_TITLE_KEYS = {
   checks: 'settings.doctor.title',
-  export: 'settings.doctor.panels.export',
-  report: 'settings.doctor.panels.report'
+  export: 'settings.doctor.panels.export'
 } as const satisfies Record<DoctorPanel, string>
 
 export interface DoctorDialogParams {
   readonly initialPanel: DoctorPanel
-  readonly initialDescription?: string
   readonly initialRunTier?: DoctorRunTier
 }
 
 type DoctorDialogProps = DoctorDialogParams & PopupInjectedProps<Record<string, never>>
 
-export function DoctorDialog({ initialDescription, initialPanel, initialRunTier, open, resolve }: DoctorDialogProps) {
+export function DoctorDialog({ initialPanel, initialRunTier, open, resolve }: DoctorDialogProps) {
   const { t } = useTranslation()
-  const reportPanelRef = useRef<DiagnosticUploadPanelHandle>(null)
   const panelHeadingRef = useRef<HTMLDivElement>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const canReturnToChecks = initialPanel === 'checks'
 
-  const finishHandoff = useCallback(
-    async (action: () => void) => {
-      if (reportPanelRef.current) {
-        const canClose = await reportPanelRef.current.requestClose()
-        if (!canClose) return
-      }
+  const navigate = useCallback(
+    (target: DoctorNavigateTarget) => {
       resolve({})
-      window.setTimeout(action, POPUP_EXIT_MS)
+      window.setTimeout(() => openSettingsTab(target), POPUP_EXIT_MS)
     },
     [resolve]
   )
-
-  const navigate = useCallback(
-    (target: DoctorNavigateTarget) => void finishHandoff(() => openSettingsTab(target)),
-    [finishHandoff]
-  )
   const controller = useDoctorController({
     subject: { kind: 'global' },
-    initialDescription,
     initialPanel,
     initialRunTier,
     onNavigate: navigate
@@ -70,31 +50,12 @@ export function DoctorDialog({ initialDescription, initialPanel, initialRunTier,
   const { setPanelInteraction } = controller
   const isExportPanel = controller.session.activePanel === 'export'
 
-  const close = useCallback(async () => {
-    if (controller.isCloseBlocked) return
-    if (reportPanelRef.current) {
-      const canClose = await reportPanelRef.current.requestClose()
-      if (!canClose) return
-    }
-    resolve({})
+  const close = useCallback(() => {
+    if (!controller.isCloseBlocked) resolve({})
   }, [controller.isCloseBlocked, resolve])
-
-  const returnToChecks = useCallback(async () => {
-    if (!controller.canChangePanel) return
-    if (controller.session.activePanel === 'report' && reportPanelRef.current) {
-      const canClose = await reportPanelRef.current.requestClose()
-      if (canClose) controller.setPanel('checks')
-      return
-    }
-    controller.setPanel('checks')
-  }, [controller])
 
   const setBundleBusy = useCallback(
     (busy: boolean) => setPanelInteraction('bundle-operation', busy),
-    [setPanelInteraction]
-  )
-  const setReportBusy = useCallback(
-    (busy: boolean) => setPanelInteraction('report-operation', busy),
     [setPanelInteraction]
   )
   const finishSecondaryPanel = useCallback(() => {
@@ -113,7 +74,7 @@ export function DoctorDialog({ initialDescription, initialPanel, initialRunTier,
   }, [controller.session.activePanel])
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && void close()}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && close()}>
       <DialogContent
         {...(!isExportPanel ? { 'aria-describedby': undefined } : {})}
         size="xl"
@@ -133,25 +94,12 @@ export function DoctorDialog({ initialDescription, initialPanel, initialRunTier,
               size="icon-sm"
               aria-label={t('settings.doctor.actions.back_to_checks')}
               disabled={!controller.canChangePanel}
-              onClick={() => void returnToChecks()}>
+              onClick={() => controller.setPanel('checks')}>
               <ArrowLeft className="size-4" aria-hidden />
             </Button>
           ) : null}
           <div ref={panelHeadingRef} tabIndex={-1} className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center gap-1">
-              <DialogTitle>{panelTitle}</DialogTitle>
-              {controller.session.activePanel === 'report' ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t('settings.about.feedback.history.title')}
-                  title={t('settings.about.feedback.history.title')}
-                  onClick={() => setHistoryOpen(true)}>
-                  <History className="size-4" aria-hidden />
-                </Button>
-              ) : null}
-            </div>
+            <DialogTitle>{panelTitle}</DialogTitle>
             {isExportPanel ? <DialogDescription>{panelDescription}</DialogDescription> : null}
           </div>
         </DialogHeader>
@@ -169,18 +117,7 @@ export function DoctorDialog({ initialDescription, initialPanel, initialRunTier,
             />
           </Suspense>
         ) : null}
-
-        {controller.session.activePanel === 'report' ? (
-          <DiagnosticUploadPanel
-            ref={reportPanelRef}
-            description={controller.session.descriptionDraft}
-            onBusyChange={setReportBusy}
-            onDescriptionChange={controller.setDescription}
-            onClose={finishSecondaryPanel}
-          />
-        ) : null}
       </DialogContent>
-      <DiagnosticHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} />
     </Dialog>
   )
 }

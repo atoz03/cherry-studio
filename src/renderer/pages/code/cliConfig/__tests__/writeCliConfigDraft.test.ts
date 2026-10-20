@@ -1578,15 +1578,6 @@ describe('writeCliConfigDraft', () => {
       expect(dataApiService.get).not.toHaveBeenCalledWith('/providers/deepseek')
     })
 
-    it('rejects the CherryAI managed default model and writes nothing', async () => {
-      mockGet({ '/models/': () => ({ id: 'qwen' }) })
-
-      await expect(
-        writeCliConfigDraft({ cliTool: CodeCli.CLAUDE_CODE, modelId: 'cherryai::qwen', gateway })
-      ).rejects.toThrow(/gateway/)
-      expect(writes).toEqual([])
-    })
-
     it('rebuilds from the edited draft: preserves hand-edited unmanaged fields and injects the fresh key', async () => {
       // Reviewer's data-loss path: the preview draft the user hand-edited carries a stale/empty
       // gateway key. A gateway save must NOT write it verbatim (stale key) and must NOT rebuild from

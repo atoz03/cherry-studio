@@ -10,10 +10,6 @@ const { netFetchMock, getCatalogVersionMock, notifyDataChangeMock, readActiveMan
   }))
 
 vi.mock('@main/services/AppUpdaterService', () => ({ RELEASE_HISTORY_URL: 'https://updates.example' }))
-vi.mock('@main/services/cherryCloud/CherryCloudService', () => ({
-  resolveCherryCloudApiOrigin: () => 'https://cloud.example'
-}))
-vi.mock('@main/services/diagnostics', () => ({ DIAGNOSTIC_UPLOAD_URL: 'https://diagnostics.example' }))
 
 vi.mock('@logger', () => ({
   loggerService: {
@@ -70,7 +66,6 @@ import { MockMainCacheServiceUtils } from '@test-mocks/main/CacheService'
 
 import { REGISTRY_SCHEMA_VERSION } from '@cherrystudio/provider-registry/node'
 
-import { builtinEndpoints } from '../network/endpoints'
 import {
   ProviderRegistryUpdaterService,
   REGISTRY_URL_GITCODE,
@@ -291,15 +286,6 @@ describe('ProviderRegistryUpdaterService.check', () => {
 
     expect(writeSnapshotMock).not.toHaveBeenCalled()
     expect(netFetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/models.json'), expect.anything())
-  })
-
-  it.each(['US', 'CN', null])('diagnoses the updater mirror with a cold country cache (%s)', async (country) => {
-    mockRemote({ country })
-    const endpoints = await builtinEndpoints()
-    const url = endpoints.find((endpoint) => endpoint.id === 'registry')!.url
-    await service.check()
-    expect(netFetchMock).toHaveBeenCalledWith(url, expect.anything())
-    expect(url).toContain(country === 'US' ? 'raw.githubusercontent.com' : 'raw.gitcode.com')
   })
 
   it('uses the GitCode mirror inside China', async () => {

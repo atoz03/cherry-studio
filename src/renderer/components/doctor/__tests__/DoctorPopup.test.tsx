@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ChangeEvent } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { popupService } from '@renderer/services/popup'
@@ -25,12 +24,6 @@ const mocks = vi.hoisted(() => ({
     'settings.doctor.summary.running_basic': 'Running quick basic checks…',
     'settings.doctor.summary.running_full': 'Running full checks, including network and services…'
   } as Record<string, string>
-}))
-
-// Upstream behaviour (switch on); the fork's switched-off path is covered by the *.fork.test files.
-vi.mock('@shared/utils/forkFeatures', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  FORK_DIAGNOSTICS_UPLOAD_ENABLED: true
 }))
 
 vi.mock('@renderer/services/popup', async (importOriginal) => await importOriginal())
@@ -63,29 +56,13 @@ vi.mock('@renderer/services/LoggerService', () => ({
 vi.mock('@renderer/services/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@renderer/services/mainWindowNavigation', () => ({ openSettingsTab: vi.fn() }))
 
-vi.mock('@renderer/components/feedback/DiagnosticUploadPanel', () => {
-  const React = require('react')
-  const DiagnosticUploadPanel = ({ ref, description, onBusyChange, onClose, onDescriptionChange }) => {
-    React.useImperativeHandle(ref, () => ({ requestClose: async () => true }))
-    return React.createElement(
-      React.Fragment,
-      null,
-      React.createElement('textarea', {
-        'aria-label': 'settings.about.diagnostics.report.description_label',
-        value: description,
-        onChange: (event: ChangeEvent<HTMLTextAreaElement>) => onDescriptionChange(event.target.value)
-      }),
-      React.createElement('button', { type: 'button', onClick: () => onBusyChange?.(true) }, 'Start report operation'),
-      React.createElement('button', { type: 'button', onClick: onClose }, 'Close report panel')
-    )
-  }
-  return { DiagnosticUploadPanel }
-})
-
 vi.mock('@renderer/components/feedback/DiagnosticBundlePanel', () => ({
-  default: ({ onClose }) => (
+  default: ({ onBusyChange, onClose }) => (
     <div>
       settings.doctor.panels.export
+      <button type="button" onClick={() => onBusyChange(true)}>
+        Start export operation
+      </button>
       <button type="button" onClick={onClose}>
         Close export panel
       </button>
@@ -108,7 +85,7 @@ import { PopupHost } from '@renderer/components/PopupHost'
 import DoctorPopup from '../DoctorPopup'
 
 function completedDoctorState(
-  results: readonly DoctorCheckResult[] = [{ id: 'install-version-channel', status: 'pass', durationMs: 1 }],
+  results: readonly DoctorCheckResult[] = [{ id: 'install-architecture-match', status: 'pass', durationMs: 1 }],
   expiresAt = new Date(Date.now() + 60_000).toISOString()
 ): DoctorState {
   const now = Date.now()
@@ -126,7 +103,6 @@ function completedDoctorState(
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',
@@ -162,14 +138,13 @@ describe('DoctorPopup', () => {
     render(<PopupHost />)
 
     act(() => {
-      void DoctorPopup.show({ initialPanel: 'report' })
+      void DoctorPopup.show({ initialPanel: 'export' })
     })
 
     // The first test pays the lazy DoctorDialog import, which exceeds the default 1s wait cold.
     const dialog = await screen.findByRole('dialog', {}, { timeout: 8000 })
     expect(dialog).toHaveClass('max-h-[calc(100vh-100px)]')
     expect(dialog).not.toHaveClass('h-[min(760px,calc(100vh-2rem))]')
-    expect(dialog).not.toHaveAccessibleDescription()
   })
 
   it('shows the checks panel without a description or dividers', async () => {
@@ -188,18 +163,18 @@ describe('DoctorPopup', () => {
     expect(dialog.querySelector('[data-slot="dialog-footer"]')).not.toHaveClass('border-t')
   })
 
-  it('treats a directly opened report as a standalone problem report', async () => {
+  it('treats a directly opened export as a standalone panel', async () => {
     const user = userEvent.setup()
     render(<PopupHost />)
 
     act(() => {
-      void DoctorPopup.show({ initialPanel: 'report' })
+      void DoctorPopup.show({ initialPanel: 'export' })
     })
 
-    expect(await screen.findByRole('heading', { name: 'settings.doctor.panels.report' })).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'settings.doctor.panels.export' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'settings.doctor.actions.back_to_checks' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Close report panel' }))
+    await user.click(screen.getByRole('button', { name: 'Close export panel' }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
@@ -219,7 +194,7 @@ describe('DoctorPopup', () => {
     expect(screen.queryByRole('region', { name: 'error.diagnostics.result' })).not.toBeInTheDocument()
     expect(
       screen.getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
   })
@@ -327,7 +302,7 @@ describe('DoctorPopup', () => {
       selectedCheckIds: DOCTOR_CHECK_IDS.filter((id) => DOCTOR_CHECK_CATALOG[id].tier === 'quick'),
       startedAt: new Date().toISOString(),
       activeCheckIds: ['provider-api-key-present'],
-      results: [{ id: 'install-version-channel', status: 'pass', durationMs: 1 }]
+      results: [{ id: 'install-architecture-match', status: 'pass', durationMs: 1 }]
     }
     const view = render(<PopupHost />)
 
@@ -344,7 +319,7 @@ describe('DoctorPopup', () => {
     expect(screen.queryByText(/^Checking:/)).not.toBeInTheDocument()
     expect(
       within(checks).getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
     expect(
@@ -389,7 +364,6 @@ describe('DoctorPopup', () => {
         basics: {
           version: '2.0.0',
           edition: 'global',
-          channel: 'latest',
           platform: 'darwin',
           arch: 'arm64',
           osRelease: '25.0.0',
@@ -400,7 +374,7 @@ describe('DoctorPopup', () => {
         },
         results: [
           {
-            id: 'install-version-channel',
+            id: 'install-architecture-match',
             status: 'pass',
             durationMs: 1
           },
@@ -483,7 +457,7 @@ describe('DoctorPopup', () => {
       'settings.doctor.checks.permission-accessibility.title',
       'settings.doctor.checks.network-online.title',
       'settings.doctor.checks.logs-recent-findings.title',
-      'settings.doctor.checks.install-version-channel.title',
+      'settings.doctor.checks.install-architecture-match.title',
       'Default provider API key'
     ]
     for (const [index, title] of expectedTitles.entries()) {
@@ -495,7 +469,7 @@ describe('DoctorPopup', () => {
 
     expect(
       screen.getByRole('button', {
-        name: /settings\.doctor\.checks\.install-version-channel\.title.*settings\.doctor\.status\.pass/
+        name: /settings\.doctor\.checks\.install-architecture-match\.title.*settings\.doctor\.status\.pass/
       })
     ).toBeVisible()
     expect(
@@ -583,16 +557,16 @@ describe('DoctorPopup', () => {
     })
   })
 
-  it('blocks every dismiss path while the report panel is busy', async () => {
+  it('blocks every dismiss path while the export panel is busy', async () => {
     const user = userEvent.setup()
     render(<PopupHost />)
 
     act(() => {
-      void DoctorPopup.show({ initialPanel: 'report' })
+      void DoctorPopup.show({ initialPanel: 'export' })
     })
 
     const dialog = await screen.findByRole('dialog')
-    await user.click(screen.getByRole('button', { name: 'Start report operation' }))
+    await user.click(await screen.findByRole('button', { name: 'Start export operation' }))
 
     expect(screen.queryByRole('button', { name: 'common.close' })).not.toBeInTheDocument()
     const overlay = document.querySelector('[data-slot="dialog-overlay"]')

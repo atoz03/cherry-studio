@@ -34,7 +34,6 @@ const cacheHookMocks = vi.hoisted(() => ({
   setSelectedMessageIds: vi.fn()
 }))
 const errorActionsMock = vi.hoisted(() => ({
-  diagnoseMessageError: vi.fn(),
   openErrorDetail: vi.fn(),
   navigateErrorTarget: vi.fn()
 }))
@@ -449,7 +448,6 @@ describe('useAgentMessageListProviderValue', () => {
     expect(value?.actions.exportToObsidian).toBe(exportActionsMock.exportToObsidian)
     expect(value?.actions.exportToJoplin).toBe(exportActionsMock.exportToJoplin)
     expect(value?.actions.exportToSiyuan).toBe(exportActionsMock.exportToSiyuan)
-    expect(value?.actions.diagnoseMessageError).toBe(errorActionsMock.diagnoseMessageError)
     expect(value?.actions.openErrorDetail).toBe(errorActionsMock.openErrorDetail)
     expect(value?.actions.navigateErrorTarget).toBe(errorActionsMock.navigateErrorTarget)
     expect(value?.actions.removeMessageErrorPart).toBeUndefined()
@@ -648,42 +646,6 @@ describe('useAgentMessageListProviderValue', () => {
     expect(useMessageErrorActionsMock.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ diagnosticReport: undefined })
     )
-  })
-
-  it('exposes diagnostic report launch only to the interactive message consumer', () => {
-    const topic = {
-      id: 'agent-session:session-1',
-      assistantId: 'agent-1',
-      name: 'Agent session',
-      lastActivityAt: '2026-01-01T00:00:00.000Z',
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-      messages: []
-    } as Topic
-    const openDiagnosticReport = vi.fn()
-    let interactiveValue: MessageListProviderValue | undefined
-    let captureValue: MessageListProviderValue | undefined
-
-    const Probe = ({ capture = false }: { capture?: boolean }) => {
-      const value = useAgentMessageListProviderValue({
-        topic,
-        messages: [],
-        partsByMessageId: {},
-        isLoading: false,
-        imageActionConsumer: capture ? 'capture' : undefined,
-        messageNavigation: 'anchor',
-        openDiagnosticReport
-      })
-      if (capture) captureValue = value
-      else interactiveValue = value
-      return null
-    }
-
-    const view = render(<Probe />)
-    view.rerender(<Probe capture />)
-
-    expect(interactiveValue?.actions.openDiagnosticReport).toBe(openDiagnosticReport)
-    expect(captureValue?.actions.openDiagnosticReport).toBeUndefined()
   })
 
   it('renders terminal fallbacks in both current and sealed history layers', () => {

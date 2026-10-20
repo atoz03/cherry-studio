@@ -1,11 +1,10 @@
 import { modelService } from '@data/services/ModelService'
 import { providerService } from '@data/services/ProviderService'
 import { loggerService } from '@logger'
-import { isManagedCherryAiDefaultModel } from '@shared/data/presets/cherryai'
 import { type Model, parseUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { formatGatewayModelId } from '@shared/utils/apiGateway'
-import { isGatewayRoutableModel, isPublicGatewayRoutableModel } from '@shared/utils/model'
+import { isGatewayRoutableModel } from '@shared/utils/model'
 import { isAgentOnlyProvider, isExternalCliProvider } from '@shared/utils/provider'
 
 const logger = loggerService.withContext('ApiGatewayModels')
@@ -96,11 +95,8 @@ function stripClaudeContextMarker(apiModelId: string): string {
   return apiModelId.replace(/\s*\[1m\]\s*$/i, '').trimEnd()
 }
 
-/** Resolve a `providerId:apiModelId`; Cherry Cloud models are served only to internal requests. */
-export async function resolveGatewayModelAddress(
-  modelAddress: string,
-  internal = false
-): Promise<ResolvedGatewayModelAddress> {
+/** Resolve a `providerId:apiModelId`. */
+export async function resolveGatewayModelAddress(modelAddress: string): Promise<ResolvedGatewayModelAddress> {
   const sepIdx = modelAddress.indexOf(':')
   if (sepIdx <= 0 || sepIdx >= modelAddress.length - 1) {
     throw gatewayModelError(`Invalid model format: "${modelAddress}". Expected "providerId:apiModelId".`, 400)
@@ -108,9 +104,6 @@ export async function resolveGatewayModelAddress(
 
   const providerId = modelAddress.slice(0, sepIdx)
   const apiModelId = modelAddress.slice(sepIdx + 1)
-  if (isManagedCherryAiDefaultModel(providerId, apiModelId)) {
-    throw gatewayModelError('CherryAI managed default model is not available through the API gateway', 400)
-  }
 
   let provider: Provider
   try {
@@ -122,10 +115,9 @@ export async function resolveGatewayModelAddress(
     throw gatewayModelError(`Model "${modelAddress}" is not available through the API gateway`, 400)
   }
 
-  const isRoutableModel = internal ? isGatewayRoutableModel : isPublicGatewayRoutableModel
   const candidates = modelService
     .list({ providerId, enabled: true })
-    .filter((candidate) => isRoutableModel(candidate))
+    .filter((candidate) => isGatewayRoutableModel(candidate))
     .map((candidate) => ({ candidate, id: candidate.apiModelId ?? parseUniqueModelId(candidate.id).modelId }))
   // Exact ids win, so catalog models whose id itself ends in `[1m]` stay addressable. Otherwise fall
   // back to the id without a Claude Code context marker / trailing whitespace (e.g. `model [1M]`, or
@@ -163,7 +155,7 @@ export async function getModels(filter: ModelsFilter = {}): Promise<ApiModelsRes
       }
       // Same routable-model predicate as the renderer's gateway picker — the
       // listing must never advertise a model the proxy cannot route.
-      if (!isPublicGatewayRoutableModel(model)) {
+      if (!isGatewayRoutableModel(model)) {
         continue
       }
 

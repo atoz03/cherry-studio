@@ -32,9 +32,6 @@ export enum IpcChannel {
   Nutstore_DecryptToken = 'nutstore:decrypt-token',
   Nutstore_GetDirectoryContents = 'nutstore:get-directory-contents',
 
-  //aes
-  Aes_Decrypt = 'aes:decrypt',
-
   Shortcut_RegistrationConflict = 'shortcut:registration-conflict',
 
   NativeCommandPopupMenu_Show = 'native-command-popup-menu:show',

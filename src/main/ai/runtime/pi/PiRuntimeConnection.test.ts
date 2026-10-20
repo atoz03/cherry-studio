@@ -14,7 +14,6 @@ import { agentTable } from '@data/db/schemas/agent'
 import { mcpServerTable } from '@data/db/schemas/mcpServer'
 import { queueRetiredAgentRuntimeMigration } from '@data/services/retiredAgentRuntimeMigration'
 import type * as UserDataSqliteGuard from '@main/ai/toolApproval/userDataSqliteGuard'
-import { CHERRY_CLOUD_MODEL_GROUP, CHERRY_CLOUD_PROVIDER_ID } from '@shared/data/presets/cherryai'
 
 import type { AgentRuntimeConnectInput, AgentRuntimeEvent, AgentRuntimeUserInput } from '../types'
 import { forkPiSession } from './piFork'
@@ -428,9 +427,7 @@ beforeEach(() => {
       providerId: 'p',
       providerName: 'P',
       source: null,
-      frozenModels: [
-        { modelId: 'p::m', apiModelId: 'm', modelName: 'M', aliases: ['p::m', 'm'], pricingSnapshot: null }
-      ]
+      frozenModels: [{ modelId: 'p::m', modelName: 'M', aliases: ['p::m', 'm'], pricingSnapshot: null }]
     }
   })
   mocks.getPath.mockImplementation((key: string, filename?: string) => {
@@ -547,19 +544,15 @@ describe('PiRuntimeConnection', () => {
     }
   })
 
-  it('establishes the Cloud baseline after starting the gateway', async () => {
+  it('establishes the gateway route baseline after starting the gateway', async () => {
     mocks.usesPiGateway.mockReturnValue(true)
     let gatewayRunning = false
-    const cloudModelId = `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free` as const
+    const gatewayModelId = 'azure::deployment' as const
     const facts = {
-      agent: { id: 'agent-1', model: cloudModelId, instructions: 'Be helpful.' },
+      agent: { id: 'agent-1', model: gatewayModelId, instructions: 'Be helpful.' },
       session: mocks.getById(),
-      provider: { id: CHERRY_CLOUD_PROVIDER_ID },
-      model: {
-        id: cloudModelId,
-        providerId: CHERRY_CLOUD_PROVIDER_ID,
-        group: CHERRY_CLOUD_MODEL_GROUP
-      },
+      provider: { id: 'azure' },
+      model: { id: gatewayModelId, providerId: 'azure' },
       enabledApiKeys: [],
       additionalSkillPaths: [],
       mcpServerSnapshots: new Map(),
@@ -572,22 +565,22 @@ describe('PiRuntimeConnection', () => {
     mocks.resolveInjection.mockImplementation(() => {
       gatewayRunning = true
       return {
-        providerName: CHERRY_CLOUD_PROVIDER_ID,
+        providerName: 'azure',
         api: 'anthropic-messages',
         providerConfig: {
-          name: 'Cherry Cloud',
+          name: 'Azure',
           baseUrl: 'http://127.0.0.1:23333',
           apiKey: 'placeholder',
           api: 'anthropic-messages',
           models: []
         },
         apiKey: 'gateway-key',
-        modelId: 'deepseek-free',
+        modelId: 'deployment',
         usageCapture: { owner: 'provider-calls' }
       }
     })
 
-    const connection = await new PiRuntimeConnection({ ...input, modelId: cloudModelId }).start()
+    const connection = await new PiRuntimeConnection({ ...input, modelId: gatewayModelId }).start()
 
     expect(mocks.resolveInjection).toHaveBeenCalledTimes(2)
     expect(mocks.createAgentSession).toHaveBeenCalledOnce()

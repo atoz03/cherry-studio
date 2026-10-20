@@ -28,13 +28,7 @@ The in-app release history follows the same managed path. Stable release prepara
 
 ## Channels
 
-The global and China editions use separate electron-updater channels:
-
-- `latest` / `latest-cn`: stable release channels.
-- `rc` / `rc-cn`: release candidate channels.
-- `beta` / `beta-cn`: beta release channels.
-
-When the test plan is disabled, the client selects its edition's stable channel. When it is enabled, the client uses the edition-specific RC or Beta channel selected in settings. Edition comes from packaged metadata and is independent of `X-Region`, so changing network region cannot move an installation between product update channels.
+The global and China editions use separate stable electron-updater channels, `latest` and `latest-cn`. Edition comes from packaged metadata and is independent of `X-Region`, so changing network region cannot move an installation between product update channels.
 
 ## Request Contract
 

@@ -13,9 +13,9 @@ the legacy Dexie `pinned:models` value.
 | Pinned models | Dexie `pinned:models` |
 | Provider logos | Dexie `image://provider-<providerId>` |
 
-Managed CherryAI rows are not copied from Redux. The v2 seeder owns the
-canonical CherryAI provider/default model, and legacy CherryAI pins are
-rewritten to that seeded model.
+The built-in free CherryAI provider is retired: its rows are skipped like
+other retired providers, and legacy CherryAI pins and default-model
+references migrate as unset so the user picks a model.
 
 ## Preset Ownership Projection
 
@@ -144,7 +144,7 @@ providers always take routing families from the current registry.
 
 Provider rows and their model rows are inserted in one synchronous
 `withWriteTx` transaction. Order keys preserve the prepared provider/model
-sequence, after the seeded CherryAI row.
+sequence.
 
 ## Implementation Files
 

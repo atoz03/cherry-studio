@@ -12,9 +12,7 @@ import { defineRoute } from '../define'
  * Providers with custom inputs or results keep those contracts in their own
  * domain instead of widening this surface.
  *
- * Codex and Grok CLI use an HTTP loopback callback through `sign_in`. CherryIN
- * shares the runtime but keeps its provider-specific IPC contract under
- * `cherryin.sign_in`.
+ * Codex and Grok CLI use an HTTP loopback callback through `sign_in`.
  *
  * `sign_in` and `get_account` return only the account id; OAuth tokens stay in
  * main. Providers without an account concept resolve `{ accountId: null }`.

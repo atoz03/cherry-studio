@@ -79,12 +79,10 @@ function createController(state: DoctorState) {
     scope: 'global',
     session: {
       activePanel: 'checks',
-      descriptionDraft: '',
       fixedCheckIds: [],
       interaction: { kind: 'idle' },
       relaunchRequired: false
     },
-    setDescription: vi.fn<DoctorController['setDescription']>(),
     setPanel: vi.fn<DoctorController['setPanel']>(),
     setPanelInteraction: vi.fn<DoctorController['setPanelInteraction']>(),
     toggleDevTools: vi.fn<DoctorController['toggleDevTools']>(),
@@ -163,7 +161,6 @@ function completedState(
       basics: {
         version: '2.0.0',
         edition: 'global',
-        channel: 'latest',
         platform: 'darwin',
         arch: 'arm64',
         osRelease: '25.0.0',

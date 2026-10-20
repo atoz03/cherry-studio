@@ -7,8 +7,7 @@ type AboutSettingsSearch = Partial<Record<typeof DOCTOR_OPEN_QUERY_PARAM, Doctor
 
 const DOCTOR_PANEL_VALUES = {
   checks: true,
-  export: true,
-  report: true
+  export: true
 } as const satisfies Record<DoctorPanel, true>
 
 function isDoctorPanel(value: unknown): value is DoctorPanel {

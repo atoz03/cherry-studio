@@ -12,7 +12,7 @@ import { useOpenReleaseNotes } from '@renderer/hooks/useOpenReleaseNotes'
 const logger = loggerService.withContext('HelpMenu')
 
 // Loaded on click: the doctor barrel drags the Markdown pipeline into the sidebar's eager graph.
-async function showDoctor(initialPanel: 'report' | 'checks'): Promise<void> {
+async function showDoctor(initialPanel: 'export' | 'checks'): Promise<void> {
   const { DoctorPopup } = await import('@renderer/components/doctor')
   await DoctorPopup.show({ initialPanel })
 }
@@ -151,7 +151,7 @@ export function HelpMenu({
               className="h-8"
               icon={<FileArchive size={16} />}
               label={t('settings.about.feedback.diagnostics.title')}
-              onClick={() => runAfterClose(() => showDoctor('report'))}
+              onClick={() => runAfterClose(() => showDoctor('export'))}
             />
             <MenuItem
               size="sm"

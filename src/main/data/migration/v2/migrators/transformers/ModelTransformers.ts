@@ -7,7 +7,6 @@
  * and pre-composed ID passthrough.
  */
 
-import { CHERRYAI_DEFAULT_UNIQUE_MODEL_ID, CHERRYAI_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import {
   createUniqueModelId,
   isUniqueModelId,
@@ -92,10 +91,13 @@ export function legacyModelToUniqueId(
   return null
 }
 
+/** v1's built-in free CherryAI provider, which v2 no longer ships. */
+const REMOVED_CHERRYAI_PROVIDER_ID = 'cherryai'
+
 /**
  * Opt-in chat/default-model migration rule.
  *
- * Legacy CherryAI model references are managed by the v2 seeded default model,
+ * References to the removed CherryAI provider migrate as "no model" so the user picks one,
  * but this rule must not apply to every model reference type (for example,
  * embedding/rerank preferences keep their original domain semantics).
  */
@@ -104,14 +106,10 @@ export function legacyChatModelToUniqueId(
   fallback?: string | null
 ): UniqueModelId | null {
   const providerId = typeof model?.provider === 'string' ? model.provider.trim() : ''
-  if (providerId === CHERRYAI_PROVIDER_ID) {
-    return CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
-  }
+  if (providerId === REMOVED_CHERRYAI_PROVIDER_ID) return null
 
   const modelId = legacyModelToUniqueId(model, fallback)
-  if (modelId?.startsWith(`${CHERRYAI_PROVIDER_ID}${UNIQUE_MODEL_ID_SEPARATOR}`)) {
-    return CHERRYAI_DEFAULT_UNIQUE_MODEL_ID
-  }
+  if (modelId?.startsWith(`${REMOVED_CHERRYAI_PROVIDER_ID}${UNIQUE_MODEL_ID_SEPARATOR}`)) return null
   return modelId
 }
 

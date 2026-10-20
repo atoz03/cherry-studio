@@ -155,7 +155,7 @@ describe('Cherry Assistant guide', () => {
     expect(marketplace).toContain('回到原始任务')
   })
 
-  it('hands Cherry Studio feedback drafts to the user-owned review dialog', () => {
+  it('keeps Cherry Studio feedback as a local draft the user sends themselves', () => {
     const agent = JSON.parse(fs.readFileSync(AGENT_TEMPLATE_PATH, 'utf-8')) as {
       instructions: Record<'en-US' | 'zh-CN', string>
       skills: string[]
@@ -166,9 +166,9 @@ describe('Cherry Assistant guide', () => {
     expect(agent.skills).toContain('cherry-studio-feedback')
     expect(agent.instructions['en-US']).toContain('Use `cherry-studio-feedback` unless the user explicitly asks')
     expect(agent.instructions['zh-CN']).toContain('明确要求创建 GitHub Issue')
-    expect(feedback).toContain('mcp__assistant__prepare_diagnostic_report')
-    expect(feedback).toContain('不会打开弹窗、勾选知晓确认或上传')
-    expect(feedback).toContain('“问题反馈”入口中的“提交诊断报告”')
+    expect(feedback).toContain('在回复中给出草稿')
+    expect(feedback).toContain('不得代替用户导出、上传或提交任何内容')
+    expect(feedback).not.toContain('prepare_diagnostic_report')
     expect(feedback).not.toContain('固定的“报告问题”入口')
     expect(feedback).not.toContain('lark-cli base +form-submit')
     expect(feedback).not.toContain('飞书表单提交')

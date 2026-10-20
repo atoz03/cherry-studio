@@ -6,7 +6,6 @@ import { Mutex } from 'async-mutex'
 import { dialog } from 'electron'
 
 import { application } from '@application'
-import { diagnosticReportService } from '@data/services/DiagnosticReportService'
 import { loggerService } from '@logger'
 import { t } from '@main/i18n'
 import {
@@ -20,13 +19,11 @@ import {
   removeDir,
   stat
 } from '@main/utils/file'
-import type { DiagnosticProcessingStatus } from '@shared/data/types/diagnosticReport'
 import { diagnosticsErrorCodes } from '@shared/ipc/errors/diagnostics'
 import { IpcError } from '@shared/ipc/errors/IpcError'
 import type { DiagnosticRange } from '@shared/ipc/schemas/diagnostics'
 import type { InputFor, OutputFor, WindowId } from '@shared/ipc/types'
 import { type AbsoluteFilePath, AbsoluteFilePathSchema } from '@shared/types/file'
-import { diagnosticReportUrl, normalizeDiagnosticDescription } from '@shared/utils/diagnostics'
 
 import {
   addChatRecordStats,
@@ -36,7 +33,6 @@ import {
   scanChatRecordStats,
   stageChatRecords
 } from './chatRecordCollector'
-import { cherryDiagnosticUploadClient } from './CherryDiagnosticUploadClient'
 import {
   buildScanReport,
   collectErrorLogRecords,
@@ -84,37 +80,6 @@ type InspectResult = OutputFor<'diagnostics.bundle.inspect'>
 type ExportInput = InputFor<'diagnostics.bundle.export'>
 type ExportResult = OutputFor<'diagnostics.bundle.export'>
 type SavedBundle = Extract<ExportResult, { status: 'saved' }>
-type UploadInput = InputFor<'diagnostics.bundle.upload'>
-type UploadResult = OutputFor<'diagnostics.bundle.upload'>
-type RetryUploadInput = InputFor<'diagnostics.bundle.retry_upload'>
-type RetryUploadResult = OutputFor<'diagnostics.bundle.retry_upload'>
-type SaveUploadInput = InputFor<'diagnostics.bundle.save_upload'>
-type SaveUploadResult = OutputFor<'diagnostics.bundle.save_upload'>
-type DiscardUploadInput = InputFor<'diagnostics.bundle.discard_upload'>
-type DiscardUploadResult = OutputFor<'diagnostics.bundle.discard_upload'>
-
-type RetainedUploadBundle =
-  | {
-      readonly bundleId: string
-      readonly fileName: string
-      readonly filePath: AbsoluteFilePath
-      readonly location: 'saved'
-    }
-  | {
-      readonly bundleId: string
-      readonly fileName: string
-      readonly filePath: AbsoluteFilePath
-      readonly location: 'temporary'
-      readonly tempRoot: AbsoluteFilePath
-    }
-
-interface RetainedUpload {
-  bundle: RetainedUploadBundle
-  readonly description: string
-  readonly fileSha256?: string
-  readonly uploadFileName: string
-}
-
 type DestinationIdentity = { readonly status: 'missing' } | ({ readonly status: 'present' } & SourceIdentity)
 
 function toTimeRange(range: DiagnosticRange, now: number): DiagnosticTimeRange {
@@ -391,7 +356,6 @@ async function assertDestinationOutsideSources(destination: AbsoluteFilePath): P
 export class DiagnosticBundleService {
   private readonly inspectionMutex = new Mutex()
   private inFlightOperation: Promise<unknown> | null = null
-  private readonly retainedUploads = new Map<string, RetainedUpload>()
 
   async inspect(rangeName: DiagnosticRange): Promise<InspectResult> {
     return this.inspectionMutex.runExclusive(() => this.performInspection(rangeName))
@@ -438,76 +402,6 @@ export class DiagnosticBundleService {
     } finally {
       if (this.inFlightOperation === operation) this.inFlightOperation = null
     }
-  }
-
-  async uploadBundle(input: UploadInput): Promise<UploadResult> {
-    if (this.inFlightOperation) return { status: 'busy' }
-    const operation = this.performUpload(input)
-    this.inFlightOperation = operation
-    try {
-      return await operation
-    } finally {
-      if (this.inFlightOperation === operation) this.inFlightOperation = null
-    }
-  }
-
-  async retryUpload(input: RetryUploadInput): Promise<RetryUploadResult> {
-    if (this.inFlightOperation) return { status: 'busy' }
-    const operation = this.performRetryUpload(input)
-    this.inFlightOperation = operation
-    try {
-      return await operation
-    } finally {
-      if (this.inFlightOperation === operation) this.inFlightOperation = null
-    }
-  }
-
-  async saveUploadBundle(input: SaveUploadInput, senderId: WindowId | null): Promise<SaveUploadResult> {
-    if (this.inFlightOperation) return { status: 'busy' }
-    const operation = this.performSaveUpload(input, senderId)
-    this.inFlightOperation = operation
-    try {
-      return await operation
-    } finally {
-      if (this.inFlightOperation === operation) this.inFlightOperation = null
-    }
-  }
-
-  async discardUpload(input: DiscardUploadInput): Promise<DiscardUploadResult> {
-    if (this.inFlightOperation) return { status: 'busy' }
-    const operation = this.performDiscardUpload(input)
-    this.inFlightOperation = operation
-    try {
-      return await operation
-    } finally {
-      if (this.inFlightOperation === operation) this.inFlightOperation = null
-    }
-  }
-
-  async refreshReport(reportId: string): Promise<OutputFor<'diagnostics.report.refresh'>> {
-    const processingStatus = await cherryDiagnosticUploadClient.fetchStatus(reportId)
-    diagnosticReportService.updateStatus(reportId, processingStatus)
-    return { processingStatus }
-  }
-
-  private recordSuccessfulUpload(
-    reportId: string,
-    processingStatus: DiagnosticProcessingStatus | null,
-    submittedAt?: number
-  ): Extract<UploadResult, { status: 'uploaded' }> {
-    let historySaved = true
-    try {
-      diagnosticReportService.record({
-        reportId,
-        submittedAt: submittedAt ?? Date.now(),
-        processingStatus,
-        lastCheckedAt: processingStatus === null ? null : Date.now()
-      })
-    } catch {
-      historySaved = false
-      logger.warn('Failed to save diagnostic report history')
-    }
-    return { reportId, reportUrl: diagnosticReportUrl(reportId), processingStatus, historySaved, status: 'uploaded' }
   }
 
   private async performExport(input: ExportInput, senderId: WindowId | null): Promise<ExportResult> {
@@ -559,8 +453,7 @@ export class DiagnosticBundleService {
         selectedChats: selection.selectedChats,
         selectedFiles: selection.selectedFiles,
         sizeOmittedFiles: selection.omittedFiles,
-        tempRoot,
-        uploadedAutomatically: false
+        tempRoot
       })
     } finally {
       await removeDir(tempRoot).catch((error) => {
@@ -569,220 +462,6 @@ export class DiagnosticBundleService {
         })
       })
     }
-  }
-
-  private async performUpload(input: UploadInput): Promise<UploadResult> {
-    const description = normalizeDiagnosticDescription(input.description.trim())
-    const createdAt = new Date()
-    const bundleId = randomUUID()
-    const fileName = `cherry-studio-diagnostics-${formatTimestamp(createdAt)}-${bundleId}.zip`
-    let tempRoot: AbsoluteFilePath
-    try {
-      tempRoot = AbsoluteFilePathSchema.parse(await mkdtemp(application.getPath('app.temp', 'diagnostic-upload-')))
-    } catch {
-      throw new IpcError(diagnosticsErrorCodes.BUNDLE_BUILD_FAILED, 'Failed to build diagnostic bundle')
-    }
-    const destination = AbsoluteFilePathSchema.parse(path.join(tempRoot, fileName))
-    let retainTempRoot = false
-
-    try {
-      let bundle: SavedBundle
-      try {
-        const range = toTimeRange(input.range, Date.now())
-        const collection = await collectDiagnosticSources(range, input)
-        const chatCollection = input.includeChatRecords ? collectChatRecords(range) : emptyChatRecordCollection()
-        const selection = await selectBundleSources([...collection.logs, ...collection.traces], chatCollection)
-        mergeWarnings(collection.warnings, chatCollection.warnings)
-        if (selection.omittedFiles.length > 0 || selection.omittedChats) {
-          collection.warnings.add('size_limit_reached')
-        }
-        bundle = await this.buildBundle({
-          allChatStats: selection.allChatStats,
-          bundleId,
-          collection,
-          destination,
-          destinationIdentity: { status: 'missing' },
-          expectedChatArchiveNames: selection.expectedChatArchiveNames,
-          input,
-          range,
-          selectedChats: selection.selectedChats,
-          selectedFiles: selection.selectedFiles,
-          sizeOmittedFiles: selection.omittedFiles,
-          tempRoot,
-          uploadedAutomatically: true
-        })
-      } catch {
-        throw new IpcError(diagnosticsErrorCodes.BUNDLE_BUILD_FAILED, 'Failed to build diagnostic bundle')
-      }
-
-      const uploadResult = await cherryDiagnosticUploadClient.upload({
-        description,
-        fileName: bundle.fileName,
-        filePath: bundle.filePath
-      })
-      if (uploadResult.status === 'uploaded') {
-        return this.recordSuccessfulUpload(
-          uploadResult.reportId,
-          uploadResult.processingStatus ?? null,
-          uploadResult.submittedAt
-        )
-      }
-
-      const retainedBundle: RetainedUploadBundle = {
-        bundleId: bundle.bundleId,
-        fileName: bundle.fileName,
-        filePath: bundle.filePath,
-        location: 'temporary',
-        tempRoot
-      }
-      this.retainedUploads.set(bundle.bundleId, {
-        bundle: retainedBundle,
-        description,
-        uploadFileName: bundle.fileName,
-        ...(uploadResult.fileSha256 ? { fileSha256: uploadResult.fileSha256 } : {})
-      })
-      retainTempRoot = true
-      if (uploadResult.status === 'submission_unknown') {
-        logger.warn('Diagnostic bundle submission result is unknown')
-        return {
-          bundleId: bundle.bundleId,
-          fileName: bundle.fileName,
-          status: 'submission_unknown'
-        }
-      }
-      logger.warn('Diagnostic bundle submission failed', { reason: uploadResult.reason })
-      return {
-        bundleId: bundle.bundleId,
-        fileName: bundle.fileName,
-        reason: uploadResult.reason,
-        status: 'submission_failed'
-      }
-    } finally {
-      if (!retainTempRoot) {
-        await removeDir(tempRoot).catch((error) => {
-          logger.warn('Failed to clean diagnostic upload temporary files', {
-            code: (error as NodeJS.ErrnoException)?.code ?? 'UNKNOWN'
-          })
-        })
-      }
-    }
-  }
-
-  private async performRetryUpload(input: RetryUploadInput): Promise<RetryUploadResult> {
-    const retained = this.retainedUploads.get(input.bundleId)
-    if (!retained) {
-      throw new IpcError(
-        diagnosticsErrorCodes.RETRY_NOT_AVAILABLE,
-        'Diagnostic bundle is not available for retry in this process'
-      )
-    }
-
-    const uploadResult = await cherryDiagnosticUploadClient.upload({
-      description: retained.description,
-      ...(retained.fileSha256 ? { expectedFileSha256: retained.fileSha256 } : {}),
-      fileName: retained.uploadFileName,
-      filePath: retained.bundle.filePath
-    })
-    if (uploadResult.status === 'uploaded') {
-      this.retainedUploads.delete(input.bundleId)
-      await this.cleanupTemporaryUpload(retained.bundle)
-      return this.recordSuccessfulUpload(
-        uploadResult.reportId,
-        uploadResult.processingStatus ?? null,
-        uploadResult.submittedAt
-      )
-    }
-    if (uploadResult.status === 'submission_unknown') {
-      logger.warn('Diagnostic bundle retry result is unknown')
-      return {
-        bundleId: retained.bundle.bundleId,
-        fileName: retained.bundle.fileName,
-        status: 'submission_unknown'
-      }
-    }
-    logger.warn('Diagnostic bundle retry failed', { reason: uploadResult.reason })
-    return {
-      bundleId: retained.bundle.bundleId,
-      fileName: retained.bundle.fileName,
-      reason: uploadResult.reason,
-      status: 'submission_failed'
-    }
-  }
-
-  private async performSaveUpload(input: SaveUploadInput, senderId: WindowId | null): Promise<SaveUploadResult> {
-    const retained = this.retainedUploads.get(input.bundleId)
-    if (!retained) {
-      throw new IpcError(
-        diagnosticsErrorCodes.RETRY_NOT_AVAILABLE,
-        'Diagnostic bundle is not available in this process'
-      )
-    }
-    if (retained.bundle.location === 'saved') {
-      return {
-        bundleId: retained.bundle.bundleId,
-        fileName: retained.bundle.fileName,
-        filePath: retained.bundle.filePath,
-        status: 'saved'
-      }
-    }
-    const temporaryBundle = retained.bundle
-    if (!senderId) throw new Error('Saving a diagnostic upload requires a managed window')
-    const parent = application.get('WindowManager').getWindow(senderId)
-    if (!parent) throw new Error('Diagnostic upload window is no longer available')
-
-    const { canceled, filePath } = await dialog.showSaveDialog(parent, {
-      defaultPath: retained.bundle.fileName,
-      filters: [{ name: t('dialog.diagnostic_bundle.zip_filter'), extensions: ['zip'] }],
-      properties: ['createDirectory', 'showOverwriteConfirmation'],
-      title: t('dialog.diagnostic_bundle.title')
-    })
-    if (canceled || !filePath) return { status: 'canceled' }
-
-    const destination = AbsoluteFilePathSchema.parse(filePath)
-    try {
-      await assertDestinationOutsideSources(destination)
-      const resolvedDestination = await resolveThroughExistingAncestor(destination)
-      const resolvedTempRoot = await realpath(temporaryBundle.tempRoot)
-      if (resolvedDestination === resolvedTempRoot || isPathInside(resolvedDestination, resolvedTempRoot)) {
-        throw new Error('Diagnostic upload cannot be saved inside its temporary directory')
-      }
-      await move(temporaryBundle.filePath, destination)
-      retained.bundle = {
-        bundleId: temporaryBundle.bundleId,
-        fileName: path.basename(destination),
-        filePath: destination,
-        location: 'saved'
-      }
-      await this.cleanupTemporaryUpload(temporaryBundle)
-      return {
-        bundleId: retained.bundle.bundleId,
-        fileName: retained.bundle.fileName,
-        filePath: destination,
-        status: 'saved'
-      }
-    } catch {
-      throw new IpcError(
-        diagnosticsErrorCodes.FALLBACK_SAVE_FAILED,
-        'Failed to preserve diagnostic bundle for manual upload'
-      )
-    }
-  }
-
-  private async performDiscardUpload(input: DiscardUploadInput): Promise<DiscardUploadResult> {
-    const retained = this.retainedUploads.get(input.bundleId)
-    if (!retained) return { status: 'not_found' }
-    this.retainedUploads.delete(input.bundleId)
-    await this.cleanupTemporaryUpload(retained.bundle)
-    return { status: 'discarded' }
-  }
-
-  private async cleanupTemporaryUpload(bundle: RetainedUploadBundle): Promise<void> {
-    if (bundle.location !== 'temporary') return
-    await removeDir(bundle.tempRoot).catch((error) => {
-      logger.warn('Failed to clean retained diagnostic upload temporary files', {
-        code: (error as NodeJS.ErrnoException)?.code ?? 'UNKNOWN'
-      })
-    })
   }
 
   private async buildBundle({
@@ -797,8 +476,7 @@ export class DiagnosticBundleService {
     selectedChats,
     selectedFiles,
     sizeOmittedFiles,
-    tempRoot,
-    uploadedAutomatically
+    tempRoot
   }: {
     allChatStats: ChatRecordStats
     bundleId: string
@@ -812,7 +490,6 @@ export class DiagnosticBundleService {
     selectedFiles: SourceCandidate[]
     sizeOmittedFiles: SourceCandidate[]
     tempRoot: AbsoluteFilePath
-    uploadedAutomatically: boolean
   }): Promise<SavedBundle> {
     const staged: StagedSource[] = []
     const failedCandidates: SourceCandidate[] = []
@@ -912,7 +589,7 @@ export class DiagnosticBundleService {
       privacy: {
         containsUnredactedData: input.includeChatRecords || input.includeLogs || input.includeTraces,
         publiclyShareable: false,
-        uploadedAutomatically
+        uploadedAutomatically: false
       },
       selection: {
         includeChatRecords: input.includeChatRecords,

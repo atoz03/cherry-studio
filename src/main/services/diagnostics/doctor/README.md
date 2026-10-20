@@ -91,7 +91,7 @@ re-probing; only the original report is updated. Expired reports require another
 Business adapters provide the subject: Chat uses the producing message's saved model identity;
 Agent uses its Agent ID. Error components never infer a subject from optional exception fields.
 A missing target leaves diagnostics unavailable; only an explicit global subject runs system checks.
-Opening report/export panels does not start health checks. The explicit full-system action opens
+Opening the export panel does not start health checks. The explicit full-system action opens
 its own global Doctor, preserving the contextual report.
 
 DoctorService resolves Agents through AgentService, captures the default model once per execution,

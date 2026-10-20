@@ -326,7 +326,26 @@ describe('ProviderModelMappings', () => {
       expect(result.apiKeys).toEqual([])
     })
 
-    it('preserves OAuth for non-anthropic legacy providers (e.g. cherryin)', () => {
+    it('drops legacy CherryIN OAuth tokens and keeps its API keys', () => {
+      const result = transformProvider(
+        {
+          id: 'cherryin',
+          name: 'CherryIN',
+          type: 'openai',
+          apiKey: 'sk-cherryin',
+          apiHost: 'https://open.cherryin.net',
+          models: [],
+          enabled: true,
+          isSystem: true
+        } as never,
+        { cherryIn: { accessToken: 'legacy-access', refreshToken: 'legacy-refresh' } } as never
+      )
+
+      expect(result.authConfig).toEqual({ type: 'api-key' })
+      expect(result.apiKeys?.map((entry) => entry.key)).toEqual(['sk-cherryin'])
+    })
+
+    it('preserves OAuth for non-anthropic legacy providers', () => {
       const result = transformProvider(
         {
           id: 'someoauth',

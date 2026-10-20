@@ -53,8 +53,7 @@ const mocks = vi.hoisted(() => ({
   getSessionById: vi.fn(),
   getAgent: vi.fn(),
   ensureTraceId: vi.fn(),
-  recordUsage: vi.fn(),
-  trackTokenUsage: vi.fn()
+  recordUsage: vi.fn()
 }))
 
 const forkRecoveryMocks = vi.hoisted(() => ({
@@ -541,7 +540,6 @@ describe('AgentSessionRuntimeService', () => {
           closeAgentSessionWarm: mocks.closeAgentSessionWarm,
           close: mocks.closeWarmSession
         }
-      if (name === 'AnalyticsService') return { trackTokenUsage: mocks.trackTokenUsage }
       if (name === 'WindowManager') return { getWindow: mocks.getWindow }
       throw new Error(`Unexpected application.get(${name})`)
     })
@@ -825,7 +823,6 @@ describe('AgentSessionRuntimeService', () => {
         frozenModels: [
           {
             modelId: 'configured-sonnet',
-            apiModelId: 'claude-sonnet-4-5',
             modelName: 'Claude Sonnet',
             pricingSnapshot: null,
             aliases: ['configured-sonnet', 'claude-sonnet-4-5']
@@ -913,13 +910,6 @@ describe('AgentSessionRuntimeService', () => {
         })
       )
     )
-    expect(mocks.trackTokenUsage).toHaveBeenCalledWith({
-      provider: 'claude-code',
-      model: 'claude-sonnet-4-5',
-      input_tokens: 10,
-      output_tokens: 5,
-      source: 'agent'
-    })
 
     events.push({ type: 'turn-complete' })
     await expect(reader.read()).resolves.toMatchObject({ done: true })
@@ -956,13 +946,6 @@ describe('AgentSessionRuntimeService', () => {
         })
       )
     )
-    expect(mocks.trackTokenUsage).toHaveBeenLastCalledWith({
-      provider: 'claude-code',
-      model: 'claude-sonnet-4-5',
-      input_tokens: 4,
-      output_tokens: 2,
-      source: 'agent'
-    })
     void service.closeSession('session-1')
   })
 
@@ -979,7 +962,6 @@ describe('AgentSessionRuntimeService', () => {
     })
 
     expect(mocks.recordUsage).not.toHaveBeenCalled()
-    expect(mocks.trackTokenUsage).not.toHaveBeenCalled()
   })
 
   describe('api_retry ephemeral status', () => {
@@ -5730,7 +5712,6 @@ describe('AgentSessionRuntimeService', () => {
           frozenModels: [
             {
               modelId: 'claude-sonnet-4-5',
-              apiModelId: 'claude-sonnet-4-5',
               modelName: 'Claude Sonnet',
               pricingSnapshot: null,
               aliases: ['claude-sonnet-4-5']

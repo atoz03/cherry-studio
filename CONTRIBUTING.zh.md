@@ -68,10 +68,6 @@ git commit --signoff -m "Your commit message"
 
 维护者会尽力在合理时间内帮助你实现用例，并及时提供建设性反馈。如果在评审中遇到阻碍，或 PR 长时间没有得到处理，请在相关 Issue 中留言，或通过[社区](README.md#-community)联系我们。
 
-### 参与 Test Plan
-
-Test Plan 旨在为用户提供更稳定的应用体验和更快的迭代速度。详情请参阅 [Test Plan](docs/contrib/test-plan.md)。
-
 ### 其他建议
 
 - **联系开发者**：提交 PR 前，可以先联系开发者进行讨论或寻求帮助。

@@ -11,10 +11,10 @@ const validate = Route.options.validateSearch as (search: Record<string, unknown
 
 describe('about settings route validateSearch', () => {
   it('keeps a supported Doctor panel and unrelated settings search', () => {
-    expect(validate({ doctor: 'report', focusId: 'support' })).toEqual({ doctor: 'report', focusId: 'support' })
+    expect(validate({ doctor: 'export', focusId: 'support' })).toEqual({ doctor: 'export', focusId: 'support' })
   })
 
   it('drops an unsupported Doctor panel without removing unrelated settings search', () => {
-    expect(validate({ doctor: 'unknown', focusId: 'support' })).toEqual({ focusId: 'support' })
+    expect(validate({ doctor: 'report', focusId: 'support' })).toEqual({ focusId: 'support' })
   })
 })

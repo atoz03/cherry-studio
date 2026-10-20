@@ -24,15 +24,19 @@ Linux 下全新配置、空闲 150 秒后的 PSS（`node scripts/fork/measure-fo
 - **标签页**：默认最多保持 4 个标签页处于加载状态（上游为 10），可在"常规 → 运行与性能"中调整。
 - **安装包**：只内置 ripgrep，mise、bun、uv 和 Windows 版 MinGit 在首次需要时下载并校验；移除重复的数据库迁移文件、多余的 pdf.js 构建和未使用的原生依赖。
 
-## 关闭的上游功能
+## 移除的上游服务
 
-代码保留，由 [`forkFeatures.ts`](src/shared/utils/forkFeatures.ts) 在构建时关闭，相关依赖不打入安装包：
+以下依赖上游服务器的功能已连同界面、设置和依赖一并删除：
 
-- Sentry 错误上报和使用统计，以及对应的数据收集授权界面
-- 设备连接（手机远程访问）
-- Cherry Cloud 账号与订阅，以及依赖上游私有密钥的 AIHubMix / PPIO 登录
-- 诊断包上传（"报告问题"改为导出到本地）
+- Sentry 错误上报、使用统计和数据收集授权界面
+- Cherry Cloud 账号、订阅和云端模型
+- 内置的免费 CherryAI 模型：新安装在引导中选择默认模型，未配置模型时跳过话题自动命名；v1 中指向 CherryAI 的模型设置迁移后留空
+- CherryIN、AIHubMix 和 PPIO 的 OAuth 登录（仍可填写 API 密钥使用）
+- 诊断包上传和报告历史（"报告问题"改为导出到本地）
+- Doctor 中探测上游模型目录镜像的网络检查
 - RC / Beta 测试通道
+
+设备连接（手机远程访问）的代码保留，由 [`forkFeatures.ts`](src/shared/utils/forkFeatures.ts) 在构建时关闭，相关依赖不打入安装包。
 
 自动更新改为从本仓库的 GitHub Releases 获取，不再访问上游更新服务器，也不发送客户端标识。模型目录自动更新可在"关于"页关闭。
 

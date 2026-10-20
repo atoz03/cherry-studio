@@ -1,13 +1,7 @@
 import { formatApiHost, formatOllamaApiHost, formatVertexApiHost, isWithTrailingSharp } from '@renderer/utils/api'
 import { ENDPOINT_TYPE, type EndpointType } from '@shared/data/types/model'
 import type { AuthConfig, Provider } from '@shared/data/types/provider'
-import {
-  isAzureOpenAIProvider,
-  isCherryAIProvider,
-  isNewApiProvider,
-  isPerplexityProvider,
-  isVertexProvider
-} from '@shared/utils/provider'
+import { isAzureOpenAIProvider, isNewApiProvider, isPerplexityProvider, isVertexProvider } from '@shared/utils/provider'
 
 export function buildHostEndpointPreviews(params: {
   provider: Provider
@@ -26,7 +20,6 @@ export function buildHostEndpointPreviews(params: {
     formattedHost = formatApiHost(anthropicApiHost || apiHost, appendVersion)
   } else if (
     provider.id === 'copilot' ||
-    isCherryAIProvider(provider) ||
     isPerplexityProvider(provider) ||
     isNewApiProvider(provider) ||
     isAzureOpenAIProvider(provider)

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { StreamListener } from '@main/ai/streamManager/types'
 import { BaseService } from '@main/core/lifecycle'
-import { CHERRY_CLOUD_MODEL_GROUP, CHERRY_CLOUD_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { createUniqueModelId } from '@shared/data/types/model'
 
 /**
@@ -96,13 +95,12 @@ beforeEach(() => {
   })
 })
 
-function mockAvailableModel(providerId: string, internalModelId: string, apiModelId = internalModelId, group?: string) {
+function mockAvailableModel(providerId: string, internalModelId: string, apiModelId = internalModelId) {
   mockGetProvider.mockReturnValue({ id: providerId, name: providerId, isEnabled: true })
   const model = {
     id: createUniqueModelId(providerId, internalModelId),
     providerId,
     apiModelId,
-    group,
     capabilities: []
   }
   mockListModels.mockReturnValue([model])
@@ -178,17 +176,6 @@ describe('processMessage model-id parsing', () => {
     expect(mockStreamPrompt).not.toHaveBeenCalled()
   })
 
-  it('rejects the managed CherryAI default model', async () => {
-    await expect(
-      processMessage({
-        params: { model: 'cherryai:qwen', messages: [] } as any,
-        inputFormat: 'openai',
-        outputFormat: 'openai'
-      })
-    ).rejects.toThrow(/not available through the API gateway/)
-    expect(mockStreamPrompt).not.toHaveBeenCalled()
-  })
-
   it('splits on the first colon for a simple provider:model', async () => {
     mockAvailableModel('openai', 'gpt-4')
     expect(await resolveValid('openai:gpt-4')).toBe(createUniqueModelId('openai', 'gpt-4'))
@@ -242,42 +229,6 @@ describe('processMessage model-id parsing', () => {
     expect(await resolveValid('sophnet:DeepSeek-v3')).toBe(createUniqueModelId('sophnet', 'deepseek-v3'))
   })
 
-  it('rejects a Cherry Cloud model from external requests', async () => {
-    mockAvailableModel(CHERRY_CLOUD_PROVIDER_ID, 'deepseek-free', 'deepseek-free', CHERRY_CLOUD_MODEL_GROUP)
-
-    await expect(
-      processMessage({
-        params: { model: `${CHERRY_CLOUD_PROVIDER_ID}:deepseek-free`, messages: [] },
-        inputFormat: 'anthropic',
-        outputFormat: 'anthropic'
-      })
-    ).rejects.toMatchObject({ status: 400 })
-    expect(mockStreamPrompt).not.toHaveBeenCalled()
-  })
-
-  it('routes Cherry Cloud messages for an internal request and attributes Agent session usage', async () => {
-    mockAvailableModel(CHERRY_CLOUD_PROVIDER_ID, 'deepseek-free', 'deepseek-free', CHERRY_CLOUD_MODEL_GROUP)
-    mockIsInternalRequest.mockReturnValue(true)
-    mockGetAgentSessionId.mockReturnValue('session-1')
-    const responsePromise = processMessage({
-      params: {
-        model: `${CHERRY_CLOUD_PROVIDER_ID}:deepseek-free`,
-        max_tokens: 64,
-        messages: [{ role: 'user', content: 'hello' }]
-      },
-      inputFormat: 'anthropic',
-      outputFormat: 'anthropic',
-      requestHeaders: new Headers()
-    })
-
-    await vi.waitFor(() => expect(captured.opts).toBeDefined())
-    expect(captured.opts?.uniqueModelId).toBe(createUniqueModelId(CHERRY_CLOUD_PROVIDER_ID, 'deepseek-free'))
-    expect(captured.opts).toMatchObject({ tokenUsageSource: 'agent' })
-    void captured.opts!.listener!.onDone({} as any)
-
-    await expect(responsePromise.then((response) => response.json())).resolves.toEqual({ ok: true })
-  })
-
   it('rejects an address that does not match an enabled gateway model', async () => {
     mockStreamPrompt.mockImplementationOnce((opts) => {
       captured.opts = opts
@@ -296,12 +247,12 @@ describe('processMessage model-id parsing', () => {
 })
 
 describe('internal requests without an Agent session', () => {
-  it('serves a Cherry Cloud model without Agent usage attribution', async () => {
-    mockAvailableModel(CHERRY_CLOUD_PROVIDER_ID, 'translation-model', 'translation-model', CHERRY_CLOUD_MODEL_GROUP)
+  it('serves a model without Agent usage attribution', async () => {
+    mockAvailableModel('deepseek', 'translation-model')
     mockIsInternalRequest.mockReturnValue(true)
     const responsePromise = processMessage({
       params: {
-        model: `${CHERRY_CLOUD_PROVIDER_ID}:translation-model`,
+        model: 'deepseek:translation-model',
         messages: [{ role: 'user', content: 'translate' }]
       },
       inputFormat: 'openai',
@@ -309,8 +260,7 @@ describe('internal requests without an Agent session', () => {
       requestHeaders: new Headers()
     })
     await vi.waitFor(() => expect(captured.opts).toBeDefined())
-    expect(captured.opts?.uniqueModelId).toBe(createUniqueModelId(CHERRY_CLOUD_PROVIDER_ID, 'translation-model'))
-    expect(captured.opts).not.toHaveProperty('tokenUsageSource', 'agent')
+    expect(captured.opts?.uniqueModelId).toBe(createUniqueModelId('deepseek', 'translation-model'))
     void captured.opts!.listener!.onDone({} as any)
     await expect(responsePromise.then((response) => response.json())).resolves.toEqual({ ok: true })
   })

@@ -85,7 +85,7 @@ export const REGRESSION_CASES = [
     id: 'M-01',
     capabilities: [],
     phase: '09-cherryin-and-images',
-    title: 'Sign in to CherryIN and chat',
+    title: 'Chat with CherryIN',
     task: 'cherryin-chat'
   },
   {

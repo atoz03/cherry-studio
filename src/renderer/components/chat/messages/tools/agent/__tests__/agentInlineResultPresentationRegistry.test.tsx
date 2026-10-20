@@ -18,14 +18,6 @@ const inlineResultParts = [
       name: 'Reviewer',
       model: 'anthropic::claude-sonnet'
     }
-  },
-  {
-    type: 'dynamic-tool',
-    toolCallId: 'prepare-report',
-    toolName: 'mcp__assistant__prepare_diagnostic_report',
-    state: 'output-available',
-    input: {},
-    output: { ok: true, description: 'Editable diagnostic report draft' }
   }
 ] as CherryMessagePart[]
 

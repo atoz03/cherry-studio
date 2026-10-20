@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  CHERRY_CLOUD_PROVIDER_ID,
-  CHERRYAI_DEFAULT_MODEL_ID,
-  CHERRYAI_PROVIDER_ID
-} from '@shared/data/presets/cherryai'
 import { ENDPOINT_TYPE, type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import {
   deriveModelGroupName,
@@ -15,7 +10,6 @@ import {
   isGatewayRoutableModel,
   isGenerateImageModel,
   isNonChatModel,
-  isPublicGatewayRoutableModel,
   isReasoningModel,
   isRerankModel,
   isSpeechToTextModel,
@@ -155,16 +149,6 @@ describe('shared model capability helpers', () => {
       expect(isGatewayRoutableModel(createModel([MODEL_CAPABILITY.AUDIO_TRANSCRIPT]))).toBe(false)
     })
 
-    it('excludes the CherryAI managed default model', () => {
-      const managedDefault: Model = {
-        ...createModel(),
-        id: `${CHERRYAI_PROVIDER_ID}::qwen`,
-        providerId: CHERRYAI_PROVIDER_ID,
-        apiModelId: CHERRYAI_DEFAULT_MODEL_ID
-      }
-      expect(isGatewayRoutableModel(managedDefault)).toBe(false)
-    })
-
     it('excludes models of a provider id containing ":" (the gateway address cannot round-trip it)', () => {
       const colonProvider: Model = {
         ...createModel(),
@@ -172,24 +156,6 @@ describe('shared model capability helpers', () => {
         providerId: 'corp:west'
       }
       expect(isGatewayRoutableModel(colonProvider)).toBe(false)
-    })
-  })
-
-  describe('isPublicGatewayRoutableModel', () => {
-    it('keeps an ordinary gateway-routable model', () => {
-      expect(isPublicGatewayRoutableModel(createModel())).toBe(true)
-    })
-
-    it('excludes Cherry Cloud without removing it from the internal Work runtime', () => {
-      const cloudModel: Model = {
-        ...createModel(),
-        id: `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free`,
-        providerId: CHERRY_CLOUD_PROVIDER_ID,
-        apiModelId: 'deepseek-free'
-      }
-
-      expect(isGatewayRoutableModel(cloudModel)).toBe(true)
-      expect(isPublicGatewayRoutableModel(cloudModel)).toBe(false)
     })
   })
 

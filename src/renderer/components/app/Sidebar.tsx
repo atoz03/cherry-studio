@@ -120,7 +120,7 @@ export default function Sidebar({ ref }: { ref?: Ref<HTMLDivElement | null> }) {
         sideOffset={8}
         className="w-56 rounded-md p-0"
         onClick={(event) => event.stopPropagation()}>
-        <UserAccountPanel active={userMenuOpen} onRequestClose={() => handleUserMenuOpenChange(false)} />
+        <UserAccountPanel onRequestClose={() => handleUserMenuOpenChange(false)} />
       </PopoverContent>
     ) : null
 

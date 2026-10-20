@@ -12,7 +12,6 @@ import type { CherryInProviderSettings } from '@cherrystudio/ai-sdk-provider'
 import { providerService, type ResolvedProviderApiKey } from '@main/data/services/ProviderService'
 import { copilotService } from '@main/services/CopilotService'
 import { mergeHeaders } from '@main/utils/http'
-import { CHERRYAI_PROVIDER_ID, isManagedCherryCloudModel } from '@shared/data/presets/cherryai'
 import { OPENAI_CODEX_PROVIDER_ID } from '@shared/data/presets/codex'
 import { GROK_CLI_PROVIDER_ID } from '@shared/data/presets/grokCli'
 import { LOCAL_EMBEDDING_PROVIDER_ID } from '@shared/data/presets/localEmbedding'
@@ -48,8 +47,6 @@ import {
   routeToEndpoint
 } from '../utils/provider'
 import { normalizeArkResponsesResponse, stripArkUnsupportedIncludes } from './ark'
-import { generateSignature } from './cherryai'
-import { buildCherryCloudProviderConfig } from './cherryCloud'
 import { buildCodexRequestHeaders, coerceCodexRequestBody } from './codex'
 import { COPILOT_DEFAULT_HEADERS } from './constants'
 import type { ServingAuthMethod, ServingCredentialReceipt } from './credential'
@@ -118,7 +115,7 @@ function formatBaseURL(baseURL: string, provider: Provider, endpointType?: Endpo
   if (isGeminiProvider(provider)) return formatApiHost(baseURL, appendApiVersion, 'v1beta')
 
   // Providers that don't append API version
-  const noVersionProviders = ['copilot', CHERRYAI_PROVIDER_ID, 'perplexity', 'newapi', 'new-api', 'azure-openai']
+  const noVersionProviders = ['copilot', 'perplexity', 'newapi', 'new-api', 'azure-openai']
   if (noVersionProviders.includes(provider.id) || noVersionProviders.includes(provider.presetProviderId ?? '')) {
     return formatApiHost(baseURL, false)
   }
@@ -228,11 +225,6 @@ export async function resolveProviderAiSdkConfig(
     },
     { match: (p) => p.id === OPENAI_CODEX_PROVIDER_ID, build: withProviderAuth('oauth', buildCodexConfig) },
     { match: (p) => p.id === GROK_CLI_PROVIDER_ID, build: withProviderAuth('oauth', buildGrokCliConfig) },
-    {
-      match: (p) => isManagedCherryCloudModel(p.id),
-      build: withoutCredential((ctx) => buildCherryCloudProviderConfig(ctx.endpointType, ctx.endpoint, ctx.model.id))
-    },
-    { match: (p) => p.id === CHERRYAI_PROVIDER_ID, build: withSelectedApiKey(buildCherryAIConfig) },
     // Local embedding runs fully in-process (transformers.js in a worker): no
     // endpoint, baseURL, or apiKey. Without this entry it falls through to the
     // openai-compatible builder, which hands ai-core an empty baseURL and throws
@@ -398,7 +390,7 @@ export async function resolveProviderAiSdkConfig(
   const { config } = resolved
   // Default every provider to the proxy-aware net.fetch base so the app proxy
   // (ProxyService → session.setProxy) applies to provider HTTP traffic. Builders
-  // that install their own fetch wrapper (e.g. CherryAI request signing) compose
+  // that install their own fetch wrapper (e.g. OAuth token refresh) compose
   // on top of customFetch; `??=` preserves them rather than clobbering them.
   config.providerSettings.fetch ??= customFetch
 
@@ -552,28 +544,6 @@ function buildGrokCliFetch() {
       customFetch,
       { notSignedInMessage: 'Not signed in to Grok CLI. Open the provider settings and sign in again.' }
     )
-  }
-}
-
-async function buildCherryAIConfig(ctx: BuilderContext): Promise<ProviderConfig<'openai-compatible'>> {
-  return {
-    providerId: 'openai-compatible',
-    endpoint: ctx.endpoint,
-    providerSettings: {
-      ...ctx.baseConfig,
-      name: ctx.actualProvider.id,
-      includeUsage: resolveEndpointDialect(ctx.actualProvider, ctx.endpointType).streamOptions,
-      headers: { ...getProviderAppHeaders(ctx.actualProvider), ...getExtraHeaders(ctx.actualProvider) },
-      fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
-        const signature = generateSignature({
-          method: 'POST',
-          path: '/chat/completions',
-          query: '',
-          body: init?.body && typeof init.body === 'string' ? JSON.parse(init.body) : undefined
-        })
-        return customFetch(input, { ...init, headers: { ...init?.headers, ...signature } })
-      }
-    }
   }
 }
 

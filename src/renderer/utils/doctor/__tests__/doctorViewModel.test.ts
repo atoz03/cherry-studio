@@ -39,7 +39,6 @@ function report(results: readonly DoctorCheckResult[], expiresAt = '2026-09-04T0
     basics: {
       version: '2.0.0',
       edition: 'global',
-      channel: 'latest',
       platform: 'darwin',
       arch: 'arm64',
       osRelease: '25.0.0',
@@ -59,7 +58,7 @@ describe('buildDoctorViewModel', () => {
       runId: 'run-1',
       tier: 'live',
       selectedCheckIds: [
-        'install-version-channel',
+        'install-architecture-match',
         'install-update-available',
         'permission-screen-capture',
         'permission-accessibility',
@@ -67,7 +66,7 @@ describe('buildDoctorViewModel', () => {
       ],
       startedAt: '2026-09-04T08:59:00.000Z',
       activeCheckIds: ['permission-accessibility', 'network-online'],
-      results: [result('permission-screen-capture', 'fail'), result('install-version-channel', 'pass')]
+      results: [result('permission-screen-capture', 'fail'), result('install-architecture-match', 'pass')]
     }
 
     const viewModel = buildDoctorViewModel(state, NOW)
@@ -76,7 +75,7 @@ describe('buildDoctorViewModel', () => {
     expect(viewModel.rows.map((row) => row.id)).not.toEqual(expect.arrayContaining(['provider-model-conversation']))
     expect(viewModel.rows.find((row) => row.id === 'provider-model-list')).toBeUndefined()
     expect(viewModel.rows.find((row) => row.id === 'network-model-endpoint')).toBeUndefined()
-    expect(viewModel.rows.find((row) => row.id === 'install-version-channel')).toMatchObject({ status: 'pass' })
+    expect(viewModel.rows.find((row) => row.id === 'install-architecture-match')).toMatchObject({ status: 'pass' })
     expect(viewModel.rows.find((row) => row.id === 'install-update-available')).toMatchObject({ status: 'pending' })
     expect(viewModel.activeCheckIds).toEqual(['permission-accessibility', 'network-online'])
     expect(viewModel.groups.find((group) => group.domain === 'permission')?.status).toBe('fail')

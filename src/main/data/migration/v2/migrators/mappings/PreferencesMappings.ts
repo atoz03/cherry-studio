@@ -1,6 +1,6 @@
 /**
  * Auto-generated preference mappings from classification.json
- * Generated at: 2026-10-19T15:57:55.766Z
+ * Generated at: 2026-10-20T07:25:29.120Z
  *
  * This file contains pure mapping relationships without default values.
  * Default values are managed in src/shared/data/preferences.ts
@@ -17,10 +17,6 @@ export const ELECTRON_STORE_MAPPINGS = [
   {
     "originalKey": "ZoomFactor",
     "targetKey": "app.zoom_factor"
-  },
-  {
-    "originalKey": "clientId",
-    "targetKey": "app.user.id"
   },
   {
     "originalKey": "skillsLibraryPath",
@@ -69,18 +65,6 @@ export const REDUX_STORE_MAPPINGS = {
     {
       "originalKey": "autoCheckUpdate",
       "targetKey": "app.dist.auto_update.enabled"
-    },
-    {
-      "originalKey": "testPlan",
-      "targetKey": "app.dist.test_plan.enabled"
-    },
-    {
-      "originalKey": "testChannel",
-      "targetKey": "app.dist.test_plan.channel"
-    },
-    {
-      "originalKey": "enableDataCollection",
-      "targetKey": "app.privacy.data_collection.enabled"
     },
     {
       "originalKey": "enableDeveloperMode",
@@ -455,10 +439,6 @@ export const REDUX_STORE_MAPPINGS = {
       "targetKey": "feature.mini_app.region"
     },
     {
-      "originalKey": "privacyPolicyVersion",
-      "targetKey": "app.privacy.policy_version"
-    },
-    {
       "originalKey": "enableSpellCheck",
       "targetKey": "app.spell_check.enabled"
     },
@@ -810,12 +790,12 @@ export const LOCALSTORAGE_MAPPINGS: ReadonlyArray<{ originalKey: string; targetK
 
 /**
  * 映射统计:
- * - ElectronStore项: 3
- * - Redux Store项: 176
+ * - ElectronStore项: 2
+ * - Redux Store项: 172
  * - Redux分类: settings, selectionStore, llm, nutstore, preprocess, translate, websearch, ocr, note
  * - DexieSettings项: 5
  * - localStorage项: 0
- * - 总配置项: 184
+ * - 总配置项: 179
  *
  * 使用说明:
  * 1. ElectronStore读取: configManager.get(mapping.originalKey)

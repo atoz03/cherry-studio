@@ -85,7 +85,6 @@ export function isDoctorFixRequest(value: unknown): value is DoctorFixRequest {
 export const DOCTOR_BASICS_DATA_CLASS: Readonly<Record<keyof DoctorBasics, DoctorDataClass>> = {
   version: 'public',
   edition: 'public',
-  channel: 'public',
   platform: 'public',
   arch: 'public',
   osRelease: 'public',
@@ -188,7 +187,7 @@ export function projectDoctorReport(
   return { ...rest, basics, results, ...(view === 'display' && pendingChecks ? { pendingChecks } : {}) }
 }
 
-export type DoctorPanel = 'checks' | 'export' | 'report'
+export type DoctorPanel = 'checks' | 'export'
 
 /**
  * The dialog is opened from outside the renderer (Help menu, protocol links) by navigating to

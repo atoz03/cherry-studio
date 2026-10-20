@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { REASONING_FORMAT_PROFILES } from '@cherrystudio/provider-registry'
-import { CHERRY_CLOUD_MODEL_GROUP, CHERRY_CLOUD_PROVIDER_ID } from '@shared/data/presets/cherryai'
 import { ENDPOINT_TYPE, type EndpointType, type Model, MODEL_CAPABILITY } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
 import { computeLanguageCost } from '@shared/utils/usagePricing'
@@ -622,7 +621,6 @@ describe('buildClaudeCodeQueryRequestForAgentSession resume-token precedence', (
       frozenModels: [
         {
           modelId: 'model-1',
-          apiModelId: 'claude-sonnet',
           modelName: 'model-1',
           pricingSnapshot: null,
           aliases: ['claude-sonnet', 'model-1']
@@ -708,36 +706,6 @@ describe('buildClaudeCodeQueryRequestForAgentSession resume-token precedence', (
     })
   })
 
-  it('routes Cherry Cloud models through the local gateway regardless of endpoint type', async () => {
-    mocks.getAgent.mockReturnValue({ id: 'agent-1', model: `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free` })
-    mocks.getProviderByProviderId.mockReturnValue({
-      id: CHERRY_CLOUD_PROVIDER_ID,
-      endpointConfigs: {
-        [ENDPOINT_TYPE.ANTHROPIC_MESSAGES]: { baseUrl: 'https://cloud.example/v1' }
-      }
-    })
-    mocks.getModelByKey.mockReturnValue({
-      id: 'deepseek-free',
-      apiModelId: 'deepseek-free',
-      group: CHERRY_CLOUD_MODEL_GROUP,
-      endpointTypes: [ENDPOINT_TYPE.ANTHROPIC_MESSAGES]
-    })
-    mocks.getLastRuntimeResumeToken.mockReturnValue(null)
-    mocks.internalGateway = { baseUrl: 'http://127.0.0.1:23333', apiKey: 'gateway-key' }
-
-    const request = await buildClaudeCodeQueryRequestForAgentSession('session-1')
-    const current = await deriveConnectionConfig('session-1')
-
-    if (!current.ok) throw new Error('expected ok derive')
-    expect(mocks.apiGatewayEnsureInternal).toHaveBeenCalled()
-    expect(request?.connectionConfig.rebuildSignature).toBe(current.config.rebuildSignature)
-    expect(request?.settings.env).toMatchObject({
-      ANTHROPIC_BASE_URL: 'http://127.0.0.1:23333',
-      ANTHROPIC_MODEL: `${CHERRY_CLOUD_PROVIDER_ID}:deepseek-free`
-    })
-    expect(mocks.resolveApiKey).not.toHaveBeenCalled()
-  })
-
   it('routes a declared Anthropic model through the gateway when the provider configures no Messages base URL', async () => {
     // Without a Messages base URL there is nothing to point ANTHROPIC_BASE_URL at; falling back to the
     // effective host would post Messages bodies at an OpenAI-compatible endpoint.
@@ -817,9 +785,9 @@ describe('buildClaudeCodeQueryRequestForAgentSession resume-token precedence', (
     expect(request?.usageCapture).toMatchObject({
       owner: 'agent-sdk',
       frozenModels: [
-        { modelId: 'model-1', apiModelId: 'model-1-api', aliases: ['model-1-api', 'model-1'] },
-        { modelId: 'model-2', apiModelId: 'model-2-api', aliases: ['model-2-api', 'model-2'] },
-        { modelId: 'model-3', apiModelId: 'model-3-api', aliases: ['model-3-api', 'model-3'] }
+        { modelId: 'model-1', aliases: ['model-1-api', 'model-1'] },
+        { modelId: 'model-2', aliases: ['model-2-api', 'model-2'] },
+        { modelId: 'model-3', aliases: ['model-3-api', 'model-3'] }
       ]
     })
   })
@@ -1119,7 +1087,6 @@ describe('buildClaudeCodeQueryRequestForAgentSession resume-token precedence', (
       frozenModels: [
         {
           modelId: 'sonnet',
-          apiModelId: 'sonnet-api',
           modelName: 'sonnet',
           pricingSnapshot: null,
           aliases: ['sonnet-api', 'sonnet']
@@ -1258,20 +1225,16 @@ describe('deriveConnectionConfig', () => {
     expect(mocks.apiGatewayStart).not.toHaveBeenCalled()
   })
 
-  it('changes a Cloud route rebuild signature when the internal gateway restarts', async () => {
+  it('changes a gateway route rebuild signature when the internal gateway restarts', async () => {
     mocks.getAgent.mockReturnValue({
       id: 'agent-1',
-      model: `${CHERRY_CLOUD_PROVIDER_ID}::deepseek-free`,
+      model: 'provider-1::model-1',
+      planModel: 'other-provider::gpt-plan',
       disabledTools: [],
       mcps: [],
       configuration: {}
     })
-    mocks.getProviderByProviderId.mockReturnValue({ id: CHERRY_CLOUD_PROVIDER_ID })
-    mocks.getModelByKey.mockReturnValue({
-      id: 'deepseek-free',
-      apiModelId: 'deepseek-free',
-      group: CHERRY_CLOUD_MODEL_GROUP
-    })
+    mocks.getProviderByProviderId.mockImplementation((providerId: string) => ({ id: providerId }))
     mocks.internalGateway = { baseUrl: 'http://127.0.0.1:23333', apiKey: 'gateway-key-1' }
     const first = await deriveSignature()
 

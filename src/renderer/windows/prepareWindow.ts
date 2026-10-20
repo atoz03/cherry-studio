@@ -2,7 +2,6 @@ import { preferenceService } from '@data/PreferenceService'
 import { DataApiDevtools } from '@data/utils/dataApiDevtools'
 import { initI18n } from '@renderer/i18n/resolver'
 import type { UnifiedPreferenceKeyType } from '@shared/data/preference/preferenceTypes'
-import { FORK_SENTRY_ENABLED } from '@shared/utils/forkFeatures'
 
 interface PrepareWindowOptions {
   /** Preference keys the first frame reads — 'all' warms the entire cache. */
@@ -18,8 +17,6 @@ interface PrepareWindowOptions {
  * to defaults plus lazy per-key self-heal in `usePreference`.
  */
 export async function prepareWindow(options: PrepareWindowOptions): Promise<void> {
-  if (FORK_SENTRY_ENABLED) await import('@renderer/services/sentry').then(({ initSentry }) => initSentry())
-
   // Window-scoped dev bootstrap: expose the DataApi DevTools control surface
   // before the first render (and thus the first DataApi request) so payload
   // capture can be enabled before any event is recorded. No-op in production.
