@@ -35,7 +35,7 @@ export const REGISTRY_URL_GITHUB = `https://raw.githubusercontent.com/CherryHQ/c
 export const REGISTRY_URL_GITCODE = `https://raw.gitcode.com/CherryHQ/cherry-studio/raw/${encodeURIComponent(REMOTE_BRANCH)}/${REMOTE_SUBPATH}`
 
 /**
- * The mirror an update cycle fetches from; the network doctor probes the same one.
+ * The mirror an update cycle fetches from.
  * Unknown egress keeps the updater's historical GitCode fallback.
  */
 export const resolveRegistryBaseUrl = async (): Promise<string> =>

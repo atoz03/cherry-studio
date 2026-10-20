@@ -99,7 +99,6 @@ export const DOCTOR_CHECK_IDS = [
   'network-tls-handshake',
   'network-proxy-applied',
   'network-endpoint-update',
-  'network-endpoint-registry',
   'network-provider-endpoint',
   'mcp-servers-connected',
   'mcp-launch-commands',
@@ -290,14 +289,6 @@ export const DOCTOR_CHECK_CATALOG = {
     requires: []
   },
   'network-endpoint-update': {
-    domain: 'network',
-    tier: 'live',
-    scope: 'global',
-    fixes: [],
-    details: ENDPOINT_DETAILS,
-    requires: ['network-online']
-  },
-  'network-endpoint-registry': {
     domain: 'network',
     tier: 'live',
     scope: 'global',

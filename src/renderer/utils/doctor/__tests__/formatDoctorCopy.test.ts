@@ -29,7 +29,7 @@ describe('formatDoctorReportForCopy', () => {
       },
       results: [
         {
-          id: 'network-endpoint-registry',
+          id: 'network-endpoint-update',
           status: 'fail',
           attribution: 'transient',
           durationMs: 123,
@@ -60,7 +60,7 @@ describe('formatDoctorReportForCopy', () => {
         isPortable: 'Portable'
       },
       runtime: { electron: 'Electron', node: 'Node.js', chrome: 'Chrome', v8: 'V8' },
-      title: (id) => (id === 'network-endpoint-registry' ? 'Model registry endpoint' : id),
+      title: (id) => (id === 'network-endpoint-update' ? 'Update endpoint' : id),
       status: (status) => status.toUpperCase(),
       boolean: (value) => (value ? 'Yes' : 'No')
     })
@@ -69,7 +69,7 @@ describe('formatDoctorReportForCopy', () => {
     expect(text).toContain('global')
     expect(text).toContain('darwin arm64')
     expect(text).toContain('Electron: 40.0.0')
-    expect(text).toContain('Model registry endpoint [network-endpoint-registry]: FAIL')
+    expect(text).toContain('Update endpoint [network-endpoint-update]: FAIL')
     expect(text).toContain('status: 503')
     expect(text).not.toContain('secret-run-id')
     expect(text).not.toContain('/Users/private')

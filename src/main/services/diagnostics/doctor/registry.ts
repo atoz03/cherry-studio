@@ -8,15 +8,7 @@ import {
 } from './checks/install'
 import { recentLogFindings } from './checks/logs'
 import { mcpLaunchCommands, mcpServersConnected } from './checks/mcp'
-import {
-  dnsResolution,
-  endpointRegistry,
-  endpointUpdate,
-  online,
-  providerEndpoint,
-  proxyApplied,
-  tlsHandshake
-} from './checks/network'
+import { dnsResolution, endpointUpdate, online, providerEndpoint, proxyApplied, tlsHandshake } from './checks/network'
 import { accessibilityPermission, screenCapturePermission } from './checks/permission'
 import { providerApiKey, providerModel } from './checks/provider'
 import { claudeLogin, managedTools } from './checks/runtime'
@@ -46,7 +38,6 @@ export const doctorCheckRegistry: DoctorCheckRegistry = {
   'network-tls-handshake': tlsHandshake,
   'network-proxy-applied': proxyApplied,
   'network-endpoint-update': endpointUpdate,
-  'network-endpoint-registry': endpointRegistry,
   'network-provider-endpoint': providerEndpoint,
   'mcp-servers-connected': mcpServersConnected,
   'mcp-launch-commands': mcpLaunchCommands,
