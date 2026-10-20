@@ -75,7 +75,7 @@ function makeListener(modelId?: UniqueModelId, onPersistFailed = vi.fn()) {
 }
 
 describe('PersistenceListener + TemporaryChatBackend', () => {
-  it('retains the execution failure and reports a distinct persistence failure to cleanup observers', async () => {
+  it('persists the classified failure under the anchor message id and rejects when the write fails', async () => {
     const result: StreamErrorResult = {
       status: 'error',
       anchorMessageId: 'owner-message',
@@ -95,11 +95,9 @@ describe('PersistenceListener + TemporaryChatBackend', () => {
     })
     await expect(listener.onError(result)).rejects.toThrow('Terminal persistence failed')
     expect(attempted?.id).toBe('owner-message')
-    expect(result.failure?.failure.reasonCode).toBe('permission')
-    expect(result.persistence).toMatchObject({
-      status: 'failed',
-      failure: { failure: { reasonCode: 'internal', source: { layer: 'host' } } }
-    })
+    expect(attempted?.parts).toMatchObject([
+      { type: 'data-error', data: { executionFailure: { failure: { reasonCode: 'permission' } } } }
+    ])
   })
   beforeEach(() => {
     appendAssistantMessageMock.mockReset()
