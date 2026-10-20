@@ -148,4 +148,12 @@ describe('mcp-launch-commands', () => {
 
     await expect(mcpLaunchCommands.run(ctx)).resolves.toEqual({ status: 'pass' })
   })
+
+  it('never starts the runtime download a real launch would', async () => {
+    mcpServers.list.mockReturnValue({ items: [server('good')], total: 1, page: 1 })
+
+    await mcpLaunchCommands.run(ctx)
+
+    expect(launch.resolveStdioLaunch).toHaveBeenCalledWith(expect.objectContaining({ downloadMissingRuntime: false }))
+  })
 })

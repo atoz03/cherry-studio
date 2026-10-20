@@ -22,13 +22,15 @@ export async function resolveStdioLaunch({
   args,
   logger,
   signal,
-  resolutionCache
+  resolutionCache,
+  downloadMissingRuntime
 }: {
   server: McpServer
   args: string[]
   logger: LoggerService
   signal?: AbortSignal
   resolutionCache?: LaunchResolutionCache
+  downloadMissingRuntime?: boolean
 }): Promise<ResolvedStdioLaunch> {
   let command = server.command ?? ''
   signal?.throwIfAborted()
@@ -57,7 +59,8 @@ export async function resolveStdioLaunch({
     loginShellEnv: buildStdioEnvironment(loginShellEnv, serverEnv),
     logger,
     signal,
-    resolutionCache
+    resolutionCache,
+    downloadMissingRuntime
   })
   return { launch, loginShellEnv, serverEnv }
 }
