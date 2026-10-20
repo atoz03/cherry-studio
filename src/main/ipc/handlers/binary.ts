@@ -19,7 +19,14 @@ export const binaryHandlers: IpcHandlersFor<typeof binaryRequestSchemas> = {
     CODE_CLI_TOOL_PRESET_BY_EXECUTABLE[request.name]
       ? application.get('CodeCliService').removeCli(request)
       : application.get('BinaryManager').removeTool(request),
-  'binary.get_tool_snapshots': async (names) => application.get('BinaryManager').getToolSnapshots(names),
+  'binary.get_tool_snapshots': async (names) => {
+    const snapshots = await application.get('BinaryManager').getToolSnapshots(names)
+    // Code CLI skills follow the availability shown to the user; boot never probes the CLIs for them.
+    if (names.some((name) => CODE_CLI_TOOL_PRESET_BY_EXECUTABLE[name])) {
+      void application.get('CodeCliService').reconcileCliSkills(snapshots)
+    }
+    return snapshots
+  },
   'binary.search_registry': async (query) => application.get('BinaryManager').searchRegistry(query),
   'binary.get_latest_versions': async (force) => application.get('BinaryManager').getLatestVersions(force)
 }

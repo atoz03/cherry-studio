@@ -4802,6 +4802,7 @@
   "settings.mcp.runtimeStatus.connecting": "Verbinden",
   "settings.mcp.runtimeStatus.disabled": "Deaktiviert",
   "settings.mcp.runtimeStatus.error": "Fehler",
+  "settings.mcp.runtimeStatus.idle": "Im Leerlauf",
   "settings.mcp.runtimeStatus.unavailable": "Nicht verfügbar",
   "settings.mcp.search.placeholder": "MCP-Server durchsuchen...",
   "settings.mcp.search.tooltip": "MCP-Server durchsuchen",

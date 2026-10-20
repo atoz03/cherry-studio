@@ -9,11 +9,12 @@ export const mcpStatusCacheKey = (serverId: string): McpStatusCacheKey => `mcp.s
 
 // Module-level constants so cache-miss fallbacks stay reference-stable across
 // renders and selector runs (see useSharedCacheSelector's fallback discipline).
-const CONNECTING_MCP_RUNTIME_STATUS: McpRuntimeStatus = { state: 'connecting', lastCheckedAt: 0 }
+// Servers start on first use, so an enabled server with no published status has not started yet.
+const IDLE_MCP_RUNTIME_STATUS: McpRuntimeStatus = { state: 'idle', lastCheckedAt: 0 }
 const DISABLED_MCP_RUNTIME_STATUS: McpRuntimeStatus = { state: 'disabled', lastCheckedAt: 0 }
 
 export function getDefaultMcpRuntimeStatus(isActive: boolean): McpRuntimeStatus {
-  return isActive ? CONNECTING_MCP_RUNTIME_STATUS : DISABLED_MCP_RUNTIME_STATUS
+  return isActive ? IDLE_MCP_RUNTIME_STATUS : DISABLED_MCP_RUNTIME_STATUS
 }
 
 export function useMcpRuntimeStatus(serverId: string | undefined, isActive: boolean): McpRuntimeStatus {

@@ -4802,6 +4802,7 @@
   "settings.mcp.runtimeStatus.connecting": "Bağlanıyor",
   "settings.mcp.runtimeStatus.disabled": "Devre dışı",
   "settings.mcp.runtimeStatus.error": "Hata",
+  "settings.mcp.runtimeStatus.idle": "Boşta",
   "settings.mcp.runtimeStatus.unavailable": "Kullanılamıyor",
   "settings.mcp.search.placeholder": "MCP sunucularında ara...",
   "settings.mcp.search.tooltip": "MCP sunucularında ara",

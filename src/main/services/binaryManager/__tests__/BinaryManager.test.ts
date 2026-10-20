@@ -233,13 +233,13 @@ describe('BinaryManager', () => {
     expect((service as any).miseBin).toBeNull()
   })
 
-  it('starts the process-wide shell environment capture without awaiting it', async () => {
-    vi.mocked(getRawShellEnv).mockReturnValue(new Promise<never>(() => {}))
+  it('does not start a login shell at startup', async () => {
     const service = new BinaryManager()
 
-    await expect((service as any).onInit()).resolves.toBeUndefined()
+    await (service as any).onInit()
+    await runAllReadyTasks(service)
 
-    expect(getRawShellEnv).toHaveBeenCalledOnce()
+    expect(getRawShellEnv).not.toHaveBeenCalled()
   })
 
   describe('install preference subscriptions', () => {

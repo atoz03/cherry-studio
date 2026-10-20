@@ -920,7 +920,8 @@ When the idle timer expires, the runtime closes the entry:
 
 - clears `pendingTurns`;
 - closes the runtime connection;
-- prewarms Claude Code when a latest resume token is known.
+- prewarms Claude Code when a latest resume token is known. The parked query lives for two minutes, and
+  only the most recently parked one is kept (parking another session's query closes the older one).
 
 Service stop and destroy close all runtime entries.
 Repeated `closeSession()` calls join the in-flight close; if a replacement entry was created meanwhile,

@@ -81,25 +81,14 @@ describe('Claude runtime acquisition', () => {
     expect(claudeBinaryTarget(platform, arch, glibc)).toBe(expected)
   })
 
-  it('starts downloading after application startup without waiting for the network or opening an agent', async () => {
-    let release!: () => void
-    const network = new Promise<void>((resolve) => {
-      release = resolve
-    })
-    vi.mocked(net.fetch).mockImplementation(async () => {
-      await network
-      return new Response(new Uint8Array(archive))
-    })
-    try {
-      await service._doAllReady()
-      expect(service.getStatus().phase).toBe('downloading')
-      expect(() => service.requireExecutable()).toThrow()
-      service.ensure()
-    } finally {
-      release()
-    }
-    expect((await settled()).phase).toBe('ready')
-    expect(await readFile(service.requireExecutable(), 'utf8')).toBe('native-cli-fixture')
+  it('does not download at startup; the first session that needs the runtime downloads it once', async () => {
+    await service._doAllReady()
+    expect(service.getStatus().phase).toBe('missing')
+    expect(vi.mocked(net.fetch)).not.toHaveBeenCalled()
+
+    const executable = await service.ensureExecutable()
+    expect(await readFile(executable, 'utf8')).toBe('native-cli-fixture')
+    expect(await service.ensureExecutable()).toBe(executable)
     expect(vi.mocked(net.fetch).mock.calls).toHaveLength(1)
   })
 

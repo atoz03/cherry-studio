@@ -4802,6 +4802,7 @@
   "settings.mcp.runtimeStatus.connecting": "接続中",
   "settings.mcp.runtimeStatus.disabled": "無効",
   "settings.mcp.runtimeStatus.error": "エラー",
+  "settings.mcp.runtimeStatus.idle": "待機中",
   "settings.mcp.runtimeStatus.unavailable": "利用不可",
   "settings.mcp.search.placeholder": "MCP サーバーを検索...",
   "settings.mcp.search.tooltip": "MCP サーバーを検索",

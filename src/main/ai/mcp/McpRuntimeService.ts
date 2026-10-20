@@ -43,6 +43,7 @@ import { isSensitiveKey, REDACTED, redactSecretText } from '@shared/utils/redact
 import { safeSerialize } from '@shared/utils/serialize'
 
 import { createExternalMcpConnection } from './connections/ExternalMcpConnection'
+import { IdleStoppingMcpConnection } from './connections/IdleStoppingMcpConnection'
 import { createInProcessMcpConnection } from './connections/InProcessMcpConnection'
 import type { McpConnection, McpConnectionEvents, McpInteractionContext } from './connections/McpConnection'
 import type { McpForwardMethod, McpForwardOptions, McpForwardResult } from './connections/McpConnection'
@@ -123,6 +124,8 @@ const mcpStatusCacheKey = (serverId: string): SharedCacheKey => `mcp.status.${se
 const MCP_CONNECT_TIMEOUT_FLOOR_MS = 180_000
 const MCP_CONNECT_RETRY_BASE_MS = 10_000
 const MCP_CONNECT_MAX_ATTEMPTS = 5
+/** A stdio server with no request for this long has its process stopped until the next request. */
+const MCP_STDIO_IDLE_STOP_MS = 10 * 60_000
 
 interface ConnectFailure {
   error: unknown
@@ -393,8 +396,9 @@ export class McpRuntimeService extends BaseService {
       })
     }
 
-    return createExternalMcpConnection({
-      server: resolveBuiltinExternalMcpServer(server),
+    const external = resolveBuiltinExternalMcpServer(server)
+    const options: Parameters<typeof createExternalMcpConnection>[0] = {
+      server: external,
       oauthCoordinator: this.oauthCoordinator,
       allowInteractiveAuthorization: canAuthorizeInteractively(requestContext),
       authorizationWindowId: requestContext?.windowId,
@@ -412,6 +416,23 @@ export class McpRuntimeService extends BaseService {
             level: 'stderr',
             message: redactSecretText(message),
             source: 'stdio'
+          })
+        }
+      }
+    }
+    const connection = await createExternalMcpConnection(options)
+    if (mcpTransportKind(external) !== 'stdio') return connection
+    return new IdleStoppingMcpConnection(connection, {
+      idleMs: MCP_STDIO_IDLE_STOP_MS,
+      reconnect: (restartSignal) => createExternalMcpConnection({ ...options, signal: restartSignal }),
+      onStateChange: (state, error) => {
+        this.setServerStatus(server.id, state, error)
+        if (state === 'idle') {
+          this.emitServerLog(server, {
+            timestamp: Date.now(),
+            level: 'info',
+            message: 'Server stopped while idle; it restarts on the next request',
+            source: 'client'
           })
         }
       }

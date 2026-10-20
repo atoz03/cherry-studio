@@ -2,7 +2,6 @@ import path from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { CODE_CLI_TOOL_PRESETS } from '@shared/data/presets/codeCliTools'
 import type { CodeCliRunInput } from '@shared/ipc/schemas/codeCli'
 import type { BinaryRemoveRequest, BinaryRemoveResult } from '@shared/types/binary'
 import { CodeCli, TerminalApp } from '@shared/types/codeCli'
@@ -194,26 +193,17 @@ describe('CodeCliService', () => {
     expect(codeCliService).toBeInstanceOf(BaseService)
   })
 
-  it('should have onInit that preloads terminals', async () => {
-    const { codeCliService } = await loadModules()
-    await expect(codeCliService._doInit()).resolves.toBeUndefined()
-    expect(codeCliService.isReady).toBe(true)
-  })
-
-  it('reconciles available CLI skills only after every service is ready', async () => {
+  it('probes no terminal, CLI, or skill while the app starts', async () => {
     const { codeCliService } = await loadModules()
 
     await codeCliService._doInit()
-    expect(skillServiceMock.syncBuiltinSkill).not.toHaveBeenCalled()
-
     await codeCliService._doAllReady()
-    expect(skillServiceMock.syncBuiltinSkill).toHaveBeenCalledTimes(CODE_CLI_TOOL_PRESETS.length)
-    expect(skillServiceMock.syncBuiltinSkill).toHaveBeenCalledWith(
-      'code-mate-codex',
-      path.join('/mock/binary-data', 'code-mate-codex'),
-      '2.0.9',
-      'code-cli:openai-codex'
-    )
+
+    expect(codeCliService.isReady).toBe(true)
+    expect(childProcessMock.execAsync).not.toHaveBeenCalled()
+    expect(childProcessMock.execFileAsync).not.toHaveBeenCalled()
+    expect(binaryManagerMock.getToolSnapshots).not.toHaveBeenCalled()
+    expect(skillServiceMock.syncBuiltinSkill).not.toHaveBeenCalled()
   })
 
   it('should clean up timers on stop', async () => {
@@ -291,19 +281,42 @@ describe('CodeCliService', () => {
     })
 
     it('preserves the skill when CLI state is unknown', async () => {
-      binaryManagerMock.getToolSnapshots.mockResolvedValue({
+      const { codeCliService } = await loadModules()
+
+      await codeCliService.reconcileCliSkills({
         codex: {
           name: 'codex',
           availability: { source: 'none' },
           application: { status: 'unknown', reason: 'backend_unavailable' }
         }
       })
-      const { codeCliService } = await loadModules()
-
-      await codeCliService.reconcileCliSkills()
 
       expect(skillServiceMock.syncBuiltinSkill).not.toHaveBeenCalled()
       expect(skillServiceMock.uninstallBuiltinSkill).not.toHaveBeenCalled()
+    })
+
+    it('syncs each available CLI skill from the snapshots read, once per availability change', async () => {
+      const { codeCliService } = await loadModules()
+      const available = {
+        codex: { name: 'codex', availability: { source: 'system', path: '/usr/local/bin/codex' } }
+      } as const
+      const removed = {
+        codex: { name: 'codex', availability: { source: 'none' }, application: { status: 'absent' } }
+      } as const
+
+      await Promise.all([codeCliService.reconcileCliSkills(available), codeCliService.reconcileCliSkills(available)])
+      expect(skillServiceMock.syncBuiltinSkill).toHaveBeenCalledTimes(1)
+      expect(skillServiceMock.syncBuiltinSkill).toHaveBeenCalledWith(
+        'code-mate-codex',
+        path.join('/mock/binary-data', 'code-mate-codex'),
+        '2.0.9',
+        'code-cli:openai-codex'
+      )
+
+      await codeCliService.reconcileCliSkills(removed)
+      await codeCliService.reconcileCliSkills(removed)
+      expect(skillServiceMock.uninstallBuiltinSkill).toHaveBeenCalledTimes(1)
+      expect(skillServiceMock.uninstallBuiltinSkill).toHaveBeenCalledWith('code-mate-codex', 'code-cli:openai-codex')
     })
   })
 

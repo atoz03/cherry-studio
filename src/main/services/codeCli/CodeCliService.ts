@@ -92,18 +92,10 @@ export class CodeCliService extends BaseService {
   } | null = null
   private readonly TERMINALS_CACHE_DURATION = 1000 * 60 * 5 // 5 minutes cache for terminals
   private loginQuery: { controller: AbortController; promise: Promise<boolean>; users: number } | null = null
-
-  protected async onInit(): Promise<void> {
-    if (isMac || isWin) {
-      void this.preloadTerminals()
-    }
-  }
-
-  protected override async onAllReady(): Promise<void> {
-    await this.reconcileCliSkills().catch((error) => {
-      logger.error('Failed to reconcile Code CLI skills', error as Error)
-    })
-  }
+  // Last availability each CLI's skill was reconciled against, so repeated snapshot reads stay cheap.
+  private readonly reconciledCliSkills = new Map<string, boolean>()
+  // Overlapping snapshot reads must not interleave skill syncs for the same CLI.
+  private cliSkillReconcile: Promise<void> = Promise.resolve()
 
   async installCli(request: BinaryInstallByNameRequest): Promise<void> {
     const preset = this.requirePreset(request.name)
@@ -125,14 +117,20 @@ export class CodeCliService extends BaseService {
     return result
   }
 
-  async reconcileCliSkills(): Promise<void> {
-    const snapshots = await application
-      .get('BinaryManager')
-      .getToolSnapshots(CODE_CLI_TOOL_PRESETS.map((preset) => preset.executable))
+  /**
+   * Install or remove each Code CLI's bundled skill to match snapshots someone already read
+   * (Code page, dependency settings), so boot runs no mise or shell probes for it.
+   */
+  reconcileCliSkills(snapshots: Record<string, BinaryToolSnapshot | undefined>): Promise<void> {
+    this.cliSkillReconcile = this.cliSkillReconcile.then(() => this.reconcileCliSkillsNow(snapshots))
+    return this.cliSkillReconcile
+  }
 
+  private async reconcileCliSkillsNow(snapshots: Record<string, BinaryToolSnapshot | undefined>): Promise<void> {
     for (const preset of CODE_CLI_TOOL_PRESETS) {
       const snapshot = snapshots[preset.executable]
       if (!snapshot) continue
+      if (this.reconciledCliSkills.get(preset.executable) === (snapshot.availability.source !== 'none')) continue
       try {
         await this.reconcileCliSkill(preset, snapshot)
       } catch (error) {
@@ -161,10 +159,12 @@ export class CodeCliService extends BaseService {
   private async reconcileCliSkill(preset: CodeCliToolPreset, snapshot: BinaryToolSnapshot): Promise<void> {
     if (snapshot.availability.source !== 'none') {
       await this.installCliSkill(preset)
+      this.reconciledCliSkills.set(preset.executable, true)
       return
     }
     if (snapshot.application?.status === 'absent') {
       await skillService.uninstallBuiltinSkill(preset.skillFolderName, preset.skillNamespace)
+      this.reconciledCliSkills.set(preset.executable, false)
     }
   }
 
@@ -246,19 +246,6 @@ export class CodeCliService extends BaseService {
   protected async onStop(): Promise<void> {
     this.loginQuery?.controller.abort()
     this.terminalsCache = null
-  }
-
-  /**
-   * Preload available terminals in background
-   */
-  private async preloadTerminals(): Promise<void> {
-    try {
-      logger.info('Preloading available terminals...')
-      await this.getAvailableTerminals()
-      logger.info('Terminal preloading completed')
-    } catch (error) {
-      logger.warn('Terminal preloading failed:', error as Error)
-    }
   }
 
   /**

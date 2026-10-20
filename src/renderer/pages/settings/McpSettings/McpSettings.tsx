@@ -469,6 +469,7 @@ const McpSettingsContent: React.FC<McpSettingsContentProps> = ({ server, updateM
   const authorizing = server.isActive && runtimeStatus.state === 'connecting' && runtimeStatus.authorizing
   const runtimeStatusLabel = {
     disabled: t('settings.mcp.runtimeStatus.disabled', 'Disabled'),
+    idle: t('settings.mcp.runtimeStatus.idle'),
     connecting: authorizing
       ? t('settings.mcp.runtimeStatus.authorizing')
       : t('settings.mcp.runtimeStatus.connecting', 'Connecting'),
@@ -751,7 +752,7 @@ const McpRuntimeStatusBadge = ({
   state,
   className,
   ...props
-}: { state: 'disabled' | 'connecting' | 'connected' | 'error' } & React.ComponentProps<'span'>) => (
+}: { state: 'disabled' | 'idle' | 'connecting' | 'connected' | 'error' } & React.ComponentProps<'span'>) => (
   <span
     className={cn(
       'inline-flex h-4.5 items-center rounded-[9px] px-1.5 text-[11px] leading-4.5',
@@ -759,6 +760,7 @@ const McpRuntimeStatusBadge = ({
       state === 'connecting' && 'border border-warning-border bg-warning-subtle text-warning-subtle-foreground',
       state === 'error' && 'border border-error-border bg-error-subtle text-error-subtle-foreground',
       state === 'disabled' && 'bg-muted text-muted-foreground',
+      state === 'idle' && 'border border-border bg-muted text-muted-foreground',
       className
     )}
     {...props}

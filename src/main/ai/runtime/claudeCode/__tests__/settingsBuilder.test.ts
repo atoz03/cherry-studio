@@ -50,6 +50,7 @@ const mocks = vi.hoisted(() => ({
   createMcpBridgeServer: vi.fn(),
   createToolPolicySnapshot: vi.fn(),
   warmToolsCache: vi.fn<(serverId: string) => Promise<void>>(async () => undefined),
+  hasToolsSnapshot: vi.fn<(serverId: string) => boolean>(() => true),
   listMcpTools: vi.fn(),
   onToolsCacheUpdated: vi.fn(),
   mcpSubscriptionDispose: vi.fn(),
@@ -312,6 +313,7 @@ describe('buildClaudeCodeSessionSettings', () => {
       setPermissionMode: vi.fn()
     })
     mocks.warmToolsCache.mockResolvedValue(undefined)
+    mocks.hasToolsSnapshot.mockReturnValue(true)
     mocks.listMcpTools.mockReturnValue([])
     mocks.onToolsCacheUpdated.mockReturnValue({ dispose: mocks.mcpSubscriptionDispose })
     mocks.findByIdOrName.mockImplementation((idOrName: string) => ({ id: idOrName, name: idOrName }))
@@ -323,6 +325,7 @@ describe('buildClaudeCodeSessionSettings', () => {
         return {
           listTools: mocks.listMcpTools,
           warmToolsCache: mocks.warmToolsCache,
+          hasToolsSnapshot: mocks.hasToolsSnapshot,
           onToolsCacheUpdated: mocks.onToolsCacheUpdated
         }
       }
@@ -1349,6 +1352,7 @@ describe('buildClaudeCodeSessionSettings', () => {
         return {
           listTools: mocks.listMcpTools,
           warmToolsCache: mocks.warmToolsCache,
+          hasToolsSnapshot: mocks.hasToolsSnapshot,
           onToolsCacheUpdated: mocks.onToolsCacheUpdated
         }
       }
@@ -2725,6 +2729,7 @@ describe('buildClaudeCodeSessionSettings', () => {
         return {
           listTools: mocks.listMcpTools,
           warmToolsCache: mocks.warmToolsCache,
+          hasToolsSnapshot: mocks.hasToolsSnapshot,
           onToolsCacheUpdated: mocks.onToolsCacheUpdated
         }
       }
@@ -3636,6 +3641,51 @@ describe('buildClaudeCodeSessionSettings', () => {
       }
     })
 
+    it('waits for a server not yet listed since launch so its tools reach the first session', async () => {
+      let resolveWarm!: () => void
+      mocks.warmToolsCache.mockReturnValue(
+        new Promise<void>((resolve) => {
+          resolveWarm = resolve
+        })
+      )
+      mocks.hasToolsSnapshot.mockReturnValue(false)
+      const session = sessionWithMcps(['srv-a'])
+
+      vi.useFakeTimers()
+      try {
+        const build = buildClaudeCodeSessionSettings(session as never, {} as never)
+        await vi.advanceTimersByTimeAsync(3_000)
+        mocks.listMcpTools.mockReturnValue([{ id: 'tool-x', name: 'tool_x', description: 'X' }])
+        resolveWarm()
+        const settings = await build
+        expect(settings.mcpToolMetadata).toMatchObject({
+          'mcp__srv-a__tool_x': expect.objectContaining({ name: 'tool_x', serverId: 'srv-a' })
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('caps the wait for a cold server that never responds at ten seconds', async () => {
+      mocks.warmToolsCache.mockReturnValue(new Promise<never>(() => {}))
+      mocks.hasToolsSnapshot.mockReturnValue(false)
+      const session = sessionWithMcps(['srv-hung'])
+
+      vi.useFakeTimers()
+      try {
+        let settled = false
+        const build = buildClaudeCodeSessionSettings(session as never, {} as never).finally(() => {
+          settled = true
+        })
+        await vi.advanceTimersByTimeAsync(9_999)
+        expect(settled).toBe(false)
+        await vi.advanceTimersByTimeAsync(1)
+        await expect(build).resolves.toBeDefined()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('tolerates a rejecting server and still resolves', async () => {
       mocks.warmToolsCache.mockImplementation((serverId: string) =>
         serverId === 'srv-a' ? Promise.reject(new Error('boom')) : Promise.resolve()
@@ -3669,6 +3719,7 @@ describe('buildClaudeCodeSessionSettings', () => {
           return {
             listTools: vi.fn(() => cachedTools),
             warmToolsCache: mocks.warmToolsCache,
+            hasToolsSnapshot: mocks.hasToolsSnapshot,
             onToolsCacheUpdated: mocks.onToolsCacheUpdated
           }
         }

@@ -4802,6 +4802,7 @@
   "settings.mcp.runtimeStatus.connecting": "连接中",
   "settings.mcp.runtimeStatus.disabled": "已禁用",
   "settings.mcp.runtimeStatus.error": "错误",
+  "settings.mcp.runtimeStatus.idle": "空闲",
   "settings.mcp.runtimeStatus.unavailable": "不可用",
   "settings.mcp.search.placeholder": "搜索 MCP 服务器...",
   "settings.mcp.search.tooltip": "搜索 MCP 服务器",

@@ -19,7 +19,10 @@ import {
 import type { ClaudeCodeProcessDiagnostics } from './processExitDiagnostics'
 
 const logger = loggerService.withContext('ClaudeCodeWarmQueryManager')
-const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000
+// A park is spawned only after a session's live connection already idled out, so it is speculative:
+// keep a short window and only the most recently parked CLI process.
+const DEFAULT_IDLE_TTL_MS = 2 * 60 * 1000
+const MAX_PARKED_QUERIES = 1
 
 type WarmQueryEntry = {
   signature: string
@@ -268,6 +271,7 @@ export class ClaudeCodeWarmQueryManager extends BaseService {
     const entry: WarmQueryEntry = { signature, promise, usageCapture: request.usageCapture, processDiagnostics }
     this.entries.set(request.key, entry)
     this.refreshIdleTimer(request.key, entry)
+    this.evictOlderParks()
   }
 
   async consume(request: WarmQueryRequest): Promise<ConsumedWarmQuery | undefined> {
@@ -334,6 +338,14 @@ export class ClaudeCodeWarmQueryManager extends BaseService {
       this.closeDetached(key, entry)
     }, DEFAULT_IDLE_TTL_MS)
     entry.idleTimer.unref?.()
+  }
+
+  private evictOlderParks(): void {
+    for (const [key, entry] of this.entries) {
+      if (this.entries.size <= MAX_PARKED_QUERIES) return
+      this.entries.delete(key)
+      this.closeDetached(key, entry)
+    }
   }
 
   private closeDetached(key: string, entry: WarmQueryEntry): void {

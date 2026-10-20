@@ -15,7 +15,8 @@ const binaryManager = {
 }
 const codeCliService = {
   installCli: vi.fn(),
-  removeCli: vi.fn()
+  removeCli: vi.fn(),
+  reconcileCliSkills: vi.fn()
 }
 
 beforeEach(() => {
@@ -79,6 +80,17 @@ describe('binaryHandlers', () => {
     const result = await binaryHandlers['binary.get_tool_snapshots'](['fd'], ctx)
     expect(binaryManager.getToolSnapshots).toHaveBeenCalledWith(['fd'])
     expect(result).toEqual({ fd: { name: 'fd', availability: { source: 'none' } } })
+    expect(codeCliService.reconcileCliSkills).not.toHaveBeenCalled()
+  })
+
+  it('get_tool_snapshots reconciles Code CLI skills from the snapshots it read', async () => {
+    const snapshots = { codex: { name: 'codex', availability: { source: 'system', path: '/usr/bin/codex' } } }
+    binaryManager.getToolSnapshots.mockResolvedValue(snapshots)
+
+    await expect(binaryHandlers['binary.get_tool_snapshots'](['codex'], ctx)).resolves.toBe(snapshots)
+
+    expect(codeCliService.reconcileCliSkills).toHaveBeenCalledWith(snapshots)
+    expect(binaryManager.getToolSnapshots).toHaveBeenCalledTimes(1)
   })
 
   it('search_registry forwards the query', async () => {

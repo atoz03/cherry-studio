@@ -50,7 +50,7 @@ afterEach(() => {
 describe('useMcpRuntimeStatus', () => {
   it('derives the default from isActive on a cache miss', () => {
     const { result: active } = renderHook(() => useMcpRuntimeStatus(SERVER_ID, true))
-    expect(active.current).toEqual({ state: 'connecting', lastCheckedAt: 0 })
+    expect(active.current).toEqual({ state: 'idle', lastCheckedAt: 0 })
 
     const { result: inactive } = renderHook(() => useMcpRuntimeStatus(SERVER_ID, false))
     expect(inactive.current).toEqual({ state: 'disabled', lastCheckedAt: 0 })

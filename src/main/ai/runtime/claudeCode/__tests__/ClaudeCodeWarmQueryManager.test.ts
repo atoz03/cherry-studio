@@ -142,12 +142,29 @@ describe('ClaudeCodeWarmQueryManager', () => {
     startupMock.mockResolvedValueOnce(warmQuery()).mockResolvedValueOnce(warmQuery())
 
     await manager.prewarm({ key: 'session-1', options: { model: 'sonnet' } })
-    await manager.prewarm({ key: 'session-2', options: { model: 'sonnet' } })
     const first = await manager.consume({ key: 'session-1', options: { model: 'sonnet' } })
+    await manager.prewarm({ key: 'session-2', options: { model: 'sonnet' } })
     const second = await manager.consume({ key: 'session-2', options: { model: 'sonnet' } })
 
-    expect(first?.processDiagnostics).not.toBe(second?.processDiagnostics)
-    expect(first?.processDiagnostics.reference).not.toBe(second?.processDiagnostics.reference)
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    expect(first!.processDiagnostics).not.toBe(second!.processDiagnostics)
+    expect(first!.processDiagnostics.reference).not.toBe(second!.processDiagnostics.reference)
+  })
+
+  it('keeps only the most recently parked process alive across sessions', async () => {
+    const manager = new ClaudeCodeWarmQueryManager()
+    const older = warmQuery()
+    const newer = warmQuery()
+    startupMock.mockResolvedValueOnce(older).mockResolvedValueOnce(newer)
+
+    await manager.prewarm({ key: 'session-1', options: { model: 'sonnet' } })
+    await manager.prewarm({ key: 'session-2', options: { model: 'sonnet' } })
+    await vi.waitFor(() => expect(older.close).toHaveBeenCalledOnce())
+
+    expect(await manager.consume({ key: 'session-1', options: { model: 'sonnet' } })).toBeUndefined()
+    expect((await manager.consume({ key: 'session-2', options: { model: 'sonnet' } }))?.warmQuery).toBe(newer)
+    expect(newer.close).not.toHaveBeenCalled()
   })
 
   it('waits for every warm cleanup in closeAll', async () => {
@@ -473,17 +490,21 @@ describe('ClaudeCodeWarmQueryManager', () => {
     expect(warm.close).toHaveBeenCalledOnce()
   })
 
-  it('closes unused warm queries after the idle ttl', async () => {
+  it('closes an unused warm query two minutes after it was parked', async () => {
     const manager = new ClaudeCodeWarmQueryManager()
     const warm = warmQuery()
     startupMock.mockResolvedValueOnce(warm)
 
     await manager.prewarm({ key: 'session-1', options: { model: 'sonnet' } })
     await Promise.resolve()
-    vi.advanceTimersByTime(5 * 60 * 1000)
+    vi.advanceTimersByTime(2 * 60 * 1000 - 1)
     await Promise.resolve()
+    expect(warm.close).not.toHaveBeenCalled()
 
+    vi.advanceTimersByTime(1)
+    await Promise.resolve()
     expect(warm.close).toHaveBeenCalledOnce()
+    expect(await manager.consume({ key: 'session-1', options: { model: 'sonnet' } })).toBeUndefined()
   })
 
   it.each(['session', 'all'] as const)(
@@ -541,7 +562,7 @@ describe('ClaudeCodeWarmQueryManager', () => {
       if (reason === 'replacement') startupMock.mockResolvedValueOnce(warmQuery())
       await manager.prewarm({ key: 'session-1', options: { model: 'sonnet' } })
       let initialClose: Promise<void> | undefined
-      if (reason === 'idle') vi.advanceTimersByTime(5 * 60 * 1000)
+      if (reason === 'idle') vi.advanceTimersByTime(2 * 60 * 1000)
       else if (reason === 'replacement') await manager.prewarm({ key: 'session-1', options: { model: 'opus' } })
       else if (reason === 'mismatch') await manager.consume({ key: 'session-1', options: { model: 'opus' } })
       else initialClose = manager.close('session-1')

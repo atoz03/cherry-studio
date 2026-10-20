@@ -100,18 +100,34 @@ The sync is idempotent; a stale entry is overwritten on the next sync.
   (issue #16242).
 - **`refreshTools(serverId)`** (and the private `listToolsForServer`) is the live
   path that connects, lists, and writes the cache. It is driven entirely by
-  background warmers: `prewarmActiveServerTools` (at `onReady`), the
-  `onToolListChanged` refresh, the renderer's on-demand `refreshTools` (via
-  `useAgentTools`), the server-enable toggle, and `restartServer`.
+  on-demand warmers: `warmToolsCache` (awaited, with a timeout, by chat and agent
+  session setup), the `onToolListChanged` refresh, the renderer's on-demand
+  `refreshTools` (via `useAgentTools`), the server-enable toggle, and
+  `restartServer`. Nothing connects at boot, so an enabled server that no chat,
+  agent, or settings page has needed since launch never starts.
 
 `listTools` also fires a single non-blocking `refreshTools` the first time it sees
 a never-warmed server (cache `undefined`, distinct from a warmed-but-empty `[]`),
 so headless/cron starts self-warm without re-probing dead servers.
 
-Trade-off: tool availability is **eventually consistent**. A server whose cache
-is still cold when a session starts contributes no tools to that session and
-appears on the next one — the Claude Agent SDK snapshots the tool list per
-session, so this cannot be made live mid-session.
+Trade-off: tool availability is **eventually consistent**. Chat requests and
+Claude Code session setup wait up to 10 s for a cold server to start, but a
+server still not listed when that wait ends contributes no tools to that
+session and appears on the next one — the Claude Agent SDK snapshots the tool
+list per session, so this cannot be made live mid-session.
+
+### Idle stdio servers stop
+
+`McpRuntimeService` wraps every stdio connection in `IdleStoppingMcpConnection`:
+once a server has had no request in flight and no resource observation open for
+10 minutes, its process is closed and its status becomes `idle`. The next
+request (including the health probe the runtime runs before reusing a
+connection) starts a fresh process; a failed restart reports `error` and goes
+through the normal connect backoff. Server metadata (version, capabilities,
+instructions) and the cached tool list stay readable while stopped. Remote and
+in-process servers are never stopped. A server that keeps session state only in
+memory (a REPL kernel, a browser without a persistent profile) loses it after an
+idle stop.
 
 ## Meta-tools
 
