@@ -8,6 +8,7 @@ import { WINDOW_CONTROLS_OVERLAY_WIDTH } from '@renderer/components/WindowContro
 import { useCommandHandler } from '@renderer/hooks/command'
 import { useTabs } from '@renderer/hooks/tab'
 import { useNativeFullscreen } from '@renderer/hooks/useNativeFullscreen'
+import { useReportFirstFrame } from '@renderer/hooks/useReportFirstFrame'
 import type { WindowFrame } from '@renderer/hooks/useWindowFrame'
 import { useWindowInitData } from '@renderer/hooks/useWindowInitData'
 import { ipcApi } from '@renderer/ipc'
@@ -33,6 +34,8 @@ export const SubWindowAppShell = () => {
   const { tabs, activeTabId, updateTab, attachTab } = useTabs()
   const initialized = useRef(false)
   const init = useWindowInitData<SubWindowInitData>()
+  // Shown once the detached tab is attached, so the window appears with its title bar and page.
+  useReportFirstFrame(tabs.length > 0)
   const isFullscreen = useNativeFullscreen()
   const handleCloseTab = useCallback(() => {
     void ipcApi.request('window.close')

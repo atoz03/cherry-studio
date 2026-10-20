@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // @application, electron, and @logger are globally mocked in tests/main.setup.ts.
 import { application } from '@application'
 import { BaseService } from '@main/core/lifecycle/BaseService'
-import { trackFirstPaint } from '@main/core/window/firstPaint'
+import { markFirstFrame, trackFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
 const { getApplicationIdMock } = vi.hoisted(() => ({
@@ -343,11 +343,13 @@ describe('SelectionService macOS action window', () => {
 })
 
 describe('SelectionService — windows created on first use', () => {
+  type Listener = (managed: unknown) => void
   type Wm = {
     open: (type: WindowType, args?: unknown) => string
+    close: (id: string) => boolean
     getWindow: (id: string) => unknown
-    destroy: (id: string) => boolean
     onWindowCreatedByType: ReturnType<typeof vi.fn<(...args: any[]) => any>>
+    onWindowDestroyedByType: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   }
   type FakeWindow = EventEmitter & Record<string, ReturnType<typeof vi.fn<(...args: any[]) => any>>>
   type Internals = {
@@ -363,16 +365,17 @@ describe('SelectionService — windows created on first use', () => {
   let svc: InstanceType<typeof SelectionService>
   let internals: Internals
 
-  /** Stand-in for a freshly constructed (not yet painted) BrowserWindow. */
+  /** Stand-in for a freshly constructed BrowserWindow whose UI has not rendered yet. */
   const createFakeWindow = (): FakeWindow => {
     const win = new EventEmitter() as FakeWindow
     let visible = false
+    let destroyed = false
     const reveal = vi.fn(() => {
       visible = true
       win.emit('show')
     })
     Object.assign(win, {
-      isDestroyed: vi.fn(() => false),
+      isDestroyed: vi.fn(() => destroyed),
       isVisible: vi.fn(() => visible),
       setPosition: vi.fn(),
       setBounds: vi.fn(),
@@ -387,16 +390,22 @@ describe('SelectionService — windows created on first use', () => {
       hide: vi.fn(() => {
         visible = false
         win.emit('hide')
+      }),
+      destroy: vi.fn(() => {
+        destroyed = true
       })
     })
     return win
   }
 
-  /** The onWindowCreatedByType listener SelectionService registered for `type`. */
-  const createdListener = (type: WindowType) =>
-    wm.onWindowCreatedByType.mock.calls.find(([t]) => t === type)![1] as (managed: unknown) => void
+  /** The window-lifecycle listener SelectionService registered for `type`. */
+  const listenerFor = (register: Wm['onWindowCreatedByType'], type: WindowType) =>
+    register.mock.calls.find(([t]) => t === type)![1] as Listener
 
   const openCalls = (type: WindowType) => vi.mocked(wm.open).mock.calls.filter(([t]) => t === type)
+
+  /** The window's renderer reporting its first frame (window.report_first_frame). */
+  const reportFirstFrame = (win: FakeWindow) => markFirstFrame(win as unknown as BrowserWindow)
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -407,13 +416,13 @@ describe('SelectionService — windows created on first use', () => {
     })
     windows = new Map()
     let created = 0
-    // WindowManager.open(): construct, notify onWindowCreatedByType subscribers, track first paint.
+    // WindowManager.open(): construct, notify onWindowCreatedByType subscribers, track the first frame.
     vi.spyOn(wm, 'open').mockImplementation((type) => {
       const id = `${type}-${++created}`
       const window = createFakeWindow()
       windows.set(id, window)
-      createdListener(type)({ id, type, window })
-      trackFirstPaint(window as unknown as BrowserWindow)
+      listenerFor(wm.onWindowCreatedByType, type)({ id, type, window })
+      trackFirstFrame(window as unknown as BrowserWindow)
       return id
     })
     vi.spyOn(wm, 'getWindow').mockImplementation((id) => windows.get(id))
@@ -430,8 +439,14 @@ describe('SelectionService — windows created on first use', () => {
     vi.restoreAllMocks()
   })
 
-  const toolbar = () => windows.get('selectionToolbar-1')!
+  const toolbar = (n = 1) => windows.get(`selectionToolbar-${n}`)!
   const textSelectedCalls = () => send.mock.calls.filter(([, event]) => event === 'selection.text_selected')
+
+  /** A new toolbar's renderer mounting: size report from a mount effect, then the first-frame report. */
+  const renderToolbar = (n = 1) => {
+    svc.determineToolbarSize(280, 43)
+    reportFirstFrame(toolbar(n))
+  }
 
   it('opens no window when the feature is activated', () => {
     internals.initStatus = true
@@ -447,18 +462,19 @@ describe('SelectionService — windows created on first use', () => {
     expect(wm.open).not.toHaveBeenCalled()
   })
 
-  it('shows the first toolbar only once its renderer has mounted and painted, with the latest selection', () => {
+  it('shows the first toolbar only once its UI has rendered, at its reported size, with the latest selection', () => {
     internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'first' })
     internals.presentToolbar({ x: 30, y: 40 }, 'bottomLeft', { text: 'second' })
 
     expect(openCalls(WindowType.SelectionToolbar)).toHaveLength(1)
 
-    // Mounted (size reported) but not painted yet → still hidden.
+    // The blank page has painted and the size is known, but the UI has not rendered yet.
+    toolbar().emit('ready-to-show')
     svc.determineToolbarSize(280, 43)
     expect(toolbar().showInactive).not.toHaveBeenCalled()
     expect(textSelectedCalls()).toHaveLength(0)
 
-    toolbar().emit('ready-to-show')
+    reportFirstFrame(toolbar())
 
     expect(toolbar().showInactive).toHaveBeenCalledTimes(1)
     // Shown at the size the renderer reported, not the 350px default.
@@ -466,21 +482,9 @@ describe('SelectionService — windows created on first use', () => {
     expect(textSelectedCalls()).toEqual([['selectionToolbar-1', 'selection.text_selected', { text: 'second' }]])
   })
 
-  it('waits for the renderer size report even when the toolbar has already painted', () => {
-    internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'hello' })
-    toolbar().emit('ready-to-show')
-    expect(toolbar().showInactive).not.toHaveBeenCalled()
-
-    svc.determineToolbarSize(300, 43)
-
-    expect(toolbar().showInactive).toHaveBeenCalledTimes(1)
-    expect(textSelectedCalls()).toHaveLength(1)
-  })
-
-  it('reuses the ready toolbar and shows it immediately for later selections', () => {
+  it('reuses the rendered toolbar and shows it immediately for later selections', () => {
     internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'one' })
-    svc.determineToolbarSize(300, 43)
-    toolbar().emit('ready-to-show')
+    renderToolbar()
     svc.hideToolbar()
 
     internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'two' })
@@ -494,26 +498,26 @@ describe('SelectionService — windows created on first use', () => {
     internals.presentToolbar({ x: 10, y: 20 }, 'bottomLeft', { text: 'gone' })
 
     svc.hideToolbar()
-    svc.determineToolbarSize(300, 43)
-    toolbar().emit('ready-to-show')
+    renderToolbar()
 
     expect(toolbar().showInactive).not.toHaveBeenCalled()
     expect(textSelectedCalls()).toHaveLength(0)
   })
 
-  it('creates the first action window on demand and shows it only after its first paint', () => {
+  it('creates the first action window on demand and shows it only once its UI has rendered', () => {
     svc.processAction({ id: 'translate', name: 'Translate', enabled: true, isBuiltIn: true })
 
     expect(openCalls(WindowType.SelectionAction)).toHaveLength(1)
     const actionWindow = windows.get('selectionAction-1')!
+    actionWindow.emit('ready-to-show')
     expect(actionWindow.show).not.toHaveBeenCalled()
 
-    actionWindow.emit('ready-to-show')
+    reportFirstFrame(actionWindow)
 
     expect(actionWindow.show).toHaveBeenCalledTimes(1)
   })
 
-  it('shows a recycled (already painted) action window immediately', () => {
+  it('shows a recycled (already rendered) action window immediately', () => {
     const recycled = createFakeWindow()
     vi.spyOn(wm, 'open').mockReturnValue('recycled-action')
     windows.set('recycled-action', recycled)

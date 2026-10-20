@@ -30,6 +30,10 @@ Window-level side effects (subscriptions, DOM sync that must live for the window
 
 Do **not** fold main-only behavior into `useWindowRuntime` (a per-window difference would need a config flag — the smell), and do not push non-first-frame work into `prepareWindow`.
 
+## First-Frame Report
+
+Windows the main process creates on demand (`subWindow`, `quickAssistant`, `selection/toolbar`, `selection/action`) stay hidden until their UI calls `useReportFirstFrame(ready)`, so they never appear blank. Call it once, from a component only that window renders: the runtime leaf, or the shell when the first meaningful frame waits for data (`SubWindowAppShell` until its tab is attached, `ActionWindow` until its payload arrives). A window that never reports is still shown after a 3 s timeout. See [Revealing Windows Created on Demand](../../../docs/references/window-manager/window-manager-warmup-mechanics.md#revealing-windows-created-on-demand).
+
 ## Logger Window Source
 
 Each window declares its logger source **declaratively** in its `index.html`, not via a call in `entryPoint.tsx`:

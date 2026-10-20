@@ -174,10 +174,10 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
   },
 
   // One window per detached tab, created on demand. SubWindowService supplies init data (and the
-  // drop position for drag detaches), then reveals the window once its renderer has painted.
+  // drop position for drag detaches), then reveals the window once its UI has rendered.
   //
   // No pre-warmed standby: it kept a hidden full app renderer process (~80–150 MB) resident from
-  // boot just to skip the first-paint wait of an occasional detach.
+  // boot just to skip the first-frame wait of an occasional detach.
   //
   // INVARIANT: destroy-on-close (`default` lifecycle). That is the *only* reason the SubWindow
   // renderer is allowed to be single-init: SubWindowAppShell opens its tab once (an `initialized`
@@ -200,9 +200,10 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       autoHideMenuBar: true,
       transparent: false,
       // Load-bearing for SubWindowService.createWindow's show path: the window is created hidden
-      // and revealed on its first ready-to-show, which a hidden window only fires while it is
-      // allowed to paint. This is Electron's default (true) — pinned explicitly so it is never
-      // silently flipped to false (the window would then only appear after the reveal timeout).
+      // and revealed when its UI reports a first frame, which needs animation frames that a hidden
+      // window only runs while it is allowed to paint. This is Electron's default (true) — pinned
+      // explicitly so it is never silently flipped to false (the window would then only appear
+      // after the reveal timeout).
       paintWhenInitiallyHidden: true,
       vibrancy: 'sidebar',
       visualEffectState: 'active',
@@ -486,7 +487,7 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
       // Producer axis: no pre-warmed standby. A resident hidden panel costs a renderer
       // process (and lists in macOS window switchers) whether or not the user ever runs an
       // action; the first action instead creates its window and SelectionService.processAction
-      // reveals it once painted (revealWhenPainted), a one-time delay.
+      // reveals it once its UI has rendered (revealOnFirstFrame), a one-time delay.
       standbySize: 0,
       // Consumer axis: closed action windows are recycled for reuse (also covers a second
       // action fired while the first is still open). Beyond 3, close destroys.

@@ -31,7 +31,7 @@ import { loggerService } from '@logger'
 import { type Activatable, BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isMac, isWin } from '@main/core/platform'
 import { isAppRendererUrl } from '@main/core/security/validateSender'
-import { revealWhenPainted } from '@main/core/window/firstPaint'
+import { revealOnFirstFrame } from '@main/core/window/firstFrame'
 import { WindowType } from '@main/core/window/types'
 
 import { isSafeExternalUrl } from '../utils/externalUrlSafety'
@@ -123,7 +123,7 @@ export class QuickAssistantService extends BaseService implements Activatable {
   private wasMainWindowFocused = false
   // Cached mainWindow reference — see file-level docstring for why this asymmetry exists.
   private mainWindowRef: BrowserWindow | null = null
-  // Set while a just-created window waits for its first paint before its first show.
+  // Set while a just-created window waits for its first frame before its first show.
   private cancelPendingShow: (() => void) | null = null
 
   protected async onInit() {
@@ -375,15 +375,15 @@ export class QuickAssistantService extends BaseService implements Activatable {
     // subscription in onInit keeps these in lockstep.
     if (!this.isActivated) return
 
-    // A just-created window is already queued to show once it has painted.
+    // A just-created window is already queued to show once its UI has rendered.
     if (this.cancelPendingShow) return
 
     const window = this.getQuickAssistant() ?? this.createQuickAssistant()
     if (!window) return
 
-    // An existing window shows right away; a new one once its renderer has painted (loadURL is
-    // async, so a direct show() would reveal it before anything is drawn).
-    this.cancelPendingShow = revealWhenPainted(window, () => {
+    // An existing window shows right away; a new one once its UI has rendered (loadURL is async,
+    // so a direct show() would reveal it before anything is drawn).
+    this.cancelPendingShow = revealOnFirstFrame(window, () => {
       this.cancelPendingShow = null
       this.proceedShow()
     })

@@ -358,7 +358,7 @@ vi.mock('../windowRegistry', () => {
 // ─── Import after mocks ────────────────────────────────────
 
 const { WindowManager } = await import('../WindowManager')
-const { isAwaitingFirstPaint } = await import('../firstPaint')
+const { markFirstFrame, revealOnFirstFrame } = await import('../firstFrame')
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -416,15 +416,17 @@ describe('WindowManager', () => {
       expect(win.destroy).toHaveBeenCalled()
     })
 
-    it('marks a fresh window as awaiting its first paint until ready-to-show', () => {
+    it('holds reveals of a fresh window until its UI reports a first frame, not just ready-to-show', () => {
       const id = wm.open('default' as never)
       const win = wm.getWindow(id)!
+      const reveal = vi.fn()
 
-      expect(isAwaitingFirstPaint(win)).toBe(true)
-
+      revealOnFirstFrame(win, reveal)
       createdWindows[0].emit('ready-to-show')
+      expect(reveal).not.toHaveBeenCalled()
 
-      expect(isAwaitingFirstPaint(win)).toBe(false)
+      markFirstFrame(win)
+      expect(reveal).toHaveBeenCalledTimes(1)
     })
   })
 

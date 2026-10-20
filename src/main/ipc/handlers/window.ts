@@ -1,4 +1,5 @@
 import { application } from '@application'
+import { markFirstFrame } from '@main/core/window/firstFrame'
 import type { windowRequestSchemas } from '@shared/ipc/schemas/window'
 import type { IpcHandlersFor } from '@shared/ipc/types'
 
@@ -41,6 +42,10 @@ export const windowHandlers: IpcHandlersFor<typeof windowRequestSchemas> = {
     senderId ? application.get('WindowManager').isFullScreen(senderId) : false,
   'window.get_init_data': async (_input, { senderId }) =>
     senderId ? application.get('WindowManager').getInitData(senderId) : null,
+  'window.report_first_frame': async (_input, { senderId }) => {
+    const window = senderId ? application.get('WindowManager').getWindow(senderId) : undefined
+    if (window) markFirstFrame(window)
+  },
   // Sub-window-only contract: reject unless the caller resolves to a SubWindow-type window
   // (a non-null senderId is insufficient — the main window must not pin itself).
   'window.sub.set_always_on_top': async (pinned, { senderId }) =>

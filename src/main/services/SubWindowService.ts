@@ -5,7 +5,7 @@ import { loggerService } from '@logger'
 import { BaseService, DependsOn, Injectable, Phase, ServicePhase } from '@main/core/lifecycle'
 import { isLinux, isMac, isWin } from '@main/core/platform'
 import { validateSender } from '@main/core/security/validateSender'
-import { isAwaitingFirstPaint, revealWhenPainted } from '@main/core/window/firstPaint'
+import { isAwaitingFirstFrame, revealOnFirstFrame } from '@main/core/window/firstFrame'
 import { syncTitleBarOverlayWithTheme } from '@main/core/window/titleBarOverlay'
 import type { WindowOptions } from '@main/core/window/types'
 import { WindowType } from '@main/core/window/types'
@@ -111,9 +111,9 @@ export class SubWindowService extends BaseService {
         const x = Math.round(payload.x)
         const y = Math.round(payload.y)
         this.moveWindow(win, x, y)
-        // A just-detached window stays hidden until its first paint; createWindow reveals it then,
-        // at the latest position set here.
-        if (!win.isVisible() && !isAwaitingFirstPaint(win)) {
+        // A just-detached window stays hidden until its UI has rendered; createWindow reveals it
+        // then, at the latest position set here.
+        if (!win.isVisible() && !isAwaitingFirstFrame(win)) {
           win.show()
         }
         // Only apply opacity when the sub window is dragging its own tab (preparing to reattach).
@@ -226,9 +226,9 @@ export class SubWindowService extends BaseService {
 
     this.tabIdToWindowId.set(tabId, windowId)
 
-    // Fresh window (no standby): reveal it on its first paint, not while its renderer is starting.
+    // Fresh window (no standby): reveal it once its UI has rendered, not while it is still blank.
     // A drag detach keeps moving it through Tab_MoveWindow meanwhile, so it appears at the cursor.
-    revealWhenPainted(win, () => {
+    revealOnFirstFrame(win, () => {
       if (!win.isDestroyed()) win.show()
     })
 
