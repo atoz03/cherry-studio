@@ -111,27 +111,18 @@ describe('changeset release policy', () => {
     expect(result.stderr).toContain('could not parse changeset')
   })
 
-  it('gates both CI (including version PRs) and release automation before creating PRs or publishing', () => {
+  // The fork publishes no packages, so CI is the only workflow that runs the policy.
+  it('gates CI on the changeset policy', () => {
     const repo = path.resolve(import.meta.dirname, '../..')
     const manifest = JSON.parse(readFileSync(path.join(repo, 'package.json'), 'utf8'))
     expect(manifest.scripts['changeset:check']).toBe('node scripts/release/check-changesets.mjs')
 
-    for (const [file, job] of [
-      ['ci.yml', 'basic-checks'],
-      ['release-packages.yml', 'release']
-    ]) {
-      const workflow = parse(readFileSync(path.join(repo, '.github/workflows', file), 'utf8'))
-      const steps = workflow.jobs[job].steps
-      const guardIndex = steps.findIndex((step: { run?: string }) => step.run === 'pnpm changeset:check')
-      expect(guardIndex).toBeGreaterThanOrEqual(0)
-      const guard = steps[guardIndex]
-      expect(guard['continue-on-error']).toBeUndefined()
-      if (file === 'ci.yml') {
-        expect(guard.if).toBe("needs.changes.outputs.repository == 'true'")
-      } else {
-        expect(guard.if).toBeUndefined()
-        expect(guardIndex).toBeLessThan(steps.findIndex((step: { id?: string }) => step.id === 'changesets'))
-      }
-    }
+    const workflow = parse(readFileSync(path.join(repo, '.github/workflows/ci.yml'), 'utf8'))
+    const guard = workflow.jobs['basic-checks'].steps.find(
+      (step: { run?: string }) => step.run === 'pnpm changeset:check'
+    )
+    expect(guard).toBeDefined()
+    expect(guard['continue-on-error']).toBeUndefined()
+    expect(guard.if).toBe("needs.changes.outputs.repository == 'true'")
   })
 })
