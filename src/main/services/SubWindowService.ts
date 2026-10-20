@@ -111,8 +111,8 @@ export class SubWindowService extends BaseService {
         const x = Math.round(payload.x)
         const y = Math.round(payload.y)
         this.moveWindow(win, x, y)
-        // A just-detached window is still hidden until its first paint; createWindow reveals it then,
-        // at the latest position set here. Showing it earlier would flash an empty shell.
+        // A just-detached window stays hidden until its first paint; createWindow reveals it then,
+        // at the latest position set here.
         if (!win.isVisible() && !isAwaitingFirstPaint(win)) {
           win.show()
         }
@@ -226,9 +226,8 @@ export class SubWindowService extends BaseService {
 
     this.tabIdToWindowId.set(tabId, windowId)
 
-    // Every open builds a fresh window (no pre-warmed standby), so show it only once its renderer
-    // has painted — showing it now would flash an empty shell. A drag detach keeps moving the
-    // hidden window through Tab_MoveWindow meanwhile, so it appears where the drag currently is.
+    // Fresh window (no standby): reveal it on its first paint, not while its renderer is starting.
+    // A drag detach keeps moving it through Tab_MoveWindow meanwhile, so it appears at the cursor.
     revealWhenPainted(win, () => {
       if (!win.isDestroyed()) win.show()
     })

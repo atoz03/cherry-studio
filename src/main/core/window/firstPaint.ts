@@ -30,8 +30,10 @@ export function isAwaitingFirstPaint(window: BrowserWindow): boolean {
 }
 
 /**
- * Run `reveal` once `window` has painted its first frame, so a window created on demand is never
- * shown as an empty shell (blank frame, or bare traffic lights on a transparent macOS window).
+ * Run `reveal` once `window` has painted its first frame, instead of showing a window whose renderer
+ * is still starting. `ready-to-show` marks the document's first paint, not the UI's: an entry that
+ * awaits `prepareWindow()` before mounting React still shows only its background for a moment
+ * (about 0.1–0.2 s on Linux) after the reveal.
  *
  * - Already painted (a recycled pool window, a long-lived singleton): `reveal` runs synchronously
  *   and `null` is returned.

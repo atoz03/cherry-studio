@@ -1356,8 +1356,8 @@ export class SelectionService extends BaseService implements Activatable {
       return
     }
 
-    // A recycled window shows right away; a fresh one only after its first paint, so the
-    // transparent panel never appears as an empty frame (bare traffic lights on macOS).
+    // A recycled window shows right away; a fresh one once its renderer has painted, rather than
+    // while it is still loading.
     revealWhenPainted(actionWindow, () => this.showActionWindow(actionWindow, isFullScreen))
   }
 

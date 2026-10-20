@@ -381,8 +381,8 @@ export class QuickAssistantService extends BaseService implements Activatable {
     const window = this.getQuickAssistant() ?? this.createQuickAssistant()
     if (!window) return
 
-    // An existing window shows right away; a new one only after its first paint, so
-    // the panel never flashes empty (loadURL is async and would race a direct show()).
+    // An existing window shows right away; a new one once its renderer has painted (loadURL is
+    // async, so a direct show() would reveal it before anything is drawn).
     this.cancelPendingShow = revealWhenPainted(window, () => {
       this.cancelPendingShow = null
       this.proceedShow()
