@@ -488,7 +488,6 @@ export class AgentSessionRuntimeService extends BaseService {
     // CLI session state is untrusted, so their next connection starts fresh instead of resuming it.
     this.reconcileStalePendingMessages()
     recoverSessionDeliveries()
-    for (const driver of runtimeDriverRegistry.getAgentSessionDrivers()) await driver.recoverSessions?.()
 
     this.registerDisposable(
       agentService.onAgentUpdated(({ agentId, updates, agent }) => {

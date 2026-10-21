@@ -3,13 +3,11 @@ import os from 'node:os'
 import path from 'node:path'
 
 import type { HookInput, SyncHookJSONOutput } from '@anthropic-ai/claude-agent-sdk'
-import type { BeforeAgentStartEvent, ExtensionAPI } from '@earendil-works/pi-coding-agent'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { PromptBuilder } from '@main/ai/agents/prompt'
 
 import { createClaudeCodeIdentityHooks } from './claudeCode/identityHooks'
-import { createPiIdentityExtension } from './pi/identityExtension'
 
 describe('Live Agent identity', () => {
   let root: string
@@ -117,29 +115,5 @@ describe('Live Agent identity', () => {
     await writeFile(file, 'Persona B with a changed length')
     await utimes(file, before.atime, before.mtime)
     expect(await builder.buildMemoriesSection(root)).toContain('Persona B with a changed length')
-  })
-
-  it('updates only the Pi identity section before each turn', async () => {
-    let beforeStart!: (event: BeforeAgentStartEvent) => Promise<void>
-    const extension = createPiIdentityExtension(root)
-    await extension({
-      on: (event: string, handler: typeof beforeStart) => {
-        if (event === 'before_agent_start') beforeStart = handler
-      }
-    } as ExtensionAPI)
-    const event = {
-      systemPromptOptions: { sections: { custom_role: 'Keep this role.' } }
-    } as unknown as BeforeAgentStartEvent
-    await writeIdentity('A')
-    await beforeStart(event)
-    expect(event.systemPromptOptions.sections.agent_identity).toContain('Persona A')
-    await writeIdentity('B')
-    await beforeStart(event)
-    expect(event.systemPromptOptions.sections.agent_identity).toContain('Persona B')
-    expect(event.systemPromptOptions.sections.agent_identity).not.toContain('Persona A')
-    expect(event.systemPromptOptions.sections.custom_role).toBe('Keep this role.')
-    await rm(path.join(root, 'SOUL.md'))
-    await beforeStart(event)
-    expect(event.systemPromptOptions.sections.agent_identity).toContain('<soul>\n\n</soul>')
   })
 })

@@ -1,5 +1,5 @@
 /**
- * Translate pi `AgentSessionEvent`s into Cherry `UIMessageChunk`s (plan D3).
+ * Translate pi RPC session events into Cherry `UIMessageChunk`s (plan D3).
  *
  * pi's event vocabulary differs from Claude Code's, so this is a fresh, smaller
  * adapter (not a reuse of the Claude `streamAdapter`). It maps only the
@@ -15,59 +15,33 @@
  * Tool parts are stamped with the pi runtime transport tag
  * (D8) so the renderer routes them to the generic pi tool card.
  */
-import type { AgentSessionEvent, AgentToolResult, ToolDefinition } from '@earendil-works/pi-coding-agent'
-
-import { CHERRY_MCP_SERVER } from '@main/ai/toolApproval/builtinToolPolicy'
 import { AGENT_RUNTIME_CAPABILITIES } from '@shared/ai/agentRuntimeCapabilities'
-import { PI_TOOL_CALL_TOOL_NAME, PI_TOOL_EXEC_TOOL_NAME, PI_TOOL_SEARCH_TOOL_NAME } from '@shared/ai/piBuiltinTools'
 import { parseFunctionCallToolName } from '@shared/ai/tools/mcpToolName'
-import type { McpServer } from '@shared/data/types/mcpServer'
 import type { CherryUIMessageChunk } from '@shared/data/types/message'
 
 export interface PiStreamSink {
   enqueue(chunk: CherryUIMessageChunk): void
 }
 
+/** The subset of pi's RPC session events (docs/json.md) that carry content. */
+export type PiContentEvent =
+  | { type: 'agent_start' | 'message_start' }
+  | { type: 'message_update'; assistantMessageEvent: AssistantMessageEventLike }
+  | { type: 'tool_execution_start'; toolCallId: string; toolName: string; args?: unknown }
+  | { type: 'tool_execution_end'; toolCallId: string; toolName: string; result?: unknown; isError?: boolean }
+  | { type: 'turn_end'; message: unknown }
+
 /** pi transport tag consumed by the renderer's tool-part routing (D8). */
 export const PI_TRANSPORT = AGENT_RUNTIME_CAPABILITIES.pi.transport
 
-const CHERRY_SERVER_NAMES = new Map<string, string>(
-  Object.values(CHERRY_MCP_SERVER).map((name) => [name.replaceAll('-', '_'), name])
-)
-
-export function resolvePiMcpToolMetadata(
-  definition: ToolDefinition | undefined,
-  snapshots: ReadonlyMap<string, Pick<McpServer, 'id' | 'name'> | undefined>
-) {
-  if (!definition?.namespace?.name.startsWith('mcp__')) return undefined
-  const separator = definition.label.indexOf('/')
-  if (separator < 0) return undefined
-  const serverId = definition.label.slice(0, separator)
-  const server = [...snapshots.values()].find((candidate) => candidate?.id === serverId)
-  return {
-    type: 'mcp' as const,
-    name: definition.label.slice(separator + 1),
-    serverId,
-    serverName: server?.name ?? serverId
-  }
-}
-
-function toolProviderMetadata(toolName: string, nativeTool?: ReturnType<typeof resolvePiMcpToolMetadata>) {
+function toolProviderMetadata(toolName: string) {
   const parsed = parseFunctionCallToolName(toolName)
-  const serverName = parsed ? (CHERRY_SERVER_NAMES.get(parsed.serverPart) ?? parsed.serverPart) : undefined
   return {
     cherry: {
       transport: PI_TRANSPORT,
-      tool:
-        nativeTool ??
-        (parsed
-          ? {
-              type: 'mcp' as const,
-              name: parsed.toolPart,
-              serverId: serverName,
-              serverName
-            }
-          : { type: 'builtin' as const, name: toolName })
+      tool: parsed
+        ? { type: 'mcp' as const, name: parsed.toolPart, serverId: parsed.serverPart, serverName: parsed.serverPart }
+        : { type: 'builtin' as const, name: toolName }
     },
     pi: { toolName }
   }
@@ -87,12 +61,9 @@ export class PiStreamAdapter {
    *  Claude driver, whose SDK `result` usage is already a turn total. */
   private turnUsage = emptyTurnUsage()
 
-  constructor(
-    private readonly sink: PiStreamSink,
-    private readonly resolveToolMetadata?: (name: string) => ReturnType<typeof resolvePiMcpToolMetadata>
-  ) {}
+  constructor(private readonly sink: PiStreamSink) {}
 
-  handleEvent(event: AgentSessionEvent): void {
+  handleEvent(event: PiContentEvent): void {
     switch (event.type) {
       case 'agent_start':
         // New turn — reset the per-turn token accumulator.
@@ -110,7 +81,7 @@ export class PiStreamAdapter {
         this.handleToolStart(event.toolCallId, event.toolName, event.args)
         return
       case 'tool_execution_end':
-        this.handleToolEnd(event.toolCallId, event.toolName, event.result, event.isError)
+        this.handleToolEnd(event.toolCallId, event.toolName, event.result, event.isError === true)
         return
       case 'turn_end':
         this.handleTurnEnd(event.message)
@@ -167,7 +138,7 @@ export class PiStreamAdapter {
       toolName,
       providerExecuted: true,
       dynamic: true,
-      providerMetadata: toolProviderMetadata(toolName, this.resolveToolMetadata?.(toolName))
+      providerMetadata: toolProviderMetadata(toolName)
     })
     this.sink.enqueue({
       type: 'tool-input-available',
@@ -176,7 +147,7 @@ export class PiStreamAdapter {
       input: args ?? {},
       providerExecuted: true,
       dynamic: true,
-      providerMetadata: toolProviderMetadata(toolName, this.resolveToolMetadata?.(toolName))
+      providerMetadata: toolProviderMetadata(toolName)
     })
   }
 
@@ -187,12 +158,10 @@ export class PiStreamAdapter {
       this.sink.enqueue({
         type: 'tool-output-error',
         toolCallId,
-        errorText: stringifyResult(
-          toolName.startsWith('mcp__automation__') ? projectPiToolOutput(toolName, result) : result
-        ),
+        errorText: toolErrorText(result),
         dynamic: true,
         providerExecuted: true,
-        providerMetadata: toolProviderMetadata(toolName, this.resolveToolMetadata?.(toolName))
+        providerMetadata: toolProviderMetadata(toolName)
       })
       return
     }
@@ -202,7 +171,7 @@ export class PiStreamAdapter {
       output: projectPiToolOutput(toolName, result),
       dynamic: true,
       providerExecuted: true,
-      providerMetadata: toolProviderMetadata(toolName, this.resolveToolMetadata?.(toolName))
+      providerMetadata: toolProviderMetadata(toolName)
     })
   }
 
@@ -238,42 +207,26 @@ export class PiStreamAdapter {
   }
 }
 
-type PiToolContent = AgentToolResult<unknown>['content'][number]
-
-function isTextContent(block: PiToolContent): block is Extract<PiToolContent, { type: 'text' }> {
-  return block.type === 'text'
+interface PiToolResult {
+  content: Array<{ type: string; text?: string }>
 }
 
-/** pi types `tool_execution_end`'s `result` as `any`, and its builtins may return a bare string. */
-function asToolResult(result: unknown): AgentToolResult<unknown> | undefined {
-  const candidate = result as AgentToolResult<unknown> | undefined
+/** pi types a tool's `result` loosely, and its builtins may return a bare string. */
+function asToolResult(result: unknown): PiToolResult | undefined {
+  const candidate = result as PiToolResult | undefined
   return candidate && Array.isArray(candidate.content) ? candidate : undefined
 }
 
 function projectPiToolOutput(toolName: string, result: unknown): unknown {
   const toolResult = asToolResult(result)
   if (!toolResult) return result ?? null
-  if (toolName === PI_TOOL_EXEC_TOOL_NAME) return unwrapMcpContent(toolResult)
-  if (toolName === PI_TOOL_SEARCH_TOOL_NAME || toolName === 'tool_exec') {
-    return toolResult.details ?? toolResult
-  }
-  if (toolName.startsWith('mcp__')) {
-    const mcpResult = toolResult.structuredContent as { structuredContent?: unknown } | undefined
-    // The automation card renders the REPL's content blocks; its structuredContent is metadata only.
-    if (toolName.startsWith('mcp__automation__')) return mcpResult ?? toolResult
-    return mcpResult?.structuredContent ?? unwrapMcpContent(toolResult)
-  }
-  return toolName === PI_TOOL_CALL_TOOL_NAME ? unwrapMcpContent(toolResult) : toolResult
+  return toolName.startsWith('mcp__') ? unwrapMcpContent(toolResult) : toolResult
 }
 
-/**
- * `tool_call` returns the target tool's MCP result verbatim, hiding an all-text payload inside a
- * JSON string. Unwrap it the way the Claude Code adapter do, so tool cards and citation
- * resolution see one shape across runtimes.
- */
-function unwrapMcpContent({ content }: AgentToolResult<unknown>): unknown {
-  if (!content.every(isTextContent)) return content
-  const text = content.map((block) => block.text).join('\n')
+/** MCP results hide an all-text payload inside JSON text blocks; unwrap it like the Claude adapter. */
+function unwrapMcpContent({ content }: PiToolResult): unknown {
+  if (!content.every((block) => block.type === 'text')) return content
+  const text = content.map((block) => block.text ?? '').join('\n')
   try {
     return JSON.parse(text)
   } catch {
@@ -333,6 +286,15 @@ function extractAssistantUsage(message: unknown): PiUsageLike | undefined {
 
 function numeric(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+/** pi reports a failed tool as a normal result whose text blocks carry the message. */
+function toolErrorText(result: unknown): string {
+  const text = asToolResult(result)
+    ?.content.filter((block) => block.type === 'text')
+    .map((block) => block.text ?? '')
+    .join('\n')
+  return text || stringifyResult(result)
 }
 
 function stringifyResult(result: unknown): string {

@@ -11,7 +11,6 @@ import { agentTable } from '@data/db/schemas/agent'
 import { agentSessionTable } from '@data/db/schemas/agentSession'
 import { agentSessionMessageTable } from '@data/db/schemas/agentSessionMessage'
 import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
-import { PiRuntimeDriver } from '@main/ai/runtime/pi/PiRuntimeDriver'
 import { runtimeDriverRegistry } from '@main/ai/runtime/registry'
 import type { AgentSessionRuntimeDriver } from '@main/ai/runtime/types'
 
@@ -261,19 +260,12 @@ describe('sweepAgentOrphans', () => {
       expect(removed).toContain('/tmp/reclaimed.jsonl')
     })
 
-    it('keeps a trashed session’s runtime state and reclaims it once the session row is purged', async () => {
-      const piSessions = path.join(root, 'pi-sessions')
-      mkdirSync(piSessions, { recursive: true })
-      const transcript = path.join(piSessions, '2026-08-19T00-00-00-000Z_token-live.jsonl')
-      writeFileSync(transcript, 'x')
-      utimesSync(transcript, STALE_SECONDS, STALE_SECONDS)
-      ;(application.getPath as Mock).mockImplementation((key: string) => {
-        if (key === 'feature.agents.data') return root
-        if (key === 'feature.agents.system_workspaces') return workspacesRoot
-        if (key === 'feature.agents.pi.sessions') return piSessions
-        return path.join(root, `unused-${key}`)
+    it('keeps a trashed session’s resume token until the session row is purged', async () => {
+      let seen: ReadonlySet<string> | undefined
+      registerDriver('runtime', async (tokens) => {
+        seen = tokens
+        return { removed: [] }
       })
-      runtimeDriverRegistry.register(new PiRuntimeDriver())
 
       // Trashed (soft-deleted) session: its message rows — and so its token — survive.
       await seedSessionWithToken('session-trashed', 'token-live')
@@ -283,39 +275,30 @@ describe('sweepAgentOrphans', () => {
         .where(eq(agentSessionTable.id, 'session-trashed'))
 
       await sweepAgentOrphans()
-      expect(existsSync(transcript)).toBe(true)
+      expect(seen?.has('token-live')).toBe(true)
 
       // Purge drops the session row; the FK cascade takes its token with it.
       await dbh.db.delete(agentSessionTable).where(eq(agentSessionTable.id, 'session-trashed'))
-      const { removed } = await sweepAgentOrphans()
+      await sweepAgentOrphans()
 
-      expect(removed).toContain(transcript)
-      expect(existsSync(transcript)).toBe(false)
+      expect(seen?.has('token-live')).toBe(false)
     })
 
-    it('keeps a runtime-claimed pi transcript until a later snapshot releases it', async () => {
-      const piSessions = path.join(root, 'pi-sessions')
-      mkdirSync(piSessions, { recursive: true })
-      const transcript = path.join(piSessions, '2026-08-19T00-00-00-000Z_token-runtime-only.jsonl')
-      writeFileSync(transcript, 'x')
-      utimesSync(transcript, STALE_SECONDS, STALE_SECONDS)
-      ;(application.getPath as Mock).mockImplementation((key: string) => {
-        if (key === 'feature.agents.data') return root
-        if (key === 'feature.agents.system_workspaces') return workspacesRoot
-        if (key === 'feature.agents.pi.sessions') return piSessions
-        return path.join(root, `unused-${key}`)
+    it('keeps a runtime-claimed resume token until a later snapshot releases it', async () => {
+      let seen: ReadonlySet<string> | undefined
+      registerDriver('runtime', async (tokens) => {
+        seen = tokens
+        return { removed: [] }
       })
-      runtimeDriverRegistry.register(new PiRuntimeDriver())
       runtimeClaimedResumeTokens.add('token-runtime-only')
 
       await sweepAgentOrphans()
-      expect(existsSync(transcript)).toBe(true)
+      expect(seen?.has('token-runtime-only')).toBe(true)
 
       runtimeClaimedResumeTokens.clear()
-      const { removed } = await sweepAgentOrphans()
+      await sweepAgentOrphans()
 
-      expect(removed).toContain(transcript)
-      expect(existsSync(transcript)).toBe(false)
+      expect(seen?.has('token-runtime-only')).toBe(false)
     })
 
     it('isolates a failing runtime so the others still reclaim', async () => {

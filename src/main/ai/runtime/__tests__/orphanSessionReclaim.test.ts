@@ -3,7 +3,6 @@
  * keep-set the agent orphan sweep reads from the database.
  *
  * Each layout below is taken from the runtime that owns it, not guessed:
- *  - pi    — `resolveResumeTokenSessionFile` resolves `{ts}_{token}.jsonl`
  *  - claude — the Agent SDK's `deleteSession` removes `{id}.jsonl` plus the
  *            `{id}/` subagent-transcript directory from the projects dir
  */
@@ -16,7 +15,6 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 
 import { application } from '@application'
 
-import { PiRuntimeDriver } from '../pi/PiRuntimeDriver'
 import { registerRuntimeDrivers } from '../registerDrivers'
 import { runtimeDriverRegistry } from '../registry'
 
@@ -44,58 +42,6 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(root, { recursive: true, force: true })
   vi.mocked(application.getPath as Mock).mockReset()
-})
-
-describe('PiRuntimeDriver.reclaimOrphanSessions', () => {
-  const driver = new PiRuntimeDriver()
-  const sessions = 'feature.agents.pi.sessions'
-
-  it('removes unclaimed sessions and keeps every generation of a claimed one', async () => {
-    const orphan = seedFile(`${sessions}/2026-08-19T00-00-00-000Z_gone.jsonl`)
-    const claimedOld = seedFile(`${sessions}/2026-08-18T00-00-00-000Z_live.jsonl`)
-    const claimedNew = seedFile(`${sessions}/2026-08-19T00-00-00-000Z_live.jsonl`)
-
-    const { removed } = await driver.reclaimOrphanSessions(new Set(['live']), OPTIONS)
-
-    expect(removed).toEqual([orphan])
-    expect(existsSync(claimedOld)).toBe(true)
-    expect(existsSync(claimedNew)).toBe(true)
-  })
-
-  it('keeps a claimed session whose resume token contains an underscore', async () => {
-    // `_` is legal in a pi resume token, so splitting the stem on the LAST one
-    // truncated the token and made a live session look orphaned.
-    const claimed = seedFile(`${sessions}/2026-08-19T00-00-00-000Z_tok_with_underscore.jsonl`)
-
-    const { removed } = await driver.reclaimOrphanSessions(new Set(['tok_with_underscore']), OPTIONS)
-
-    expect(removed).toEqual([])
-    expect(existsSync(claimed)).toBe(true)
-  })
-
-  it('ignores names it cannot parse into a resume token', async () => {
-    const notPi = seedFile(`${sessions}/index.json`)
-    const noToken = seedFile(`${sessions}/nounderscore.jsonl`)
-
-    const { removed } = await driver.reclaimOrphanSessions(new Set(), OPTIONS)
-
-    expect(removed).toEqual([])
-    expect(existsSync(notPi)).toBe(true)
-    expect(existsSync(noToken)).toBe(true)
-  })
-
-  it('defers a session still being written', async () => {
-    const warm = seedFile(`${sessions}/2026-08-19T00-00-00-000Z_warm.jsonl`, (NOW - 60_000) / 1000)
-
-    const { removed } = await driver.reclaimOrphanSessions(new Set(), OPTIONS)
-
-    expect(removed).toEqual([])
-    expect(existsSync(warm)).toBe(true)
-  })
-
-  it('no-ops when the runtime was never used', async () => {
-    await expect(driver.reclaimOrphanSessions(new Set(), OPTIONS)).resolves.toEqual({ removed: [] })
-  })
 })
 
 describe('claude-code reclaimOrphanSessions', () => {

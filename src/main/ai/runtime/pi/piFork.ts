@@ -1,13 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { application } from '@application'
+import { agentSessionService } from '@data/services/AgentSessionService'
 import { readForkPrefix, readNativeForkHistory } from '@main/ai/runtime/fork'
 
 import { AgentSessionForkError, type RuntimeForkInput, type RuntimeForkResult } from '../fork'
 import { parsePiForkCheckpoint } from './forkCheckpoint'
-import { loadPiSdk } from './piSdk'
-import { resolveResumeTokenSessionFile } from './piSessionFile'
+import { findPiSessionFile, piSessionDirectory, readPiSession, writeBranchedPiSession } from './piSessionFiles'
 
 export async function forkPiSession(input: RuntimeForkInput): Promise<RuntimeForkResult> {
   return readNativeForkHistory(() => preparePiFork(input))
@@ -15,32 +14,47 @@ export async function forkPiSession(input: RuntimeForkInput): Promise<RuntimeFor
 
 async function preparePiFork(input: RuntimeForkInput): Promise<RuntimeForkResult> {
   const checkpoint = parsePiForkCheckpoint(input.checkpoint)
-  if (!/^[a-zA-Z0-9-]+$/.test(checkpoint.runtimeSessionId)) throw new AgentSessionForkError('history_corrupt')
-  const sessions = application.getPath('feature.agents.pi.sessions')
-  const sourceFile = resolveResumeTokenSessionFile(checkpoint.runtimeSessionId, sessions)
+  const sourceCwd = agentSessionService.getById(input.sourceSessionId)?.workspace?.path
+  if (!sourceCwd) throw new AgentSessionForkError('history_missing')
+  let sourceFile: string | null
+  try {
+    sourceFile = await findPiSessionFile(sourceCwd, checkpoint.runtimeSessionId)
+  } catch {
+    throw new AgentSessionForkError('history_corrupt')
+  }
   if (!sourceFile) throw new AgentSessionForkError('history_missing')
-  const source = await readForkPrefix(sourceFile)
-  // The SDK tolerates malformed trailing lines; a fork must not silently omit history.
-  for (const line of source.toString('utf8').trimEnd().split('\n')) JSON.parse(line)
-  if (!source.equals(await readForkPrefix(sourceFile, source.length)))
-    throw new AgentSessionForkError('history_changed')
+  // Snapshot a committed prefix: the user's terminal pi may still be appending to the source.
   const directory = path.join(input.artifactDirectory, 'pi')
   await mkdir(directory, { recursive: false })
   const snapshotFile = path.join(directory, 'source.jsonl')
-  await writeFile(snapshotFile, source, { flag: 'wx', mode: 0o600 })
+  await writeFile(snapshotFile, await readForkPrefix(sourceFile), { flag: 'wx', mode: 0o600 })
   input.signal.throwIfAborted()
-  const sdk = await loadPiSdk()
-  const manager = sdk.SessionManager.open(snapshotFile, directory, input.targetCwd)
-  if (manager.getSessionId() !== checkpoint.runtimeSessionId || !manager.getEntry(checkpoint.leafId)) {
+  const source = await readPiSession(snapshotFile)
+  if (source.header?.id !== checkpoint.runtimeSessionId) throw new AgentSessionForkError('history_changed')
+  if (!source.entries.some((entry) => entry.id === checkpoint.leafId)) {
     throw new AgentSessionForkError('history_changed')
   }
-  const file = manager.createBranchedSession(checkpoint.leafId)
-  if (!file) throw new AgentSessionForkError('history_corrupt')
-  const resumeToken = manager.getSessionId()
-  const checkpoints = input.checkpoints.map(parsePiForkCheckpoint).map((value) => {
-    if (value.runtimeSessionId !== checkpoint.runtimeSessionId || !manager.getEntry(value.leafId))
-      throw new AgentSessionForkError('history_corrupt')
-    return parsePiForkCheckpoint({ ...value, runtimeSessionId: resumeToken })
+  const branched = await writeBranchedPiSession({
+    source,
+    sourceFile,
+    leafId: checkpoint.leafId,
+    cwd: input.targetCwd,
+    directory
   })
-  return { resumeToken, checkpoints, publish: [{ source: file, target: path.join(sessions, path.basename(file)) }] }
+  const checkpoints = input.checkpoints.map(parsePiForkCheckpoint).map((value) => {
+    if (value.runtimeSessionId !== checkpoint.runtimeSessionId || !branched.entryIds.has(value.leafId)) {
+      throw new AgentSessionForkError('history_corrupt')
+    }
+    return { ...value, runtimeSessionId: branched.sessionId }
+  })
+  return {
+    resumeToken: branched.sessionId,
+    checkpoints,
+    publish: [
+      {
+        source: branched.file,
+        target: path.join(piSessionDirectory(input.targetCwd), path.basename(branched.file))
+      }
+    ]
+  }
 }

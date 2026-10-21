@@ -20,7 +20,6 @@ import { t } from '@main/i18n'
 import type { AgentSessionEditTarget } from '@shared/ai/agentSessionEdit'
 import { Sequencer } from '@shared/utils/async'
 
-import { ensureRetiredSessionHistory } from '../../runtime/pi/retiredSessionHistory'
 import { runtimeDriverRegistry } from '../../runtime/registry'
 import { copyForkWorkspace, forkFileIdentity, publishForkArtifact } from './files'
 import { type AgentSessionForkResources, readForkResources, writeForkResources, removeForkResources } from './resources'
@@ -94,7 +93,6 @@ export class AgentSessionForkOperations {
     closeSource: () => Promise<void>,
     persist: (tx: DbOrTx, nativeSessionId: string) => T
   ): Promise<T> {
-    await ensureRetiredSessionHistory(sessionId)
     const database = application.get('DbService')
     const source = database.withWriteTx((tx) =>
       agentSessionMessageService.readEditSnapshotTx(tx, sessionId, target.messageId)
@@ -199,7 +197,6 @@ export class AgentSessionForkOperations {
     signal: AbortSignal
   ): Promise<string> {
     signal.throwIfAborted()
-    await ensureRetiredSessionHistory(sourceSessionId)
     const preliminary = agentSessionForkService.read(sourceSessionId, messageId)
     const selected = preliminary.messages.at(-1)!
     const anchor = RuntimeForkAnchorSchema.safeParse(selected.data.runtimeAnchor)

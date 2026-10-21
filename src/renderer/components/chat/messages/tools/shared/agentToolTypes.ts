@@ -195,7 +195,8 @@ export const AskUserQuestionOptionSchema = z.object({
 export const AskUserQuestionItemSchema = z.object({
   question: z.string(),
   header: z.string(),
-  options: z.array(AskUserQuestionOptionSchema).min(2).max(4),
+  // Claude sends 2-4 options; pi plugin dialogs may send any number.
+  options: z.array(AskUserQuestionOptionSchema),
   multiSelect: z.boolean().default(false)
 })
 
