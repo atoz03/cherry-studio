@@ -3,6 +3,7 @@
 import { McpServer } from '@modelcontextprotocol/server'
 import * as z from 'zod'
 
+import { readableContentService } from '@main/services/readableContent'
 import { applyTableRules } from '@main/utils/htmlToMarkdown'
 import { fetchRemoteText } from '@main/utils/remoteFetch'
 
@@ -33,20 +34,9 @@ async function fetchText({ url, headers }: RequestPayload): Promise<string> {
   return fetchRemoteText(url, { headers: buildHeaders(headers), maxRedirects: 5 })
 }
 
-async function htmlToText(html: string): Promise<string> {
-  // Delayed loading: jsdom costs tens of MB of RSS, so it must load on first tool call, not at boot.
-  const { JSDOM } = await import('jsdom')
-  const dom = new JSDOM(html)
-  const document = dom.window.document
-
-  const scripts = document.getElementsByTagName('script')
-  const styles = document.getElementsByTagName('style')
-  Array.from(scripts).forEach((script: any) => script.remove())
-  Array.from(styles).forEach((style: any) => style.remove())
-
-  const text = document.body.textContent || ''
-
-  return text.replace(/\s+/g, ' ').trim()
+function htmlToText(html: string): Promise<string> {
+  // jsdom costs tens of MB that a main-process import would keep for the rest of the session.
+  return readableContentService.extractPlainText(html)
 }
 
 async function htmlToMarkdown(html: string): Promise<string> {

@@ -48,6 +48,12 @@ export class ReadableContentService {
     return this.enqueue({ format: 'markdown', inputKind: 'html', source: html }, options)
   }
 
+  /** The whole body as one line of text, scripts and styles dropped — no readability pass. */
+  async extractPlainText(html: string, options: ReadableContentOptions = {}): Promise<string> {
+    const result = await this.enqueue({ format: 'text', inputKind: 'html', source: html }, options)
+    return result.content
+  }
+
   async extractPreviewText(source: string, options: PreviewTextOptions): Promise<string> {
     const { inputKind, maxLength, ...workerOptions } = options
     const result = await this.enqueue({ format: 'preview', inputKind, maxLength, source }, workerOptions)

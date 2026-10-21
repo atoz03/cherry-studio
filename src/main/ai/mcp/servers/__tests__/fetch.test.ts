@@ -6,6 +6,15 @@ vi.mock('@main/utils/remoteFetch', () => ({
   fetchRemoteText: fetchRemoteTextMock
 }))
 
+vi.mock('@main/services/readableContent/readableContentWorker?nodeWorker', async () => {
+  const { Worker } = await import('node:worker_threads')
+
+  return {
+    default: (options: ConstructorParameters<typeof Worker>[1]) =>
+      new Worker(`${process.cwd()}/src/main/services/readableContent/readableContentWorker.ts`, options)
+  }
+})
+
 import { createFetchServer } from '../fetch'
 import { callBuiltinTool, toolText } from './builtinMcpClient'
 
