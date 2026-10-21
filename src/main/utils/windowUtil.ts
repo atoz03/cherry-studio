@@ -76,3 +76,31 @@ const isWindowsMicaSupported = () => {
 export const getWindowsBackgroundMaterial = () => {
   return isWindowsMicaSupported() ? 'mica' : undefined
 }
+
+/**
+ * Lets Chromium throttle `window` while it is hidden or minimized, when `isEnabled()` allows it,
+ * and lifts the throttling again once it is shown. Electron applies the flag only at the next
+ * visibility change, so it is set just before our own hide()/minimize() calls and on the OS
+ * minimize notification; a visible window is never throttled, even if it is covered.
+ */
+export function throttleWhileHidden(window: BrowserWindow, isEnabled: () => boolean): void {
+  const allow = () => {
+    if (!window.isDestroyed() && isEnabled()) window.webContents.setBackgroundThrottling(true)
+  }
+  const lift = () => {
+    if (!window.isDestroyed()) window.webContents.setBackgroundThrottling(false)
+  }
+  const hide = window.hide.bind(window)
+  const minimize = window.minimize.bind(window)
+  window.hide = () => {
+    allow()
+    hide()
+  }
+  window.minimize = () => {
+    allow()
+    minimize()
+  }
+  window.on('minimize', allow)
+  window.on('show', lift)
+  window.on('restore', lift)
+}

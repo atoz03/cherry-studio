@@ -25,7 +25,7 @@ import {
 } from '@main/utils/agentWebviewRequest'
 import { getAppEdition } from '@main/utils/appEdition'
 import { isAllowedHtmlArtifactRequest } from '@main/utils/htmlArtifactRequest'
-import { getWindowsBackgroundMaterial, replaceDevtoolsFont } from '@main/utils/windowUtil'
+import { getWindowsBackgroundMaterial, replaceDevtoolsFont, throttleWhileHidden } from '@main/utils/windowUtil'
 import { IpcChannel } from '@shared/IpcChannel'
 import type { MainWindowInitData } from '@shared/types/mainWindow'
 import { normalizeBrowserEntryUrl, normalizeBrowserUrl } from '@shared/utils/browserUrl'
@@ -295,6 +295,9 @@ export class MainWindowService extends BaseService {
     this.setupWebContentsHandlers(mainWindow)
     this.setupWindowLifecycleEvents(mainWindow)
     this.setupMainWindowMonitor(mainWindow)
+    throttleWhileHidden(mainWindow, () =>
+      application.get('PreferenceService').get('app.memory.throttle_hidden_windows')
+    )
     replaceDevtoolsFont(mainWindow)
     // Content loading is handled by WindowManager via the registry's htmlPath.
   }

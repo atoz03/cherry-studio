@@ -231,9 +231,8 @@ export const WINDOW_TYPE_REGISTRY: Partial<Record<WindowType, WindowTypeMetadata
         sandbox: false,
         webSecurity: false,
         webviewTag: true,
-        // REQUIRED: SubWindow hosts streaming LLM responses and WebSocket heartbeats;
-        // Chromium's background-tab throttling would freeze the UI for seconds after
-        // focus switches. Mirrors the Main window's choice above; do not remove.
+        // REQUIRED off while visible: a covered window would otherwise stall streaming replies.
+        // throttleWhileHidden turns it on only for a hidden or minimized window. Mirrors Main.
         backgroundThrottling: false
       }
     },
