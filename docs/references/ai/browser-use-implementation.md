@@ -1246,7 +1246,9 @@ MiniApp pages and transient apps open through tabs. The secondary pane selects a
 opening or reusing a tab. A window shares one guest per app ID across tabs and the visible split
 pane. Collapsing split releases a split-only guest; an independently opened tab keeps its guest.
 Closing the last consumer releases the guest. Route-page dormancy does not release tab-owned
-guests: TabLruManager controls React page caching only.
+guests: TabLruManager controls React page caching only, though a dormant pinned tab no longer
+protects its guest. A hidden, unprotected guest is released once `app.memory.unload_hidden_pages_minutes`
+passes and recreated when shown again.
 Both visible panes are exempt from eviction. Evicted background guests remain absent until shown
 again. Pool DOM order stays stable while recency changes; the pool lives outside page Activities.
 Catalog deletion and runtime eviction clear the matching split selection and close all matching tabs; region/edition filtering does not.
