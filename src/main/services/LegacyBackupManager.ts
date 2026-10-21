@@ -337,7 +337,7 @@ class BackupManager {
       await ensureDir(AbsoluteFilePathSchema.parse(outputDirectory))
       onProgress({ stage: 'preparing', progress: 0, total: 100 })
 
-      const userDataPath = application.getPath('app.userdata')
+      const sessionDataPath = application.getPath('app.session')
       onProgress({ stage: 'copying_files', progress: 15, total: 100 })
       logger.debug('[backupDirect] Capturing v2 backup resources')
 
@@ -382,12 +382,12 @@ class BackupManager {
 
           if (!slimBackup) {
             await this.copyDirectoryOrCreate(
-              path.join(userDataPath, 'IndexedDB'),
+              path.join(sessionDataPath, 'IndexedDB'),
               path.join(workDir, 'IndexedDB'),
               signal
             )
             await this.copyDirectoryOrCreate(
-              path.join(userDataPath, 'Local Storage'),
+              path.join(sessionDataPath, 'Local Storage'),
               path.join(workDir, 'Local Storage'),
               signal
             )
@@ -793,6 +793,14 @@ class BackupManager {
     try {
       const metadata = await this.readDirectBackupMetadata(extractionDir)
       const isSlimBackup = !metadata.resources.indexedDB && !metadata.resources.localStorage
+      // The journal resolves every live path against userData, so browser storage
+      // restores only while sessionData has not been moved out of it.
+      const restoresBrowserStorage = path.resolve(application.getPath('app.session')) === path.resolve(userDataPath)
+      if (!restoresBrowserStorage && !isSlimBackup) {
+        logger.warn('[restoreDirect] Skipping IndexedDB and Local Storage: browser data is in a custom location')
+      }
+      const restoresIndexedDB = metadata.resources.indexedDB && restoresBrowserStorage
+      const restoresLocalStorage = metadata.resources.localStorage && restoresBrowserStorage
 
       if (metadata.platform && metadata.platform !== process.platform) {
         logger.warn(
@@ -812,10 +820,10 @@ class BackupManager {
       await this.assertArchiveFile(path.join(extractionDir, 'cache.json'), 'cache.json')
       await fs.copy(path.join(extractionDir, 'cache.json'), stagedCache)
 
-      if (metadata.resources.indexedDB) {
+      if (restoresIndexedDB) {
         await this.stageArchiveDirectory(path.join(extractionDir, 'IndexedDB'), stagedIndexedDB)
       }
-      if (metadata.resources.localStorage) {
+      if (restoresLocalStorage) {
         await this.stageArchiveDirectory(path.join(extractionDir, 'Local Storage'), stagedLocalStorage)
       }
 
@@ -882,7 +890,7 @@ class BackupManager {
           directory: false
         })
       )
-      if (metadata.resources.indexedDB) {
+      if (restoresIndexedDB) {
         fileResources.push(
           await this.createJournalResource({
             restoreDir,
@@ -892,7 +900,7 @@ class BackupManager {
           })
         )
       }
-      if (metadata.resources.localStorage) {
+      if (restoresLocalStorage) {
         fileResources.push(
           await this.createJournalResource({
             restoreDir,
