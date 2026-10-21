@@ -11,7 +11,8 @@ export const USER_DATA_RELOCATION_VALIDATION_REASONS = [
   'target_in_use',
   'target_not_empty',
   'target_missing',
-  'target_work_conflict'
+  'target_work_conflict',
+  'target_not_enough_space'
 ] as const
 
 export type UserDataRelocationValidationReason = (typeof USER_DATA_RELOCATION_VALIDATION_REASONS)[number]

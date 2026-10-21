@@ -7,6 +7,7 @@ import {
   CACHE_CLEANUP_SIZE_ACCURACIES,
   CACHE_CLEANUP_SIZE_COMPLETENESS
 } from '../../types/cacheCleanup'
+import { STORAGE_LOCATIONS } from '../../types/storageLocation'
 import { USER_DATA_RELOCATION_VALIDATION_REASONS } from '../../types/userDataRelocation'
 import { defineRoute } from '../define'
 
@@ -14,6 +15,9 @@ const relocationInspectionSchema = z.discriminatedUnion('valid', [
   z.object({ valid: z.literal(true), targetEmpty: z.boolean() }),
   z.object({ valid: z.literal(false), reason: z.enum(USER_DATA_RELOCATION_VALIDATION_REASONS) })
 ])
+
+const storageLocationSchema = z.enum(STORAGE_LOCATIONS)
+const storageLocationTargetSchema = z.object({ location: storageLocationSchema, path: z.string().min(1) })
 
 const cacheCleanupGroupSchema = z.enum(CACHE_CLEANUP_GROUPS)
 const cacheCleanupSizeSchema = z.object({
@@ -57,6 +61,27 @@ export const appRequestSchemas = {
       path: z.string().min(1),
       copy: z.boolean()
     }),
+    output: z.void()
+  }),
+  'app.storage_location.list': defineRoute({
+    input: z.void(),
+    output: z.array(
+      z.object({
+        location: storageLocationSchema,
+        path: z.string(),
+        defaultPath: z.string(),
+        isDefault: z.boolean(),
+        bytes: z.number().int().nonnegative().nullable()
+      })
+    )
+  }),
+  // A location's defaultPath resets it; any other path must be a missing or empty directory.
+  'app.storage_location.inspect': defineRoute({
+    input: storageLocationTargetSchema,
+    output: relocationInspectionSchema
+  }),
+  'app.storage_location.request': defineRoute({
+    input: storageLocationTargetSchema,
     output: z.void()
   }),
   'app.cache_cleanup.inspect': defineRoute({

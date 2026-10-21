@@ -7,14 +7,17 @@ import * as z from 'zod'
 
 import { application } from '@application'
 import { loggerService } from '@logger'
+import { storagePathsKey } from '@main/core/preboot/storageLocation'
 import { canonicalizeUserDataPath, getNormalizedExecutablePath } from '@main/core/preboot/userDataLocation'
 import { bootConfigService } from '@main/data/bootConfig'
 import type { RelocationProgress } from '@shared/types/userDataRelocation'
 
+import { commitStorageLocation, currentStorageRoot, executeStorageRelocation } from './storage'
 import type { FailedRelocation, PendingRelocation, RelocationState } from './types'
 import {
   assertEffectiveSeparation,
   assertEmptyDirectory,
+  assertEnoughFreeSpace,
   assertRelocationPaths,
   assertUserDataRelocationRequest,
   invalid,
@@ -22,8 +25,7 @@ import {
   isPathInside,
   normalizeForCompare,
   pathEntryExists,
-  relocationArtifactPaths,
-  resolveExistingAncestor
+  relocationArtifactPaths
 } from './validation'
 import { openUserDataRelocationWindow, type UserDataRelocationWindow } from './window'
 
@@ -52,10 +54,6 @@ const RELOCATION_OWNER_MARKER = '.cherry-relocation-owner.json'
 // recovery invariant needs the owner marker inside workPath before the first
 // payload byte lands. Two constraints, one directory level each.
 const RELOCATION_PAYLOAD_DIRNAME = 'payload'
-// The copy can transiently need more space than the source occupies
-// (allocation rounding, filesystem metadata), and filling the destination
-// volume to the last byte would break the app that boots from it.
-const FREE_SPACE_SAFETY_FACTOR = 1.2
 
 const relocationOwnerSchema = z.object({
   kind: z.literal('cherry-studio-user-data-relocation'),
@@ -76,8 +74,13 @@ export async function runUserDataRelocation(): Promise<'handled' | 'skipped'> {
   // source tree quiescent. A switch never reads the source tree and a
   // failed-state launch just shows the error window, so neither may depend on
   // the temp filesystem: a broken environment must not block a pure pointer
-  // switch or the error explanation.
-  if (relocation.status === 'pending' && relocation.copy) {
+  // switch or the error explanation. Of the storage locations only sessionData
+  // itself is touched by Chromium.
+  if (
+    relocation.status === 'pending' &&
+    relocation.copy &&
+    (relocation.scope === undefined || relocation.scope === 'session_data')
+  ) {
     relocation = prepareIsolatedSessionData(relocation)
   }
 
@@ -107,12 +110,21 @@ export async function runUserDataRelocation(): Promise<'handled' | 'skipped'> {
 
   try {
     publish(makeProgress('preparing', relocation, 0, 0))
-    await executeRelocation(relocation, publish, () => {
-      publish(makeProgress('committing', relocation, 0, 0))
-      commitUserDataRelocation(relocation.to)
-    })
+    const scope = relocation.scope
+    if (scope) {
+      await executeStorageRelocation({ ...relocation, scope }, publish, () => {
+        publish(makeProgress('committing', relocation, 0, 0))
+        commitStorageLocation(scope, relocation.to)
+      })
+    } else {
+      await executeRelocation(relocation, publish, () => {
+        publish(makeProgress('committing', relocation, 0, 0))
+        commitUserDataRelocation(relocation.to, relocation.copy)
+      })
+    }
     publish(makeProgress('completed', relocation, 0, 0))
     logger.info('userData relocation completed; waiting to relaunch', {
+      scope,
       from: relocation.from,
       to: relocation.to,
       copy: relocation.copy
@@ -121,6 +133,7 @@ export async function runUserDataRelocation(): Promise<'handled' | 'skipped'> {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     logger.error('userData relocation failed; keeping previous location', {
+      scope: relocation.scope,
       from: relocation.from,
       to: relocation.to,
       error: message
@@ -163,6 +176,7 @@ function persistFailedRelocation(pending: PendingRelocation, message: string): F
   const failed: FailedRelocation = {
     status: 'failed',
     taskId: pending.taskId,
+    scope: pending.scope,
     from: pending.from,
     to: pending.to,
     copy: pending.copy,
@@ -177,24 +191,26 @@ function persistFailedRelocation(pending: PendingRelocation, message: string): F
 }
 
 function readUserDataRelocationState(): RelocationState | null {
-  // Unpackaged dev runs use the suffixed dev userData and never execute
-  // relocations (mirrors the request-side isPackaged gate in ipc/handlers).
-  if (!app.isPackaged) return null
-
   // BootConfigService already validates this key against the shared zod schema
   // on load and set, so a non-null value here is structurally trustworthy.
   const relocation = bootConfigService.get('temp.user_data_relocation')
   if (!relocation) return null
 
-  // A request whose `from` is not the userData this launch resolved was
-  // recorded under different conditions (executable moved, BootConfig copied
-  // to another machine). Executing it would relocate the wrong tree — discard.
-  const currentUserDataPath = application.getPath('app.userdata')
-  const currentUserData = normalizeForCompare(currentUserDataPath)
-  if (normalizeForCompare(relocation.from) !== currentUserData) {
+  // Unpackaged dev runs use the suffixed dev userData and never execute
+  // whole-userData relocations (mirrors the request-side isPackaged gate in
+  // ipc/handlers). Storage locations hang off that dev userData and do run.
+  if (!relocation.scope && !app.isPackaged) return null
+
+  // A request whose `from` is not the tree this launch resolved was recorded
+  // under different conditions (executable moved, BootConfig copied to another
+  // machine, a custom storage root unavailable). Executing it would relocate
+  // the wrong tree — discard.
+  const currentPath = relocation.scope ? currentStorageRoot(relocation.scope) : application.getPath('app.userdata')
+  if (normalizeForCompare(relocation.from) !== normalizeForCompare(currentPath)) {
     logger.warn('Discarding stale userData relocation request', {
+      scope: relocation.scope,
       requestedFrom: relocation.from,
-      currentUserData: currentUserDataPath
+      currentPath
     })
     clearRelocationState()
     return null
@@ -371,25 +387,36 @@ async function executeRelocation(
 
 /**
  * Persist the new location after the filesystem transaction completed. The
- * two BootConfig writes — pin the target for this executable, clear the
- * pending request — commit together in one persist(); on persist failure the
+ * BootConfig writes — pin the target for this executable, carry a copied
+ * profile's storage roots, clear the pending request — commit together in
+ * one persist(); on persist failure the
  * in-memory state is restored before rethrowing, so a later flush cannot
  * record a path whose filesystem transaction the caller rolls back (see the
  * catch in executeRelocation).
  */
-function commitUserDataRelocation(targetPath: string): void {
+function commitUserDataRelocation(targetPath: string, copy: boolean): void {
   const canonicalTargetPath = canonicalizeUserDataPath(targetPath)
   const exe = getNormalizedExecutablePath()
   const current = bootConfigService.get('app.user_data_path') ?? {}
   const relocation = bootConfigService.get('temp.user_data_relocation')
+  const storagePaths = bootConfigService.get('app.storage_paths') ?? {}
 
   bootConfigService.set('app.user_data_path', { ...current, [exe]: canonicalTargetPath })
   bootConfigService.set('temp.user_data_relocation', null)
+  // A copy is this profile moved, so its custom storage roots follow it; a
+  // switch adopts another profile, which keeps whatever roots it already has.
+  const sourceKey = storagePathsKey()
+  const carriesStorage = copy && sourceKey in storagePaths
+  if (carriesStorage) {
+    const { [sourceKey]: roots, ...others } = storagePaths
+    bootConfigService.set('app.storage_paths', { ...others, [canonicalTargetPath]: roots })
+  }
   try {
     bootConfigService.persist()
   } catch (error) {
     bootConfigService.set('app.user_data_path', current)
     bootConfigService.set('temp.user_data_relocation', relocation)
+    if (carriesStorage) bootConfigService.set('app.storage_paths', storagePaths)
     throw error
   }
 
@@ -544,18 +571,6 @@ async function calculateTotalBytes(
     total += await calculateTotalBytes(path.join(root, entry.name), true, childAncestors)
   }
   return total
-}
-
-async function assertEnoughFreeSpace(target: string, requiredBytes: number): Promise<void> {
-  const { path: existingAncestor } = resolveExistingAncestor(target)
-  const stats = await fsp.statfs(existingAncestor)
-  const availableBytes = stats.bsize * stats.bavail
-  const requiredWithSafetyMargin = Math.ceil(requiredBytes * FREE_SPACE_SAFETY_FACTOR)
-  if (availableBytes < requiredWithSafetyMargin) {
-    throw new Error(
-      `not enough free space for relocation: required ${requiredWithSafetyMargin} including safety margin, available ${availableBytes}`
-    )
-  }
 }
 
 function makeProgress(

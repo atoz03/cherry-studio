@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 import { application } from '@application'
@@ -11,6 +12,11 @@ import type { PendingRelocation } from './types'
 // Their presence in a proposed target means another (possibly still running)
 // Cherry Studio instance owns that directory, so relocation must not touch it.
 const ACTIVE_PROFILE_MARKERS = ['SingletonLock', 'SingletonSocket'] as const
+
+// A copy can transiently need more space than the source occupies
+// (allocation rounding, filesystem metadata), and filling the destination
+// volume to the last byte would break the app that boots from it.
+const FREE_SPACE_SAFETY_FACTOR = 1.2
 
 export class RelocationValidationError extends Error {
   constructor(
@@ -110,7 +116,8 @@ export function assertRelocationPaths(
 /**
  * Three protection layers, checked in order:
  *   1. application trees (relocation session root, install, app root, extra
- *      resources, cherry home) — rejected on overlap in either direction;
+ *      resources, cherry home, the storage-location roots) — rejected on
+ *      overlap in either direction;
  *   2. well-known user/system directories (home, appdata, temp, downloads, …)
  *      — rejected on exact match only, so app-specific subdirectories stay
  *      selectable;
@@ -123,7 +130,10 @@ function assertTargetIsNotProtected(target: string, normalizedTarget: string): v
     application.getPath('app.install'),
     application.getPath('app.root'),
     application.getPath('app.extra_resources'),
-    application.getPath('cherry.home')
+    application.getPath('cherry.home'),
+    application.getPath('feature.storage.models'),
+    application.getPath('feature.storage.toolchain'),
+    application.getPath('app.session')
   ]
   for (const protectedTree of protectedApplicationTrees) {
     const normalizedProtected = normalizeForCompare(resolveEffectivePath(protectedTree))
@@ -184,6 +194,19 @@ export function assertEffectiveSeparation(source: string, target: string): void 
   }
   if (isPathInside(sourceReal, targetEffective)) {
     throw new Error(`target real path contains source: ${target}`)
+  }
+}
+
+export async function assertEnoughFreeSpace(target: string, requiredBytes: number): Promise<void> {
+  const { path: existingAncestor } = resolveExistingAncestor(target)
+  const stats = await fsp.statfs(existingAncestor)
+  const availableBytes = stats.bsize * stats.bavail
+  const requiredWithSafetyMargin = Math.ceil(requiredBytes * FREE_SPACE_SAFETY_FACTOR)
+  if (availableBytes < requiredWithSafetyMargin) {
+    invalid(
+      'target_not_enough_space',
+      `not enough free space for relocation: required ${requiredWithSafetyMargin} including safety margin, available ${availableBytes}`
+    )
   }
 }
 

@@ -13,22 +13,27 @@ Relocation gets a dedicated launch: the request is persisted to BootConfig, the 
 | File | Role |
 |---|---|
 | `execution.ts` | `runUserDataRelocation()` — launch-time entry owning the whole flow: state read, sessionData isolation, copy/recover/rollback, commit, progress, window driving, relaunch |
-| `request.ts` | run-time request face: `inspectUserDataRelocationTarget()`, `requestUserDataRelocation()` |
+| `request.ts` | run-time request face: `inspectUserDataRelocationTarget()`, `requestUserDataRelocation()`, and the storage-location counterparts `inspectStorageRelocationTarget()`, `requestStorageRelocation()` |
+| `storage.ts` | storage-location moves (local models, downloaded tools, Chromium sessionData): listing for the settings page, validation, the per-entry move with rollback, and the `app.storage_paths` commit |
 | `validation.ts` | shared path validation: request assertions, protected-tree rules, path primitives |
 | `window.ts` | dedicated pre-lifecycle BrowserWindow controller |
 | `types.ts` | domain aliases over the shared BootConfig schema |
 | `index.ts` | barrel — the only import surface for code outside this directory |
 
-Internal dependency direction (acyclic): `execution → validation, window, types`; `request → validation, types`; `validation → types`. Externally both faces depend downward on `core/preboot/userDataLocation` and `data/bootConfig`.
+Internal dependency direction (acyclic): `execution → storage, validation, window, types`; `request → storage, validation, types`; `storage → validation, types`; `validation → types`. Externally both faces depend downward on `core/preboot/userDataLocation` and `data/bootConfig`.
 
 ## Two faces and the BootConfig contract
 
 | Face | Caller | Entry |
 |---|---|---|
-| Request (app running) | `ipc/handlers/app.ts` — the IpcApi boundary keeps only `isPackaged` policy + `IpcError` mapping | `inspectUserDataRelocationTarget`, `requestUserDataRelocation` |
+| Request (app running) | `ipc/handlers/app.ts` — the IpcApi boundary keeps only `isPackaged` policy (userData routes only) + `IpcError` mapping | `inspectUserDataRelocationTarget`, `requestUserDataRelocation`, `listStorageLocations`, `inspectStorageRelocationTarget`, `requestStorageRelocation` |
 | Execution (next launch) | `main.ts` preboot sequence — the only caller | `runUserDataRelocation` |
 
 `temp.user_data_relocation`: request writes `pending`; execution reads it, discards stale requests, overwrites with `failed` on any error, and clears it on commit or on user-confirmed restart from the failed screen. `app.user_data_path`: the commit step writes it; `core/preboot/userDataLocation.ts` reads it when resolving userData on every launch. Both keys are validated against the shared zod schema at the BootConfig load/set boundary.
+
+## Storage locations
+
+A request with a `scope` (`models`, `toolchain` or `session_data`) moves one storage root instead of userData. It reuses the request state, the dedicated launch, the progress window and the failed state; only the execution differs (`storage.ts`). The entries of the root are moved one by one — renamed on the same volume, copied through a task-owned work path otherwise — and the entry list is journaled into the request before the first rename, so a launch that finds a journaled request undoes the interrupted move and fails instead of retrying. Any failure rolls completed moves back; `app.storage_paths` (keyed by the canonical userData path) is committed only after every entry moved, and sources of copies are deleted only after that commit. Only a `session_data` move isolates sessionData for the relocation launch. Unlike whole-userData relocation, storage moves also run in unpackaged development builds. A userData copy carries the profile's `app.storage_paths` entry to the new userData key; a switch does not.
 
 ## Preboot-phase constraints
 
