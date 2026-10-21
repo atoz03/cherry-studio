@@ -15,7 +15,8 @@ import {
   type OpenTabOptions,
   TabsContext,
   type TabsContextValue,
-  useConversationNavigationOwner
+  useConversationNavigationOwner,
+  useHiddenPageUnloading
 } from '@renderer/hooks/tab'
 import { ipcApi, useIpcOn } from '@renderer/ipc'
 import { TAB_LIMITS, TabLruManager } from '@renderer/services/TabLruManager'
@@ -364,6 +365,14 @@ export function TabsProvider({
     },
     [setPinnedTabs, storesPinned]
   )
+
+  const hibernateHiddenTab = useCallback(
+    (id: string) => {
+      if (id !== activeTabIdRef.current) updateTab(id, { isDormant: true, savedState: { scrollPosition: 0 } })
+    },
+    [updateTab]
+  )
+  useHiddenPageUnloading(tabs, activeTabId, hibernateHiddenTab)
 
   const setActiveTab = useCallback(
     (id: string) => {

@@ -6,6 +6,7 @@ export {
 } from './useCloseConversationTabs'
 export { useConversationNavigationOwner } from './useConversationNavigationOwner'
 export { TabIdContext, useCurrentTab, useCurrentTabId, useIsActiveTab } from './useCurrentTab'
+export { useHiddenPageUnloading } from './useHiddenPageUnloading'
 export { useMainWindowNavigation } from './useMainWindowNavigation'
 export { useTabs } from './useTabs'
 export {

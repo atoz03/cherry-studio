@@ -1109,3 +1109,58 @@ describe('TabsProvider keep-alive limit (fork)', () => {
     expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^$/)
   })
 })
+
+function BrowserTabControls() {
+  const { addTab, setActiveTab, tabs } = useTabsContext()
+  const open = (id: string, url: string) =>
+    addTab({ id, type: 'route', url, title: id, lastAccessTime: 0, isDormant: false })
+
+  return (
+    <>
+      <button type="button" onClick={() => open('web', '/app/browser?url=https%3A%2F%2Fexample.com')}>
+        Open browser
+      </button>
+      <button type="button" onClick={() => open('chat', '/app/chat?topicId=t')}>
+        Open chat
+      </button>
+      <button type="button" onClick={() => setActiveTab('home')}>
+        Activate Home
+      </button>
+      <div data-testid="dormant-ids">
+        {tabs
+          .filter((tab) => tab.isDormant)
+          .map((tab) => tab.id)
+          .join(',')}
+      </div>
+      <div data-testid="web-url">{tabs.find((tab) => tab.id === 'web')?.url}</div>
+    </>
+  )
+}
+
+describe('TabsProvider hidden page unloading (fork)', () => {
+  afterEach(() => {
+    MockUsePreferenceUtils.setPreferenceValue('app.memory.unload_hidden_pages_minutes', 0)
+    vi.useRealTimers()
+  })
+
+  // A background browser tab below the keep-alive limit used to keep its page for the whole session.
+  it('unloads a background browser tab hidden past the timeout and keeps its address', () => {
+    vi.useFakeTimers()
+    MockUsePreferenceUtils.setPreferenceValue('app.memory.unload_hidden_pages_minutes', 1)
+    render(
+      <TabsProvider initialDefaultTab={HOME_TAB} includePinnedTabs={false}>
+        <BrowserTabControls />
+      </TabsProvider>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open browser' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Activate Home' }))
+
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+
+    expect(screen.getByTestId('dormant-ids')).toHaveTextContent(/^web$/)
+    expect(screen.getByTestId('web-url')).toHaveTextContent('/app/browser?url=https%3A%2F%2Fexample.com')
+  })
+})

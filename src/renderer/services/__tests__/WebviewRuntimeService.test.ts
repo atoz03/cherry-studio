@@ -1,6 +1,7 @@
 import type { WebviewTag } from 'electron'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { HiddenPageUnloader } from '../HiddenPageUnloader'
 import { WebviewRuntimeService, type WebviewRequest } from '../WebviewRuntimeService'
 
 const demand = (key: string, patch: Partial<WebviewRequest> = {}): WebviewRequest => ({
@@ -116,5 +117,42 @@ describe('WebView resource lifetime', () => {
     const existing = service.get('a')!
     service.sync([demand('a', { source: undefined })], 1)
     expect(service.get('a')).toBe(existing)
+  })
+})
+
+describe('WebView hidden page unloading', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const setup = () => {
+    vi.useFakeTimers()
+    const unloader = new HiddenPageUnloader()
+    unloader.setTimeoutMinutes(1)
+    return new WebviewRuntimeService(unloader)
+  }
+
+  // Below the keep-alive count a hidden mini app used to stay loaded for the whole session.
+  it('unloads a hidden mini app after the timeout and reloads it when shown again', () => {
+    const service = setup()
+    service.sync([demand('a')], 3)
+    const instance = service.get('a')!.instance
+    service.sync([demand('a', { visible: false }), demand('b')], 3)
+
+    vi.advanceTimersByTime(60_000)
+    expect(service.get('a')).toBeUndefined()
+    expect(service.get('b')).toBeDefined()
+
+    service.sync([demand('a'), demand('b', { visible: false })], 3)
+    expect(service.get('a')!.instance).not.toBe(instance)
+  })
+
+  it('keeps a protected (pinned) mini app however long it stays hidden', () => {
+    const service = setup()
+    service.sync([demand('a')], 3)
+    service.sync([demand('a', { visible: false, protected: true }), demand('b')], 3)
+
+    vi.advanceTimersByTime(60 * 60_000)
+    expect(service.get('a')).toBeDefined()
   })
 })
