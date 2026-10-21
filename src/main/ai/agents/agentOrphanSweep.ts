@@ -8,6 +8,7 @@ import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
 import { agentSessionMessageService } from '@data/services/AgentSessionMessageService'
 import { loggerService } from '@logger'
 import { listEntries, reclaimStale } from '@main/ai/runtime/orphanSessionReclaim'
+import { prunePiSessionSyncMarks } from '@main/ai/runtime/pi/piHistorySync'
 import { runtimeDriverRegistry } from '@main/ai/runtime/registry'
 import type { OrphanSessionReclaimOptions } from '@main/ai/runtime/types'
 
@@ -128,6 +129,7 @@ export async function sweepAgentOrphans(signal?: AbortSignal): Promise<AgentSwee
 
   signal?.throwIfAborted()
   const { runtimeSessions, failedDrivers } = await reclaimRuntimeSessions(removed, options, signal)
+  prunePiSessionSyncMarks()
 
   logger.info('agent-orphan-sweep', { event: 'agent-orphan-sweep', agentDirs, workspaceDirs, runtimeSessions })
   return { removed, failedDrivers }

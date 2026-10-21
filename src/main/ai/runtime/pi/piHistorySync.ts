@@ -4,11 +4,12 @@
  * Cherry's own runs advance the watermark too, so they are never imported twice.
  */
 import { readUIMessageStream, type UIMessageChunk } from 'ai'
-import { eq } from 'drizzle-orm'
+import { eq, inArray, like } from 'drizzle-orm'
 import { v7 as uuidv7 } from 'uuid'
 
 import { application } from '@application'
 import { notifyDataApiDataChange } from '@data/dataApiDataChange'
+import { agentSessionTable } from '@data/db/schemas/agentSession'
 import type { AgentSessionMessageRow } from '@data/db/schemas/agentSessionMessage'
 import { appStateTable } from '@data/db/schemas/appState'
 import type { DbOrTx } from '@data/db/types'
@@ -61,11 +62,26 @@ export function markPiSessionSynced(sessionId: string, mark: PiSyncMark): void {
   application.get('DbService').withWriteTx((tx) => writeMarkTx(tx, sessionId, mark))
 }
 
-/** Drop a session's watermark once its rows are gone. */
-export function clearPiSessionSyncTx(tx: DbOrTx, sessionId: string): void {
-  tx.delete(appStateTable)
-    .where(eq(appStateTable.key, `${SYNC_KEY_PREFIX}${sessionId}`))
-    .run()
+/** Drop the watermarks of purged sessions. Returns how many were dropped. */
+export function prunePiSessionSyncMarks(): number {
+  return application.get('DbService').withWriteTx((tx) => {
+    const sessionIds = new Set(
+      tx
+        .select({ id: agentSessionTable.id })
+        .from(agentSessionTable)
+        .all()
+        .map((row) => row.id)
+    )
+    const stale = tx
+      .select({ key: appStateTable.key })
+      .from(appStateTable)
+      .where(like(appStateTable.key, `${SYNC_KEY_PREFIX}%`))
+      .all()
+      .map((row) => row.key)
+      .filter((key) => !sessionIds.has(key.slice(SYNC_KEY_PREFIX.length)))
+    if (stale.length > 0) tx.delete(appStateTable).where(inArray(appStateTable.key, stale)).run()
+    return stale.length
+  })
 }
 
 /** Index after which the branch is new to Cherry, or undefined when the history cannot be aligned. */

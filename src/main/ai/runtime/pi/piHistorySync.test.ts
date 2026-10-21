@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import { setupTestDatabase } from '@test-helpers/db'
+import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { application } from '@application'
@@ -10,7 +11,7 @@ import { agentSessionTable } from '@data/db/schemas/agentSession'
 import { agentWorkspaceTable } from '@data/db/schemas/agentWorkspace'
 import { agentSessionMessageService } from '@data/services/AgentSessionMessageService'
 
-import { syncPiSessionHistory } from './piHistorySync'
+import { prunePiSessionSyncMarks, syncPiSessionHistory } from './piHistorySync'
 import { piSessionDirectory } from './piSessionFiles'
 
 const sessionId = 'session-1'
@@ -226,5 +227,14 @@ describe('syncPiSessionHistory', () => {
     await sync()
 
     expect(rows().at(-1)?.status).toBe('error')
+  })
+
+  it('forgets what it imported only once the session is purged', async () => {
+    await sync()
+    expect(prunePiSessionSyncMarks()).toBe(0)
+
+    dbh.db.delete(agentSessionTable).where(eq(agentSessionTable.id, sessionId)).run()
+    expect(prunePiSessionSyncMarks()).toBe(1)
+    expect(prunePiSessionSyncMarks()).toBe(0)
   })
 })
