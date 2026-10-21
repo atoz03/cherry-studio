@@ -1,5 +1,6 @@
 import type { DataContent, ModelMessage } from 'ai'
 
+import { loadSharp } from '@main/utils/sharp'
 import { parseDataUrl } from '@shared/utils/dataUrl'
 
 import type { TokenDialect } from './dialect'
@@ -296,7 +297,7 @@ function imageBytesWithinBudget(value: DataContent | URL, maxBytes: number): Buf
  */
 async function dimensionsFromBytes(bytes: Buffer): Promise<ImageDims | undefined> {
   try {
-    const { default: sharp } = await import('sharp')
+    const sharp = await loadSharp()
     const { width, height } = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).metadata()
     return width && height ? { width, height } : undefined
   } catch {

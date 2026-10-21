@@ -1,9 +1,10 @@
 import { readFile } from 'fs/promises'
 
+import { loadSharp } from '@main/utils/sharp'
 import type { FileInfo } from '@shared/types/file'
 
 export const preprocessImage = async (buffer: Buffer): Promise<Buffer> => {
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   return sharp(buffer).grayscale().normalize().sharpen().png({ quality: 100 }).toBuffer()
 }
 

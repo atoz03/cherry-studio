@@ -1,5 +1,7 @@
 import { fileTypeFromBuffer } from 'file-type'
 
+import { loadSharp } from './sharp'
+
 /** Target square dimension for normalized entity images (avatar / logo). */
 const ENTITY_IMAGE_DIMENSION = 128
 /** Decode-work bound: a small file can still declare huge dimensions (bomb). */
@@ -17,8 +19,7 @@ const MODEL_IMAGE_MAX_EDGE = 2000
  * decides how to react).
  */
 export async function transcodeToEntityWebp(bytes: Uint8Array): Promise<Buffer> {
-  // Delayed loading: a static import would map sharp's multi-MB libvips native library at boot.
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   // Only the first frame of an animated GIF is used — fine for a 128² entity image.
   // `failOn: 'none'` keeps slightly-malformed user images (truncated chunk, bad CRC) decodable;
   // sharp's default rejects them on a libvips warning, which varies by platform.
@@ -37,7 +38,7 @@ export async function transcodeToPng(bytes: Uint8Array): Promise<Uint8Array> {
     return bytes
   }
 
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   return sharp(bytes).png().toBuffer()
 }
 
@@ -47,7 +48,7 @@ export async function transcodeToPng(bytes: Uint8Array): Promise<Uint8Array> {
  * @returns resized bytes, or `null` when the image already fits. Throws on undecodable input.
  */
 export async function clampImageForModel(bytes: Uint8Array): Promise<Uint8Array | null> {
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   const image = sharp(bytes, { failOn: 'none' })
   const { width, height } = await image.metadata()
   if (!width || !height) throw new Error('could not read image dimensions')
@@ -67,7 +68,7 @@ export async function cropPng(
   bytes: Uint8Array,
   region: { x: number; y: number; width: number; height: number }
 ): Promise<Uint8Array> {
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   return sharp(bytes)
     .extract({ left: region.x, top: region.y, width: region.width, height: region.height })
     .png()

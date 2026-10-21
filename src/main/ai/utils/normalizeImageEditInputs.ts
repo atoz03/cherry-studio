@@ -1,3 +1,5 @@
+import { loadSharp } from '@main/utils/sharp'
+
 const MAX_IMAGE_EDIT_INPUT_PIXELS = 100_000_000
 
 /** Prepare upload copies without changing stored originals or remote image URLs. */
@@ -18,7 +20,7 @@ export async function normalizeImageEditInputs(images: readonly string[], signal
       continue
     }
 
-    const sharp = (await import('sharp')).default
+    const sharp = await loadSharp()
     signal?.throwIfAborted()
     const pipeline = sharp(bytes, { limitInputPixels: MAX_IMAGE_EDIT_INPUT_PIXELS })
     const metadata = await pipeline.metadata()

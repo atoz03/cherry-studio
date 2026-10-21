@@ -4,6 +4,7 @@ import { fileTypeFromBuffer } from 'file-type'
 import { application } from '@application'
 import { notifyDataApiDataChange } from '@data/dataApiDataChange'
 import { loggerService } from '@logger'
+import { loadSharp } from '@main/utils/sharp'
 
 const logger = loggerService.withContext('BrowserFavicons')
 const MAX_ICON_BYTES = 256 * 1024
@@ -25,7 +26,7 @@ export async function cacheBrowserFavicons(icons: ReadonlyMap<string, Buffer>, s
       if (type?.ext === 'ico') {
         if (bytes.length <= 32 * 1024) prepared.set(url.origin, `data:image/x-icon;base64,${bytes.toString('base64')}`)
       } else {
-        const sharp = (await import('sharp')).default
+        const sharp = await loadSharp()
         const png = await sharp(bytes, { limitInputPixels: 1_000_000, failOn: 'none' })
           .resize(32, 32, { fit: 'inside', withoutEnlargement: true })
           .png()
