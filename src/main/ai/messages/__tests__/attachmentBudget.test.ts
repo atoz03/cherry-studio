@@ -1,8 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { MockMainPreferenceServiceUtils } from '@test-mocks/main/PreferenceService'
+import { afterEach, describe, expect, it } from 'vitest'
 
+import { makeModel } from '@main/ai/__tests__/fixtures/model'
+import { makeProvider } from '@main/ai/__tests__/fixtures/provider'
 import { READ_FILE_PAGE_SIZE } from '@shared/ai/builtinTools'
+import { ENDPOINT_TYPE } from '@shared/data/types/model'
 
-import { allocateAttachmentBudget, allocateInlineCaps } from '../attachmentBudget'
+import { allocateAttachmentBudget, allocateInlineCaps, resolveAttachmentBudget } from '../attachmentBudget'
+import { ALL_MEDIA } from '../messageCapabilities'
 
 /** One token per character, so allocations read directly as character counts. */
 const charTokenizer = { id: 'chars', count: (text: string) => text.length }
@@ -97,3 +102,34 @@ describe('allocateInlineCaps', () => {
 function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0)
 }
+
+describe('resolveAttachmentBudget tokenizer', () => {
+  const resolveForOpenAi = () =>
+    resolveAttachmentBudget({
+      provider: makeProvider({
+        defaultChatEndpoint: ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS,
+        endpointConfigs: { [ENDPOINT_TYPE.OPENAI_CHAT_COMPLETIONS]: { adapterFamily: 'openai-compatible' } }
+      }),
+      model: makeModel({ contextWindow: 128_000 }),
+      system: 'You are helpful.',
+      tools: undefined,
+      maxOutputTokens: undefined,
+      messages: [],
+      mediaCapabilities: ALL_MEDIA
+    })
+
+  afterEach(() => MockMainPreferenceServiceUtils.resetMocks())
+
+  // Releasing idle runtimes must not load the GPT tokenizer, which then stays for the session.
+  it('estimates instead of loading the BPE tokenizer while idle runtimes are released', async () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('app.memory.release_idle_runtimes', true)
+
+    expect((await resolveForOpenAi())?.tokenizer.id).toBe('tokenx')
+  })
+
+  it('counts with the BPE tokenizer when the user keeps runtimes loaded', async () => {
+    MockMainPreferenceServiceUtils.setPreferenceValue('app.memory.release_idle_runtimes', false)
+
+    expect((await resolveForOpenAi())?.tokenizer.id).toBe('gpt-tokenizer/o200k')
+  })
+})

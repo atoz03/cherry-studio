@@ -12,13 +12,14 @@ import type { ToolSet, UIMessage } from 'ai'
  * Every number here is an estimate with a safety ratio on top, not a ledger:
  * erring small costs a `read_file` page, erring large fails the request.
  */
+import { application } from '@application'
 import { ATTACHMENT_INPUT_SAFETY_RATIO } from '@main/ai/constants'
 import { resolveContextWindow } from '@main/ai/contextBuild/resolveContextWindow'
 import { resolveInputRoom } from '@main/ai/contextBuild/resolveInputRoom'
 import { resolveModelTokenDialect } from '@main/ai/tokens/dialect'
 import { countToolTokens, estimateModelMessagesSync } from '@main/ai/tokens/footprint'
 import { getTextTokenizer } from '@main/ai/tokens/profiles'
-import type { TextTokenizer } from '@main/ai/tokens/textTokenizer'
+import { type TextTokenizer, tokenxTokenizer } from '@main/ai/tokens/textTokenizer'
 import { serializeToolSchema } from '@main/ai/tools/adapters/aiSdk/meta/schemaStub'
 import { surrogateSafeEnd } from '@main/ai/utils/textPaging'
 import type { Model } from '@shared/data/types/model'
@@ -54,7 +55,10 @@ export async function resolveAttachmentBudget(input: AttachmentBudgetInput): Pro
   if (window === null) return null
 
   const dialect = resolveModelTokenDialect(input.provider, input.model)
-  const tokenizer = await getTextTokenizer(dialect)
+  // The safety ratio already absorbs estimate error; skip loading the ~20 MB BPE while saving memory.
+  const tokenizer = application.get('PreferenceService').get('app.memory.release_idle_runtimes')
+    ? tokenxTokenizer
+    : await getTextTokenizer(dialect)
 
   let spent: number
   try {
