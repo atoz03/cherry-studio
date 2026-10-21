@@ -1,3 +1,4 @@
+import { LanguageDescription } from '@codemirror/language'
 import { linter } from '@codemirror/lint' // statically imported by @uiw/codemirror-extensions-basic-setup
 import { EditorView } from '@codemirror/view'
 import type { Extension } from '@uiw/react-codemirror'
@@ -50,7 +51,16 @@ async function loadLanguageExtension(language: string, languageConfig?: Language
     }
   }
 
-  // 回退到 uiw/codemirror 包含的语言
+  // language-data loads one language at a time; extensions-langs parses every language at once.
+  try {
+    const { languages } = await import('@codemirror/language-data')
+    const description = LanguageDescription.matchFilename(languages, `file.${fileExt}`)
+    if (description) return await description.load()
+  } catch (error) {
+    console.debug(`Failed to load language ${language} (${fileExt})`, error as Error)
+  }
+
+  // 回退到 uiw/codemirror 包含的语言（nix、solidity、svelte 只在这里）
   try {
     const { loadLanguage } = await import('@uiw/codemirror-extensions-langs')
     const extension = loadLanguage(fileExt as any)
