@@ -4,7 +4,7 @@ import path from 'node:path'
 
 import { MockMainFileManagerExport } from '@test-mocks/main/FileManager'
 import Database from 'better-sqlite3'
-import { app } from 'electron'
+import { app, session } from 'electron'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { application } from '@application'
@@ -15,19 +15,22 @@ import { cacheCleanupService } from '@main/services/cacheCleanup'
 const bootConfigGet = vi.hoisted(() => vi.fn())
 const hasPendingRestoreMock = vi.hoisted(() => vi.fn(() => false))
 const removeOrphanBaseArtifacts = vi.hoisted(() => vi.fn())
-const { defaultSession, webviewSession, htmlArtifactPreviewSession } = vi.hoisted(() => {
-  const createSession = () => ({
-    clearCodeCaches: vi.fn(),
-    clearData: vi.fn(),
-    clearStorageData: vi.fn(),
-    getCacheSize: vi.fn()
+const { defaultSession, webviewSession, htmlArtifactPreviewSession, agentBrowserSession, mcpBrowserSession } =
+  vi.hoisted(() => {
+    const createSession = () => ({
+      clearCodeCaches: vi.fn(),
+      clearData: vi.fn(),
+      clearStorageData: vi.fn(),
+      getCacheSize: vi.fn()
+    })
+    return {
+      defaultSession: createSession(),
+      webviewSession: createSession(),
+      htmlArtifactPreviewSession: createSession(),
+      agentBrowserSession: createSession(),
+      mcpBrowserSession: createSession()
+    }
   })
-  return {
-    defaultSession: createSession(),
-    webviewSession: createSession(),
-    htmlArtifactPreviewSession: createSession()
-  }
-})
 
 vi.mock('@data/bootConfig', () => ({
   bootConfigService: { get: bootConfigGet }
@@ -49,9 +52,12 @@ vi.mock('electron', () => ({
   },
   session: {
     defaultSession,
-    fromPartition: vi.fn((partition: string) =>
-      partition === 'persist:webview' ? webviewSession : htmlArtifactPreviewSession
-    )
+    fromPartition: vi.fn((partition: string) => {
+      if (partition === 'persist:webview') return webviewSession
+      if (partition === 'persist:agent-browser') return agentBrowserSession
+      if (partition === 'persist:default') return mcpBrowserSession
+      return htmlArtifactPreviewSession
+    })
   }
 }))
 
@@ -135,6 +141,8 @@ describe('CacheCleanupService', () => {
         'app.userdata.data': path.join(userDataPath, 'Data'),
         'app.session': rootPath('Session'),
         'app.session.webview': rootPath('Session', 'Partitions', 'webview'),
+        'app.session.agent_browser': rootPath('Session', 'Partitions', 'agent-browser'),
+        'app.session.mcp_browser': rootPath('Session', 'Partitions', 'default'),
         'app.temp': rootPath('Temp'),
         'feature.trace': tracePath,
         'app.logs': logsPath,
@@ -154,7 +162,13 @@ describe('CacheCleanupService', () => {
       return filename ? path.join(base, filename) : base
     })
 
-    for (const mockedSession of [defaultSession, webviewSession, htmlArtifactPreviewSession]) {
+    for (const mockedSession of [
+      defaultSession,
+      webviewSession,
+      htmlArtifactPreviewSession,
+      agentBrowserSession,
+      mcpBrowserSession
+    ]) {
       mockedSession.getCacheSize.mockResolvedValue(0)
       mockedSession.clearData.mockResolvedValue(undefined)
       mockedSession.clearCodeCaches.mockResolvedValue(undefined)
@@ -196,6 +210,21 @@ describe('CacheCleanupService', () => {
         completeness: 'complete'
       }
     })
+  })
+
+  // Bug: the built-in browsers' caches were neither counted nor cleared.
+  it('counts and clears the cache of a built-in browser that has been used, leaving unused ones uncreated', async () => {
+    agentBrowserSession.getCacheSize.mockResolvedValue(400)
+    await writeTestFile(rootPath('Session', 'Partitions', 'agent-browser', 'Code Cache', 'agent.bin'), Buffer.alloc(19))
+
+    const inspection = await cacheCleanupService.inspect(['normal_cache'])
+    vi.mocked(application.get).mockReturnValueOnce({ cleanLocalData: async () => undefined } as never)
+    const cleanup = await cacheCleanupService.run(['normal_cache'])
+
+    expect(inspection.results[0]?.size.bytes).toBe(419)
+    expect(cleanup.results[0]?.status).toBe('cleared')
+    expect(agentBrowserSession.clearData).toHaveBeenCalledWith({ dataTypes: ['cache'], avoidClosingConnections: true })
+    expect(vi.mocked(session.fromPartition).mock.calls.map(([partition]) => partition)).not.toContain('persist:default')
   })
 
   it('reports site-data inspection as partial when the preview partition cannot be measured', async () => {

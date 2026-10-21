@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import path from 'node:path'
 
 import { type Session, session } from 'electron'
@@ -44,6 +45,8 @@ function getCleanupPaths() {
   return {
     defaultSession: application.getPath('app.session'),
     webviewSession: application.getPath('app.session.webview'),
+    agentBrowserSession: application.getPath('app.session.agent_browser'),
+    mcpBrowserSession: application.getPath('app.session.mcp_browser'),
     trace: application.getPath('feature.trace'),
     legacyTrace: application.getPath('v1.trace')
   }
@@ -59,6 +62,19 @@ async function measureSessionCache(ses: Session, item: string): Promise<SizeMeas
   }
 }
 
+/**
+ * Browser partitions that exist on disk. Partitions that were never used are
+ * skipped so measuring or clearing does not create their sessions.
+ */
+function usedBrowserPartitions(paths: ReturnType<typeof getCleanupPaths>) {
+  return [
+    { item: 'agent_browser_session', root: paths.agentBrowserSession, partition: 'persist:agent-browser' },
+    { item: 'mcp_browser_session', root: paths.mcpBrowserSession, partition: 'persist:default' }
+  ]
+    .filter(({ root }) => fs.existsSync(root))
+    .map(({ item, root, partition }) => ({ item, root, value: session.fromPartition(partition) }))
+}
+
 function clearSessionNormalCache(ses: Session, item: string): Promise<CleanupStepResult[]> {
   return Promise.all([
     captureStep(`${item}_http_cache`, () => ses.clearData({ dataTypes: ['cache'], avoidClosingConnections: true })),
@@ -71,7 +87,8 @@ export async function inspectNormalCache(): Promise<CacheCleanupSizeSnapshot> {
   const paths = getCleanupPaths()
   const sessions = [
     { item: 'default_session', root: paths.defaultSession, value: session.defaultSession },
-    { item: 'webview_session', root: paths.webviewSession, value: session.fromPartition('persist:webview') }
+    { item: 'webview_session', root: paths.webviewSession, value: session.fromPartition('persist:webview') },
+    ...usedBrowserPartitions(paths)
   ]
   const previewSession = {
     item: 'html_artifact_preview_session',
@@ -125,21 +142,22 @@ export async function inspectSiteData(): Promise<CacheCleanupSizeSnapshot> {
 
 export async function clearNormalCache(): Promise<CacheCleanupGroupResult> {
   const paths = getCleanupPaths()
-  const [defaultSessionSteps, webviewSessionSteps, previewSessionSteps, traceStep, legacyTraceStep] = await Promise.all(
-    [
+  const [defaultSessionSteps, webviewSessionSteps, previewSessionSteps, traceStep, legacyTraceStep, browserSteps] =
+    await Promise.all([
       clearSessionNormalCache(session.defaultSession, 'default_session'),
       clearSessionNormalCache(session.fromPartition('persist:webview'), 'webview_session'),
       clearSessionNormalCache(session.fromPartition(HTML_ARTIFACT_PREVIEW_PARTITION), 'html_artifact_preview_session'),
       captureStep('trace', () => application.get('TraceStorageService').cleanLocalData()),
-      removeCleanupTarget({ item: 'legacy_trace', path: paths.legacyTrace, kind: 'directory' })
-    ]
-  )
+      removeCleanupTarget({ item: 'legacy_trace', path: paths.legacyTrace, kind: 'directory' }),
+      Promise.all(usedBrowserPartitions(paths).map(({ value, item }) => clearSessionNormalCache(value, item)))
+    ])
   return resultFromSteps('normal_cache', [
     ...defaultSessionSteps,
     ...webviewSessionSteps,
     ...previewSessionSteps,
     traceStep,
-    legacyTraceStep
+    legacyTraceStep,
+    ...browserSteps.flat()
   ])
 }
 

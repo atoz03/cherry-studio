@@ -95,6 +95,8 @@ export function buildPathRegistry(storage?: StorageRoots) {
     'app.session': appSession,
     'app.session.cache': path.join(appSession, 'Cache'), // Chromium cache Directory
     'app.session.webview': path.join(appSession, 'Partitions', 'webview'), // persist:webview Chromium partition
+    'app.session.agent_browser': path.join(appSession, 'Partitions', 'agent-browser'), // persist:agent-browser partition
+    'app.session.mcp_browser': path.join(appSession, 'Partitions', 'default'), // persist:default (MCP browser) partition
     'app.extra_resources': appExtraResources, // electron-builder extraResources output root
     'app.temp': appTemp, // Cherry-specific temp under sys.temp
     'app.userdata': appUserData, // Electron per-app data dir (Cherry-owned)
@@ -426,6 +428,8 @@ const NO_ENSURE = [
   'feature.selection.native_panel_file',
   'app.utility_process',
   'app.session.webview',
+  'app.session.agent_browser',
+  'app.session.mcp_browser',
   'feature.backup.restore.session',
   'app.database.migrations',
   'feature.provider_registry.data',
