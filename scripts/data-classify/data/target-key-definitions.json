@@ -48,6 +48,27 @@
       "description": "Prevent system sleep while the app has active work (v2 new feature, no v1 source)"
     },
     {
+      "targetKey": "app.memory.unload_hidden_pages_minutes",
+      "type": "number",
+      "defaultValue": 10,
+      "status": "classified",
+      "description": "Minutes a hidden, unpinned web page (mini app, built-in browser or agent browser) stays loaded before it is unloaded until shown again; 0 keeps them (fork setting, no v1 source)"
+    },
+    {
+      "targetKey": "app.memory.release_idle_runtimes",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Stop the Pyodide worker when idle and estimate attachment tokens without loading the GPT tokenizer (fork setting, no v1 source)"
+    },
+    {
+      "targetKey": "app.memory.throttle_hidden_windows",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Let Chromium throttle timers and rendering of the main and detached windows while they are hidden or minimized (fork setting, no v1 source)"
+    },
+    {
       "targetKey": "app.notification.update.enabled",
       "type": "boolean",
       "defaultValue": false,
@@ -329,7 +350,14 @@
       "type": "number",
       "defaultValue": 4,
       "status": "classified",
-      "description": "Tabs kept loaded at once; beyond it the least recently used unpinned background tabs are unloaded until reopened (fork setting, no v1 source)"
+      "description": "Tabs kept loaded at once; beyond it the least recently used background tabs are unloaded until reopened (fork setting, no v1 source)"
+    },
+    {
+      "targetKey": "ui.tab.keep_alive_counts_pinned",
+      "type": "boolean",
+      "defaultValue": true,
+      "status": "classified",
+      "description": "Pinned tabs count toward ui.tab.keep_alive_limit and are unloaded like other background tabs (fork setting, no v1 source)"
     },
     {
       "targetKey": "chat.default_model_id",

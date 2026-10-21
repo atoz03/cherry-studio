@@ -8,9 +8,10 @@ import { usePreference } from '@data/hooks/usePreference'
 import Selector from '@renderer/components/Selector'
 import { toast } from '@renderer/services/toast'
 import { getAppEdition } from '@renderer/utils/appEdition'
+import { DefaultPreferences } from '@shared/data/preference/preferenceSchemas'
 import type { MiniAppRegionFilter } from '@shared/data/types/miniApp'
 
-const DEFAULT_MAX_KEEPALIVE = 3
+const DEFAULT_MAX_KEEPALIVE = DefaultPreferences.default['feature.mini_app.max_keep_alive']
 
 /**
  * "Preferences" group of the display-settings drawer: global-edition region filter,

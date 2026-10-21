@@ -1868,7 +1868,7 @@
         {
           "originalKey": "maxKeepAliveMinapps",
           "type": "number",
-          "defaultValue": 3,
+          "defaultValue": 1,
           "status": "classified",
           "category": "preferences",
           "targetKey": "feature.mini_app.max_keep_alive"
