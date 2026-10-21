@@ -15,6 +15,7 @@ import {
   SHUTDOWN_TIMEOUT_MS
 } from '@main/core/lifecycle'
 import { buildPathRegistry, type PathKey, type PathMap, shouldAutoEnsure } from '@main/core/paths/pathRegistry'
+import type { StorageRoots } from '@main/core/paths/storageLayout'
 import { isDev, isLinux, isMac, isPortable, isWin } from '@main/core/platform'
 import { handleGuarded } from '@main/core/security/guardedIpc'
 import { bootConfigService } from '@main/data/bootConfig'
@@ -120,7 +121,8 @@ export class Application {
    *
    * Timing contract:
    *   - MUST be called AFTER `resolveUserDataLocation()` so that all
-   *     `app.setPath('userData', ...)` calls have completed.
+   *     `app.setPath('userData', ...)` calls have completed, and after
+   *     `resolveStorageLocations()`, which supplies `storage`.
    *   - MUST be called BEFORE `bootstrap()` — `bootstrap()` asserts the
    *     registry is initialized and refuses to start otherwise.
    *
@@ -138,11 +140,11 @@ export class Application {
    * one-shot startup pipelines (migration, legacy backup restore) carry
    * their own ad-hoc path logic and do not consume the registry either.
    */
-  public initPathRegistry(): void {
+  public initPathRegistry(storage?: StorageRoots): void {
     if (this.pathMap !== null) {
       throw new Error('initPathRegistry() called twice — path registry is already initialized')
     }
-    this.pathMap = buildPathRegistry()
+    this.pathMap = buildPathRegistry(storage)
     logger.debug(`Path registry initialized with ${Object.keys(this.pathMap).length} entries`)
   }
 

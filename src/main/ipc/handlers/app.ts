@@ -7,7 +7,13 @@ import { loggerService } from '@logger'
 import { isWin } from '@main/core/platform'
 import { cacheCleanupService } from '@main/services/cacheCleanup'
 import { requestDataReset, requestV1Remigration } from '@main/services/dataReset'
-import { inspectUserDataRelocationTarget, requestUserDataRelocation } from '@main/services/userDataRelocation'
+import {
+  inspectStorageRelocationTarget,
+  inspectUserDataRelocationTarget,
+  listStorageLocations,
+  requestStorageRelocation,
+  requestUserDataRelocation
+} from '@main/services/userDataRelocation'
 import { handleZoomFactor } from '@main/utils/zoom'
 import { IpcError } from '@shared/ipc/errors/IpcError'
 import type { appRequestSchemas } from '@shared/ipc/schemas/app'
@@ -39,6 +45,11 @@ export const appHandlers: IpcHandlersFor<typeof appRequestSchemas> = {
     }
     requestUserDataRelocation(path, copy)
   },
+  // Storage locations move on the next launch through the same relocation flow,
+  // and run in dev builds too: they hang off whichever userData this launch uses.
+  'app.storage_location.list': async () => listStorageLocations(),
+  'app.storage_location.inspect': async ({ location, path }) => inspectStorageRelocationTarget(location, path),
+  'app.storage_location.request': async ({ location, path }) => requestStorageRelocation(location, path),
   'app.cache_cleanup.inspect': async ({ groups }) => cacheCleanupService.inspect(groups),
   'app.cache_cleanup.run': async ({ groups }) => cacheCleanupService.run(groups),
   'app.relaunch': async () => application.relaunch(),

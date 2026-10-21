@@ -1,2 +1,8 @@
 export { runUserDataRelocation } from './execution'
-export { inspectUserDataRelocationTarget, requestUserDataRelocation } from './request'
+export {
+  inspectStorageRelocationTarget,
+  inspectUserDataRelocationTarget,
+  requestStorageRelocation,
+  requestUserDataRelocation
+} from './request'
+export { listStorageLocations } from './storage'

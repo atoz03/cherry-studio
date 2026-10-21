@@ -19,6 +19,7 @@ import { prepareBackupRestoreSession, runBackupRestoreGate } from '@main/core/pr
 import { configureChromiumFlags } from '@main/core/preboot/chromiumFlags'
 import { initCrashTelemetry } from '@main/core/preboot/crashTelemetry'
 import { requireSingleInstance } from '@main/core/preboot/singleInstance'
+import { resolveStorageLocations } from '@main/core/preboot/storageLocation'
 import { resolveUserDataLocation } from '@main/core/preboot/userDataLocation'
 import { runV2MigrationGate } from '@main/core/preboot/v2MigrationGate'
 import { MINI_APP_SCHEME_DECLARATION } from '@main/features/miniApp/runtime/protocol'
@@ -35,7 +36,7 @@ configureChromiumFlags()
 configureRemoteDebugging()
 initCrashTelemetry()
 // Freeze the path registry — bootstrap() asserts this completed.
-application.initPathRegistry()
+application.initPathRegistry(resolveStorageLocations())
 const isolatedRestoreSession = prepareBackupRestoreSession()
 // Privileged schemes must be declared before the app is ready, and only ONCE per
 // process — startApp() itself awaits app.whenReady(), so this cannot move in there.

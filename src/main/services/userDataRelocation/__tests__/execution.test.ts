@@ -213,14 +213,13 @@ describe('userDataRelocation execution', () => {
     expect(windowOpenMock).not.toHaveBeenCalled()
   })
 
-  it('skips unpackaged development runs before even reading BootConfig', async () => {
+  it('leaves a whole-userData request untouched in unpackaged development runs', async () => {
     electronState.isPackaged = false
     relocationState['temp.user_data_relocation'] = pending('/old/data', '/new/data')
 
     const { runUserDataRelocation } = await loadDomain()
 
     await expect(runUserDataRelocation()).resolves.toBe('skipped')
-    expect(bootConfigGetMock).not.toHaveBeenCalled()
     expect(bootConfigSetMock).not.toHaveBeenCalled()
     expect(bootConfigFlushMock).not.toHaveBeenCalled()
     expect(appSetPathMock).not.toHaveBeenCalled()

@@ -158,7 +158,7 @@ function stubElectron() {
   }))
 }
 
-function stubApplication(userData: string = USER_DATA, opts: { throwOnUserData?: boolean } = {}) {
+function stubApplication(userData: string = USER_DATA, opts: { throwOnUserData?: boolean; sessionData?: string } = {}) {
   applicationMock = createMockApplication()
   applicationMock.getPath.mockImplementation((key: string) => {
     if (key === 'app.userdata') {
@@ -166,6 +166,7 @@ function stubApplication(userData: string = USER_DATA, opts: { throwOnUserData?:
       return userData
     }
     if (key === 'app.temp') return APP_TEMP
+    if (key === 'app.session') return opts.sessionData ?? userData
     if (key === 'feature.data_reset.marker_file') return `${userData}/data-reset.pending.json`
     if (key === 'app.database.file') return `${userData}/Data/cherrystudio.sqlite`
     if (key === 'feature.agents.claude.root') return `${userData}/Data/Agents/.claude`
@@ -764,6 +765,25 @@ describe('runDataReset', () => {
     expect(rmSyncMock).not.toHaveBeenCalled()
     expect(applicationMock.forceExit).not.toHaveBeenCalled()
     expect(applicationMock.relaunch).not.toHaveBeenCalled()
+  })
+
+  // Bug caught: after browser data moved out of userData, a reset would leave
+  // every cookie and site storage in place.
+  it('wipes the Chromium entries of a custom browser data location too', async () => {
+    stubAll(pendingMarker())
+    stubApplication(USER_DATA, { sessionData: '/mock/browser' })
+    const listOthers = readdirSyncMock.getMockImplementation()!
+    readdirSyncMock.mockImplementation((dir: string) =>
+      dir === '/mock/browser' ? ['Cookies', 'Partitions', 'Local Storage', 'notes.txt'] : listOthers(dir)
+    )
+    await runReset()
+
+    const removed = rmSyncMock.mock.calls.map(([target]) => String(target))
+    expect(removed).toEqual(
+      expect.arrayContaining(['/mock/browser/Cookies', '/mock/browser/Partitions', '/mock/browser/Local Storage'])
+    )
+    expect(removed).not.toContain('/mock/browser/notes.txt')
+    expect(applicationMock.relaunch).toHaveBeenCalledTimes(1)
   })
 
   it('never touches paths outside userData and app.temp', async () => {

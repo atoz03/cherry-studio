@@ -57,6 +57,37 @@ const MANUAL_BOOT_CONFIG_ITEMS = [
   },
   {
     source: 'preboot',
+    sourceCategory: 'storage',
+    originalKey: 'storagePaths',
+    targetKey: 'app.storage_paths',
+    zodType:
+      'z.record(\n' +
+      '    z.string(),\n' +
+      '    z.object({\n' +
+      '      models: z.string().optional(),\n' +
+      '      toolchain: z.string().optional(),\n' +
+      '      session_data: z.string().optional()\n' +
+      '    })\n' +
+      '  )',
+    defaultValue: 'VALUE: {}',
+    jsdoc: [
+      'Custom storage roots moved out of userData, keyed by userData path.',
+      '',
+      'Keyed by the canonical userData path (canonicalizeUserDataPath) rather',
+      'than the executable: the roots belong to one profile, so dev profiles',
+      'sharing an executable never share a Chromium sessionData directory.',
+      'A missing location means its default under userData.',
+      '  - models: local model files ({userData}/Runtime/models, tesseract, OVMS)',
+      '  - toolchain: downloaded tools ({userData}/Toolchain)',
+      '  - session_data: Electron sessionData (all Chromium browser state)',
+      '',
+      'Preboot applies these before the path registry is frozen',
+      '(core/preboot/storageLocation.ts). Only the relocation commit step in',
+      'services/userDataRelocation writes them, after the data has moved.'
+    ]
+  },
+  {
+    source: 'preboot',
     sourceCategory: 'transient',
     originalKey: 'userDataRelocation',
     targetKey: 'temp.user_data_relocation',
@@ -66,13 +97,16 @@ const MANUAL_BOOT_CONFIG_ITEMS = [
       '      z.object({\n' +
       "        status: z.literal('pending'),\n" +
       '        taskId: z.uuid(),\n' +
+      "        scope: z.enum(['models', 'toolchain', 'session_data']).optional(),\n" +
       '        from: z.string(),\n' +
       '        to: z.string(),\n' +
-      '        copy: z.boolean()\n' +
+      '        copy: z.boolean(),\n' +
+      '        entries: z.array(z.string()).optional()\n' +
       '      }),\n' +
       '      z.object({\n' +
       "        status: z.literal('failed'),\n" +
       '        taskId: z.uuid(),\n' +
+      "        scope: z.enum(['models', 'toolchain', 'session_data']).optional(),\n" +
       '        from: z.string(),\n' +
       '        to: z.string(),\n' +
       '        copy: z.boolean(),\n' +
@@ -101,6 +135,11 @@ const MANUAL_BOOT_CONFIG_ITEMS = [
       '    a previous preboot attempt failed. The record stays in BootConfig',
       '    until the dedicated relocation window shows the error and the user',
       '    explicitly abandons it by restarting on the previous userData path.',
+      '',
+      'scope: absent for the whole userData tree; otherwise one storage',
+      'location from app.storage_paths, with from/to its old and new root.',
+      'entries: names the storage move journals before touching the',
+      'filesystem, so an interrupted move can be undone on the next launch.',
       '',
       'Note: "userData" here means the Electron OS directory',
       "(app.getPath('userData')), not the colloquial sense of user content.",

@@ -120,6 +120,8 @@ Keys follow the same naming convention as preferences: `namespace.key_name`
 
 BootConfig also carries data migrated from v1's `{cherryHome}/config/config.json` file (see `BootConfigMigrator`'s file source). The `app.user_data_path` key holds the custom user data directory mapping that the v1 file stored under `appDataPath`; preboot reads it before the path registry is frozen. User-initiated directory changes are first written to `temp.user_data_relocation`, then the next launch executes them during preboot (`src/main/services/userDataRelocation/`), copying or switching the Electron `userData` directory and committing `app.user_data_path`.
 
+`app.storage_paths` holds the custom roots of the user-relocatable storage locations (local models, downloaded tools, Chromium sessionData), keyed by the canonical userData path so profiles that share an executable never share them. `core/preboot/storageLocation.ts` applies them before the path registry is frozen. Moving a location goes through the same `temp.user_data_relocation` request with a `scope`, and the relocation launch commits `app.storage_paths` after the move.
+
 ## Access Convention
 
 | Context                            | API                                               | Note                                             |

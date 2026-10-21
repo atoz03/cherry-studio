@@ -25,7 +25,7 @@ function requireOvms() {
 export const ovmsHandlers: IpcHandlersFor<typeof ovmsRequestSchemas> = {
   'ovms.is_supported': async () => isWin && getCpuName().toLowerCase().includes('intel'),
   'ovms.install_binary': async () => {
-    await runInstallScript('install-ovms.js')
+    await runInstallScript('install-ovms.js', { CHERRY_OVMS_DIR: application.getPath('feature.ovms') })
   },
   'ovms.add_model': async ({ modelName, modelId, modelSource, task }) =>
     requireOvms().addModel(modelName, modelId, modelSource, task),

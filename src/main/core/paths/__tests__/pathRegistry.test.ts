@@ -38,6 +38,27 @@ afterEach(() => {
 })
 
 describe('buildPathRegistry', () => {
+  // Bug caught: a feature path left under a default root keeps downloading into
+  // userData after the user moved that storage location.
+  it('places every model and toolchain path under custom storage roots', () => {
+    const defaults = buildPathRegistry()
+    const custom = buildPathRegistry({ models: '/big/models', toolchain: '/big/tools' })
+    const roots = [
+      [defaults['feature.storage.models'], '/big/models'],
+      [defaults['feature.storage.toolchain'], '/big/tools']
+    ] as const
+
+    for (const [key, value] of Object.entries(defaults)) {
+      for (const [defaultRoot, customRoot] of roots) {
+        if (value?.startsWith(defaultRoot + path.sep)) {
+          expect(custom[key as keyof typeof custom], key).toBe(customRoot + value.slice(defaultRoot.length))
+        }
+      }
+    }
+    expect(custom['feature.ocr.tesseract']).toBe(path.join('/big/models', 'tesseract'))
+    expect(custom['feature.ovms.ovms']).toBe(path.join('/big/models', 'ovms', 'ovms'))
+  })
+
   it('isolates voice scratch directories for profiles sharing the same basename', () => {
     const voiceTemp = (profile: string) => {
       getPathMock.mockImplementation((key) => (key === 'userData' ? profile : `/mock/${key}`))

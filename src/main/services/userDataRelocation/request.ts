@@ -4,8 +4,10 @@ import { application } from '@application'
 import { loggerService } from '@logger'
 import { canonicalizeUserDataPath } from '@main/core/preboot/userDataLocation'
 import { bootConfigService } from '@main/data/bootConfig'
+import type { StorageLocation } from '@shared/types/storageLocation'
 import type { UserDataRelocationInspection } from '@shared/types/userDataRelocation'
 
+import { assertStorageRelocationPaths, assertStorageRelocationSpace, currentStorageRoot } from './storage'
 import type { PendingRelocation } from './types'
 import { assertRelocationPaths, assertUserDataRelocationRequest, RelocationValidationError } from './validation'
 
@@ -42,7 +44,47 @@ export function requestUserDataRelocation(targetPath: string, copy: boolean): vo
     copy
   }
   assertUserDataRelocationRequest(pending)
+  persistRelocationRequest(pending)
+}
 
+/**
+ * Validate moving a storage location to `targetPath` (its default root resets
+ * it) without mutating anything, including the free-space check for a move
+ * that has to copy across volumes.
+ */
+export async function inspectStorageRelocationTarget(
+  location: StorageLocation,
+  targetPath: string
+): Promise<UserDataRelocationInspection> {
+  try {
+    const from = currentStorageRoot(location)
+    assertStorageRelocationPaths(location, from, targetPath)
+    await assertStorageRelocationSpace(location, from, targetPath)
+    return { valid: true, targetEmpty: true }
+  } catch (error) {
+    if (error instanceof RelocationValidationError) {
+      return { valid: false, reason: error.reason }
+    }
+    throw error
+  }
+}
+
+/** Record a pending storage move; the data moves on the next launch. */
+export async function requestStorageRelocation(location: StorageLocation, targetPath: string): Promise<void> {
+  const pending: PendingRelocation = {
+    status: 'pending',
+    taskId: uuidv4(),
+    scope: location,
+    from: canonicalizeUserDataPath(currentStorageRoot(location)),
+    to: canonicalizeUserDataPath(targetPath),
+    copy: true
+  }
+  assertStorageRelocationPaths(location, pending.from, pending.to)
+  await assertStorageRelocationSpace(location, pending.from, pending.to)
+  persistRelocationRequest(pending)
+}
+
+function persistRelocationRequest(pending: PendingRelocation): void {
   // Temporary BootConfig values bypass PreferenceService. Persist immediately
   // because the request must be durable before Electron relaunches.
   const previous = bootConfigService.get('temp.user_data_relocation')

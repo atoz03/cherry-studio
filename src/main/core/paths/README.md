@@ -24,6 +24,7 @@ application.getPath('invalid.key')
 |------|------|
 | `constants.ts` | Earliest path constants (`CHERRY_HOME`, `BOOT_CONFIG_PATH`, `LOGS_DIR`) and dev-profile isolation — used before the registry exists; imported directly by the pre-registry bootstrappers (`LoggerService`, `BootConfigService`) |
 | `pathRegistry.ts` | `buildPathRegistry()` + `shouldAutoEnsure` + `PathKey` / `PathMap` types. Imported directly by `Application.ts`. ESLint-enforced key format |
+| `storageLayout.ts` | Layout of the user-relocatable storage locations: default roots, where each entry lives under a root, and the Chromium entries of a sessionData directory. Shared by the registry and `services/userDataRelocation` |
 
 **No barrel.** The module's public access point is `application.getPath()`, not an `index.ts` — its two files are independent building blocks imported directly by their specific consumers (per [Naming §6.4](../../../../docs/references/architecture/naming-conventions.md): a directory that merely aggregates independent sub-modules gets no barrel).
 
@@ -137,6 +138,10 @@ Reserved for features that genuinely need per-instance subdirectories.
 ## File-Level Constraint in `pathRegistry.ts`
 
 No object literals besides the registry itself — the ESLint rule validates every string-keyed property in the file. Helper constants must be primitives; put helper objects in a separate file.
+
+## Relocatable Storage Roots
+
+Three locations can be moved by the user (Settings → Data → Storage locations): local models (`feature.storage.models`), downloaded tools (`feature.storage.toolchain`), and Chromium's sessionData (`app.session`). Preboot passes the custom models/toolchain roots to `buildPathRegistry(storage)`; a custom sessionData root arrives through `app.setPath('sessionData')`. Every key that lives under one of these roots must be derived from the root variable (`modelsRoot`, `appUserDataToolchain`, `appSession`), never from `appUserData` — otherwise it stays behind after a move. Tesseract (`{userData}/tesseract`) and OVMS (`{cherryHome}/ovms`) keep their own default homes and join the models root only when it is custom (`storageEntryPath`).
 
 ## Bootstrap Order
 

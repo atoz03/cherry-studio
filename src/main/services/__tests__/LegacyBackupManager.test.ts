@@ -80,7 +80,8 @@ const {
   mockZipExtract,
   mockZipClose,
   mockZipEntries,
-  MockStreamZipAsync
+  MockStreamZipAsync,
+  mockPaths
 } = vi.hoisted(() => {
   const mockAgentIngressHold = { dispose: vi.fn() }
   const mockJobHold = { dispose: vi.fn() }
@@ -142,6 +143,7 @@ const {
     mockZipExtract,
     mockZipClose,
     mockZipEntries,
+    mockPaths: { session: '/mock/userData' },
     MockStreamZipAsync: vi.fn(function () {
       return { entries: mockZipEntries, extract: mockZipExtract, close: mockZipClose }
     })
@@ -295,6 +297,7 @@ vi.mock('@application', () => ({
     getPath: vi.fn((key: string, filename?: string) => {
       const paths: Record<string, string> = {
         'app.userdata': '/mock/userData',
+        'app.session': mockPaths.session,
         'app.userdata.data': '/mock/userData/Data',
         'app.database.file': '/mock/userData/Data/cherrystudio.sqlite',
         'feature.backup.temp': '/mock/temp/backup',
@@ -387,6 +390,7 @@ describe('BackupManager direct v2 data compatibility', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockPaths.session = '/mock/userData'
     backupManager = new BackupManager()
     mockRandomUUID.mockReturnValue('operation-id')
     mockHashDbFile.mockResolvedValue('same-fingerprint')
@@ -599,6 +603,24 @@ describe('BackupManager direct v2 data compatibility', () => {
     expect(mockAgentExecutionHold.dispose).toHaveBeenCalledOnce()
     expect(mockJobHold.dispose).toHaveBeenCalledOnce()
     expect(mockHeartbeatHold.dispose).toHaveBeenCalledOnce()
+  })
+
+  // Bug caught: after browser data moves out of userData, backups would capture
+  // empty IndexedDB and Local Storage directories from the old location.
+  it('backs up browser storage from a custom browser data location', async () => {
+    mockPaths.session = '/mock/browser'
+    vi.mocked(fs.pathExists).mockImplementation(async (entryPath) => {
+      return ['/mock/userData/cache.json', '/mock/userData/Data'].includes(String(entryPath))
+    })
+    const copyDirectories = vi.spyOn(backupManager as any, 'copyDirectoryOrCreate').mockResolvedValue(undefined)
+    vi.spyOn(backupManager as any, 'getDirSize').mockResolvedValue(42)
+    vi.spyOn(backupManager as any, 'copyDirWithProgress').mockResolvedValue(undefined)
+    mockArchiveClose()
+
+    await backupManager.backup({} as Electron.IpcMainInvokeEvent, 'backup.zip', '/backups')
+
+    const sources = copyDirectories.mock.calls.map(([source]) => source)
+    expect(sources).toEqual(['/mock/browser/IndexedDB', '/mock/browser/Local Storage'])
   })
 
   it('rejects remote backup file names containing path separators', async () => {
@@ -1273,6 +1295,25 @@ describe('BackupManager direct v2 data compatibility', () => {
       sourceRootPath: '/extract/Data'
     })
     expect(dataStageCall?.[3]?.excludeRelativePath).toBeUndefined()
+  })
+
+  // Bug caught: the journal restores into userData, where Chromium no longer
+  // reads browser storage once it has moved, so restoring it there is wrong.
+  it('leaves browser storage out of a restore while browser data lives in a custom location', async () => {
+    mockPaths.session = '/mock/browser'
+    arrangeDirectRestore()
+
+    await (backupManager as any).restoreDirect('/extract')
+
+    expect((backupManager as any).stageArchiveDirectory).not.toHaveBeenCalledWith(
+      '/extract/IndexedDB',
+      expect.anything()
+    )
+    const journal = mockWriteRestoreJournal.mock.calls[0]?.[0] as { fileResources: Array<{ livePath: string }> }
+    const livePaths = journal.fileResources.map((resource) => resource.livePath)
+    expect(livePaths).toContain('cache.json')
+    expect(livePaths).not.toContain('IndexedDB')
+    expect(livePaths).not.toContain('Local Storage')
   })
 
   it('restores a slim archive without replacing IndexedDB, Local Storage, or non-database Data', async () => {
