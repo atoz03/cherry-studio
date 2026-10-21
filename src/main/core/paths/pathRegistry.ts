@@ -19,6 +19,7 @@ import { loggerService } from '@logger'
 import { isMac, isWin } from '@main/core/platform'
 
 import { CHERRY_HOME, LOGS_DIR } from './constants'
+import { defaultStorageRoot, storageEntryPath, type StorageRoots } from './storageLayout'
 
 const logger = loggerService.withContext('PathRegistry')
 
@@ -39,18 +40,22 @@ function getUserSystemPath(name: UserSystemPathName, fallback: string): string {
  *
  * Every value must be resolvable in preboot — only sync Electron APIs,
  * `process.resourcesPath`, and Node built-ins. No service dependencies.
+ * `storage` carries the custom models/toolchain roots preboot resolved from
+ * BootConfig (the custom sessionData root arrives through `app.setPath`).
  *
  * Access via `application.getPath(key, filename?)` only; do not import
  * this function directly (reserved for Application.ts and tests).
  */
-export function buildPathRegistry() {
+export function buildPathRegistry(storage?: StorageRoots) {
   // Intermediate vars (primitives only — no object literals in this file).
   const sysHome = os.homedir()
   const appUserData = app.getPath('userData')
   const appUserDataData = path.join(appUserData, 'Data')
   const appUserDataRuntime = path.join(appUserData, 'Runtime')
   const appUserDataProviderRegistryOverride = path.join(appUserDataRuntime, 'provider-registry-override')
-  const appUserDataToolchain = path.join(appUserData, 'Toolchain')
+  const appUserDataToolchain = storage?.toolchain ?? defaultStorageRoot('toolchain', appUserData)
+  const modelsRoot = storage?.models ?? defaultStorageRoot('models', appUserData)
+  const ovmsRoot = storageEntryPath('models', storage?.models, 'ovms', appUserData)
   const appUserDataToolchainMise = path.join(appUserDataToolchain, 'mise')
   const appSession = app.getPath('sessionData')
   const sysTemp = app.getPath('temp')
@@ -128,8 +133,12 @@ export function buildPathRegistry() {
     // Isolated preload for site `<webview>` guests. Local mini apps keep their capability bridge.
     'feature.webview.preload_file': path.join(app.getAppPath(), 'out/preload/webview.js'),
 
+    // User-relocatable storage roots (Settings → Data → Storage locations)
+    'feature.storage.models': modelsRoot,
+    'feature.storage.toolchain': appUserDataToolchain,
+
     // Local embedding model cache (transformers.js HF cache root, downloaded on first use)
-    'feature.embedding.models': path.join(appUserDataRuntime, 'models', 'qwen3-embedding'),
+    'feature.embedding.models': path.join(modelsRoot, 'qwen3-embedding'),
 
     'feature.claude_code.binary': path.join(appUserDataToolchain, 'claude-agent-sdk'),
 
@@ -141,13 +150,13 @@ export function buildPathRegistry() {
     'feature.sherpa_onnx.binary': path.join(appUserDataToolchain, 'sherpa-onnx'),
 
     // FunASR Nano and Silero VAD model files, downloaded on demand.
-    'feature.asr.funasr': path.join(appUserDataRuntime, 'models', 'funasr-nano'),
+    'feature.asr.funasr': path.join(modelsRoot, 'funasr-nano'),
     'feature.mlx.binary': path.join(appUserDataToolchain, 'mlx-node'),
-    'feature.tts.qwen3': path.join(appUserDataRuntime, 'models', 'qwen3-tts-0.6b-customvoice-8bit'),
-    'feature.tts.kokoro': path.join(appUserDataRuntime, 'models', 'kokoro-multi-lang-v1.1'),
+    'feature.tts.qwen3': path.join(modelsRoot, 'qwen3-tts-0.6b-customvoice-8bit'),
+    'feature.tts.kokoro': path.join(modelsRoot, 'kokoro-multi-lang-v1.1'),
 
     // BabelDOC runtime cache (layout model, fonts, CMap/tiktoken assets)
-    'feature.pdf_translation.babeldoc': path.join(appUserDataRuntime, 'models', 'babeldoc'),
+    'feature.pdf_translation.babeldoc': path.join(modelsRoot, 'babeldoc'),
 
     'feature.pdfjs.cmaps': path.join(app.getAppPath(), 'node_modules', 'pdfjs-dist', 'cmaps'),
     'feature.pdfjs.standard_fonts': path.join(app.getAppPath(), 'node_modules', 'pdfjs-dist', 'standard_fonts'),
@@ -203,10 +212,10 @@ export function buildPathRegistry() {
     'feature.trace': path.join(appUserDataRuntime, 'trace'),
 
     // OVMS (OpenVINO Model Server)
-    'feature.ovms': path.join(CHERRY_HOME, 'ovms'),
-    'feature.ovms.ovms': path.join(CHERRY_HOME, 'ovms', 'ovms'),
-    'feature.ovms.patch': path.join(CHERRY_HOME, 'ovms', 'patch'),
-    'feature.ovms.ovocr': path.join(CHERRY_HOME, 'ovms', 'ovocr'),
+    'feature.ovms': ovmsRoot,
+    'feature.ovms.ovms': path.join(ovmsRoot, 'ovms'),
+    'feature.ovms.patch': path.join(ovmsRoot, 'patch'),
+    'feature.ovms.ovocr': path.join(ovmsRoot, 'ovocr'),
 
     // Agents
     'feature.code_cli.skills.builtin': path.join(appRootResources, 'code-cli-skills'), // conditional Code Mate skill templates (read-only)
@@ -257,9 +266,9 @@ export function buildPathRegistry() {
     'feature.mini_app.logs': path.join(LOGS_DIR, 'mini-apps'),
 
     // OCR
-    'feature.ocr.tesseract': path.join(appUserData, 'tesseract'),
+    'feature.ocr.tesseract': storageEntryPath('models', storage?.models, 'tesseract', appUserData),
     // Local OCR model files (PaddleOCR / ppu-paddle-ocr, downloaded on demand)
-    'feature.ocr.paddleocr': path.join(appUserDataRuntime, 'models', 'pp-ocrv6'),
+    'feature.ocr.paddleocr': path.join(modelsRoot, 'pp-ocrv6'),
 
     // Version log
     'feature.version_log.file': path.join(appUserData, 'version.log'),

@@ -107,6 +107,11 @@ preboot/
 ├── userDataLocation.ts  resolves userData (dev profile root, suffix, or
 │                        BootConfig) and exports the shared isUsableDataDir(p) validator
 │                        used by v1→v2 migration
+├── storageLocation.ts   resolves the custom storage roots (models, toolchain,
+│                        sessionData) from BootConfig `app.storage_paths` for
+│                        initPathRegistry and applies a custom sessionData via
+│                        app.setPath before app.whenReady(); an unusable root
+│                        falls back to the default for that launch
 ├── chromiumFlags.ts     Chromium startup flags that must run before
 │                        app.whenReady()
 ├── crashTelemetry.ts    crashReporter + process-level error hooks +
