@@ -3148,6 +3148,7 @@
   "provider.paddleocr": "PaddleOCR",
   "provider.perplexity": "Perplexity",
   "provider.ph8": "PH8",
+  "provider.pi": "Pi",
   "provider.poe": "Poe",
   "provider.ppio": "PPIO 派欧云",
   "provider.qiniu": "七牛云 AI 推理",
