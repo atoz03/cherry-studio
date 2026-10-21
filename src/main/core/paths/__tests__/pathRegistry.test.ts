@@ -51,7 +51,7 @@ describe('buildPathRegistry', () => {
     for (const [key, value] of Object.entries(defaults)) {
       for (const [defaultRoot, customRoot] of roots) {
         if (value?.startsWith(defaultRoot + path.sep)) {
-          expect(custom[key as keyof typeof custom], key).toBe(customRoot + value.slice(defaultRoot.length))
+          expect(custom[key as keyof typeof custom], key).toBe(path.join(customRoot, value.slice(defaultRoot.length)))
         }
       }
     }
