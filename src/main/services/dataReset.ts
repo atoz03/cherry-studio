@@ -63,7 +63,7 @@ export const USER_DATA_WIPE = [
   'DIPS'
 ]
 
-/** Retained diagnostics and downloaded runtimes. */
+/** Retained diagnostics and downloaded runtimes (also kept when moved to a custom location). */
 export const USER_DATA_KEPT = ['logs', 'Crashpad', 'Runtime', 'Toolchain', 'tesseract']
 
 // Absorb transient Windows file locks before consuming a reset attempt.
@@ -340,6 +340,11 @@ export function runDataReset(): void {
       wipeV1RemigrationData(failures)
     } else {
       wipeDirectoryEntries(userData, shouldWipe, failures)
+      // A custom sessionData root holds the Chromium entries userData holds by default.
+      const sessionData = application.getPath('app.session')
+      if (path.resolve(sessionData) !== path.resolve(userData)) {
+        wipeDirectoryEntries(sessionData, shouldWipe, failures)
+      }
       wipeNestedUserDataTargets(failures)
       // Temporary cache removal is best-effort.
       try {
