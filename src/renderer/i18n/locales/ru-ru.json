@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "Неактивный",
   "library.config.tools.info_main": "MCP (Model Context Protocol) позволяет модели безопасно вызывать внешние инструменты.",
   "library.config.tools.info_sub": "Включение только необходимых серверов повышает безопасность и скорость отклика.",
-  "library.config.tools.legacy_restrictions.description": "У этого агента остались ограничения инструментов из прежней среды. Их удаление разрешит эти инструменты; сначала проверьте доступ MCP.",
-  "library.config.tools.legacy_restrictions.remove": "Удалить прежние ограничения инструментов",
   "library.config.tools.mode.auto.desc": "Модель решает, какие включённые инструменты MCP вызывать",
   "library.config.tools.mode.auto.label": "Авто",
   "library.config.tools.mode.disabled.desc": "Никакие инструменты MCP недоступны во время чата",

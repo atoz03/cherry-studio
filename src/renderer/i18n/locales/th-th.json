@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "ไม่ใช้งาน",
   "library.config.tools.info_main": "MCP (Model Context Protocol) ช่วยให้โมเดลเรียกใช้เครื่องมือภายนอกได้อย่างปลอดภัย",
   "library.config.tools.info_sub": "การเปิดใช้เฉพาะเซิร์ฟเวอร์ที่จำเป็นช่วยเพิ่มความปลอดภัยและความเร็วในการตอบสนอง",
-  "library.config.tools.legacy_restrictions.description": "เอเจนต์นี้มีข้อจำกัดเครื่องมือตกค้างจาก runtime ก่อนหน้า การลบออกจะอนุญาตเครื่องมือเหล่านั้น โปรดตรวจสอบการเข้าถึง MCP ก่อน",
-  "library.config.tools.legacy_restrictions.remove": "ลบข้อจำกัดเครื่องมือเดิม",
   "library.config.tools.mode.auto.desc": "โมเดลตัดสินใจว่าจะเรียกใช้เครื่องมือ MCP ใด",
   "library.config.tools.mode.auto.label": "อัตโนมัติ",
   "library.config.tools.mode.disabled.desc": "ไม่มีเครื่องมือ MCP ระหว่างการแชท",

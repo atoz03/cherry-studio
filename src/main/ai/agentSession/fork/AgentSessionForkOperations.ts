@@ -12,7 +12,6 @@ import { AgentSessionForkSourceError, agentSessionForkService } from '@data/serv
 import { agentSessionMessageService } from '@data/services/AgentSessionMessageService'
 import { agentSessionService } from '@data/services/AgentSessionService'
 import { agentWorkspaceService } from '@data/services/AgentWorkspaceService'
-import { getRetiredAgentSessionMigration } from '@data/services/retiredAgentRuntimeMigration'
 import { loggerService } from '@logger'
 import { type RuntimeForkCheckpoint, RuntimeForkAnchorSchema } from '@main/ai/runtime/fork'
 import { AgentSessionForkError } from '@main/ai/runtime/fork'
@@ -176,12 +175,7 @@ export class AgentSessionForkOperations {
     for (const resources of await readForkResources()) {
       if ([...this.pending.values()].some((operation) => operation.operationId === resources.operationId)) continue
       if ([...this.edits.values()].some((operation) => operation.operationId === resources.operationId)) continue
-      if (this.hasPublishedResources(resources)) {
-        // Retire the journal before migration replaces its durable native token.
-        if (getRetiredAgentSessionMigration(application.get('DbService').getDb(), resources.targetSessionId))
-          await removeForkResources(resources.operationId)
-        continue
-      }
+      if (this.hasPublishedResources(resources)) continue
       try {
         await this.cleanup(resources)
       } catch (error) {

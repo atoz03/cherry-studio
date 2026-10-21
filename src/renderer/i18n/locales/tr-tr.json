@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "Etkin değil",
   "library.config.tools.info_main": "MCP (Model Context Protocol), modelin harici araçları güvenli bir şekilde çağırmasını sağlar.",
   "library.config.tools.info_sub": "Yalnızca gerekli sunucuları etkinleştirmek güvenliği ve yanıt hızını artırır.",
-  "library.config.tools.legacy_restrictions.description": "Bu ajan önceki çalışma ortamından araç kısıtlamalarını koruyor. Bunları kaldırmak bu araçlara izin verir; önce MCP erişimini inceleyin.",
-  "library.config.tools.legacy_restrictions.remove": "Eski araç kısıtlamalarını kaldır",
   "library.config.tools.mode.auto.desc": "Model, etkin MCP araçlarından hangilerini çağıracağına karar verir",
   "library.config.tools.mode.auto.label": "Otomatik",
   "library.config.tools.mode.disabled.desc": "Sohbet sırasında hiçbir MCP aracı kullanılamaz",

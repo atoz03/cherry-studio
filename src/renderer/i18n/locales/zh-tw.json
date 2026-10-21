@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "未啟用",
   "library.config.tools.info_main": "MCP（Model Context Protocol）讓模型能安全地呼叫外部工具。",
   "library.config.tools.info_sub": "僅啟用必要的伺服器可提升安全性與回應速度。",
-  "library.config.tools.legacy_restrictions.description": "此智慧體保留了舊執行環境的工具停用規則。移除後將允許這些工具，請先檢查 MCP 存取權限。",
-  "library.config.tools.legacy_restrictions.remove": "移除舊工具停用規則",
   "library.config.tools.mode.auto.desc": "模型決定要呼叫哪些已啟用的 MCP 工具",
   "library.config.tools.mode.auto.label": "自動",
   "library.config.tools.mode.disabled.desc": "聊天期間無可用的 MCP 工具",

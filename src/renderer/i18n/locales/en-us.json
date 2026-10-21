@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "Inactive",
   "library.config.tools.info_main": "MCP (Model Context Protocol) lets the model safely invoke external tools.",
   "library.config.tools.info_sub": "Enabling only necessary servers improves safety and response speed.",
-  "library.config.tools.legacy_restrictions.description": "This agent has tool restrictions from its previous runtime. Removing them permits those tools; review MCP access first.",
-  "library.config.tools.legacy_restrictions.remove": "Remove legacy tool restrictions",
   "library.config.tools.mode.auto.desc": "The model decides which enabled MCP tools to call",
   "library.config.tools.mode.auto.label": "Auto",
   "library.config.tools.mode.disabled.desc": "No MCP tools are available during chat",

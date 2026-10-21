@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "非アクティブ",
   "library.config.tools.info_main": "MCP（Model Context Protocol）は、モデルが外部ツールを安全に呼び出すことを可能にします。",
   "library.config.tools.info_sub": "必要なサーバーのみを有効にすることで、安全性と応答速度が向上します。",
-  "library.config.tools.legacy_restrictions.description": "このエージェントには以前のランタイムのツール制限が残っています。削除するとこれらのツールが許可されるため、先に MCP アクセスを確認してください。",
-  "library.config.tools.legacy_restrictions.remove": "以前のツール制限を削除",
   "library.config.tools.mode.auto.desc": "モデルは、有効化されている MCP ツールのうちどれを呼び出すかを決定します。",
   "library.config.tools.mode.auto.label": "自動",
   "library.config.tools.mode.disabled.desc": "チャット中に利用可能な MCP ツールはありません",

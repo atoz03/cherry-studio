@@ -2050,8 +2050,6 @@
   "library.config.tools.inactive_badge": "Ανενεργό",
   "library.config.tools.info_main": "Το MCP (Model Context Protocol) επιτρέπει στο μοντέλο να καλεί με ασφάλεια εξωτερικά εργαλεία.",
   "library.config.tools.info_sub": "Η ενεργοποίηση μόνο των απαραίτητων διακομιστών βελτιώνει την ασφάλεια και την ταχύτητα απόκρισης.",
-  "library.config.tools.legacy_restrictions.description": "Αυτός ο πράκτορας διατηρεί περιορισμούς εργαλείων από το προηγούμενο περιβάλλον εκτέλεσης. Η αφαίρεσή τους επιτρέπει αυτά τα εργαλεία· ελέγξτε πρώτα την πρόσβαση MCP.",
-  "library.config.tools.legacy_restrictions.remove": "Αφαίρεση παλιών περιορισμών εργαλείων",
   "library.config.tools.mode.auto.desc": "Το μοντέλο αποφασίζει ποια ενεργοποιημένα εργαλεία MCP θα καλέσει",
   "library.config.tools.mode.auto.label": "Αυτόματο",
   "library.config.tools.mode.disabled.desc": "Δεν είναι διαθέσιμα εργαλεία MCP κατά τη διάρκεια της συνομιλίας",
