@@ -10,7 +10,12 @@ const { appGetOptionalMock, getCpuNameMock, runInstallScriptMock, platform } = v
   platform: { isWin: true }
 }))
 
-vi.mock('@application', () => ({ application: { getOptional: appGetOptionalMock } }))
+vi.mock('@application', () => ({
+  application: {
+    getOptional: appGetOptionalMock,
+    getPath: (key: string) => (key === 'feature.ovms' ? 'D:\\Models\\ovms' : `/unexpected/${key}`)
+  }
+}))
 vi.mock('@main/core/platform', () => ({
   get isWin() {
     return platform.isWin
@@ -48,9 +53,9 @@ describe('ovmsHandlers', () => {
     expect(await ovmsHandlers['ovms.is_supported'](undefined, ctx)).toBe(false)
   })
 
-  it('install_binary runs the install script', async () => {
+  it('install_binary installs into the registry OVMS directory, which follows the models location', async () => {
     await ovmsHandlers['ovms.install_binary'](undefined, ctx)
-    expect(runInstallScriptMock).toHaveBeenCalledWith('install-ovms.js')
+    expect(runInstallScriptMock).toHaveBeenCalledWith('install-ovms.js', { CHERRY_OVMS_DIR: 'D:\\Models\\ovms' })
   })
 
   it('add_model forwards the object fields as positional args to OvmsManager', async () => {

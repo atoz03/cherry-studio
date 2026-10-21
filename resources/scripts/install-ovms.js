@@ -8,6 +8,8 @@ const { downloadWithPowerShell } = require('./download')
 const OVMS_RELEASE_BASE_URL =
   'https://storage.openvinotoolkit.org/repositories/openvino_model_server/packages/2025.4.1/ovms_windows_python_on.zip'
 const OVMS_EX_URL = 'https://gitcode.com/gcw_ggDjjkY3/kjfile/releases/download/download/ovms_25.4_ex.zip'
+// The app passes its registry path ('feature.ovms'), which follows the local models location.
+const OVMS_DIR = process.env.CHERRY_OVMS_DIR || path.join(os.homedir(), '.cherrystudio', 'ovms')
 
 /**
  * error code:
@@ -25,11 +27,9 @@ const OVMS_EX_URL = 'https://gitcode.com/gcw_ggDjjkY3/kjfile/releases/download/d
  */
 function cleanOldOvmsInstallation() {
   console.log('Cleaning the existing OVMS installation...')
-  const csDir = path.join(os.homedir(), '.cherrystudio')
-  const csOvmsDir = path.join(csDir, 'ovms')
-  if (fs.existsSync(csOvmsDir)) {
+  if (fs.existsSync(OVMS_DIR)) {
     try {
-      fs.rmSync(csOvmsDir, { recursive: true })
+      fs.rmSync(OVMS_DIR, { recursive: true })
     } catch (error) {
       console.warn(`Failed to clean up old OVMS installation: ${error.message}`)
       return 110
@@ -60,8 +60,7 @@ async function installOvmsBase() {
   }
 
   // unzip the base package to the target directory
-  const csDir = path.join(os.homedir(), '.cherrystudio')
-  const csOvmsDir = path.join(csDir, 'ovms')
+  const csOvmsDir = OVMS_DIR
   fs.mkdirSync(csOvmsDir, { recursive: true })
 
   try {
@@ -72,7 +71,7 @@ async function installOvmsBase() {
 
     // Clean up temporary file
     fs.unlinkSync(tempFilename)
-    console.log(`Installation directory: ${csDir}`)
+    console.log(`Installation directory: ${csOvmsDir}`)
   } catch (error) {
     console.error(`Error installing OVMS: ${error.message}`)
     fs.unlinkSync(tempFilename)
@@ -137,8 +136,7 @@ async function installOvmsExtra() {
   }
 
   // unzip the extra package to the target directory
-  const csDir = path.join(os.homedir(), '.cherrystudio')
-  const csOvmsDir = path.join(csDir, 'ovms')
+  const csOvmsDir = OVMS_DIR
 
   try {
     // Use tar.exe to extract the ZIP file
@@ -148,7 +146,7 @@ async function installOvmsExtra() {
 
     // Clean up temporary file
     fs.unlinkSync(tempFilename)
-    console.log(`Installation directory: ${csDir}`)
+    console.log(`Installation directory: ${csOvmsDir}`)
   } catch (error) {
     console.error(`Error installing OVMS Extra: ${error.message}`)
     fs.unlinkSync(tempFilename)
