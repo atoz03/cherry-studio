@@ -37,7 +37,11 @@ export class TabLruManager {
   private softCap: number
   private hardCap: number
 
-  constructor(limits: TabLimits = TAB_LIMITS) {
+  /** @param exemptPinned Keep pinned tabs out of soft-cap hibernation (`ui.tab.keep_alive_counts_pinned` off). */
+  constructor(
+    limits: TabLimits = TAB_LIMITS,
+    private readonly exemptPinned = true
+  ) {
     this.softCap = limits.softCap
     this.hardCap = limits.hardCap
   }
@@ -141,14 +145,14 @@ export class TabLruManager {
    * 豁免条件：
    * - 当前活动标签
    * - 默认聊天标签 (id === 'home')
-   * - 置顶标签 (isPinned)
+   * - 置顶标签 (isPinned)，仅当 exemptPinned
    * - 已休眠的标签（不重复处理）
    */
   private isExempt(tab: Tab, activeTabId: string): boolean {
     return (
       tab.id === activeTabId || // 当前活动标签
       tab.id === 'home' || // 默认聊天标签（须与 TabsContext 的 DEFAULT_TAB.id 一致）
-      tab.isPinned === true || // 置顶标签
+      (this.exemptPinned && tab.isPinned === true) || // 置顶标签
       tab.isDormant === true // 已休眠的不再参与
     )
   }

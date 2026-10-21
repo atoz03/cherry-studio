@@ -300,7 +300,11 @@ export function TabsProvider({
   }, [includePinnedTabs, activeTabId, setPersistedActiveTabId])
 
   const [keepAliveLimit] = usePreference('ui.tab.keep_alive_limit')
-  const lruManager = useMemo(() => new TabLruManager({ ...TAB_LIMITS, softCap: keepAliveLimit }), [keepAliveLimit])
+  const [keepAliveCountsPinned] = usePreference('ui.tab.keep_alive_counts_pinned')
+  const lruManager = useMemo(
+    () => new TabLruManager({ ...TAB_LIMITS, softCap: keepAliveLimit }, !keepAliveCountsPinned),
+    [keepAliveLimit, keepAliveCountsPinned]
+  )
 
   // Merge tabs: pinned + normal (route titles follow current i18n language)
   const tabs = useMemo(() => {

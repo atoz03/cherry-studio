@@ -118,7 +118,8 @@ export function useMiniAppRuntimeBinding(): void {
             ? { src: app.url, partition: app.kind === 'app' ? `persist:miniapp:${appId}` : 'persist:webview' }
             : undefined,
           visible: appId === splitMiniAppId || owners.some((tab) => tab.id === activeTabId),
-          protected: owners.some((tab) => !!tab.isPinned),
+          // A pinned tab unloaded by the tab keep-alive limit no longer holds its page.
+          protected: owners.some((tab) => !!tab.isPinned && !tab.isDormant),
           lastAccessTime: Math.max(0, ...owners.map((tab) => tab.lastAccessTime ?? 0))
         }
       })
