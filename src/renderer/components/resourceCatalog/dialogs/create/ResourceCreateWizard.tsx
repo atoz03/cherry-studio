@@ -171,7 +171,12 @@ export function ResourceCreateWizard({
 
     const capability = { id: 'capability' as const, label: t('library.config.dialogs.create.step.capability') }
     const caps = AGENT_RUNTIME_CAPABILITIES[agentType]
-    return [basic, systemPrompt, ...(caps.skills ? [capability] : []), ...(caps.knowledgeBases ? [knowledge] : [])]
+    return [
+      basic,
+      ...(caps.instructions ? [systemPrompt] : []),
+      ...(caps.skills ? [capability] : []),
+      ...(caps.knowledgeBases ? [knowledge] : [])
+    ]
   }, [agentType, kind, t])
 
   useEffect(() => {

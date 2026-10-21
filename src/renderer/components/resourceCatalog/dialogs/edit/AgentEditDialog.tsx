@@ -349,7 +349,7 @@ function AgentEditDialogContent({
   const tabs = useMemo<EditDialogTab[]>(
     () => [
       { id: 'basic', label: t('library.config.dialogs.edit.basic_tab') },
-      { id: 'prompt', label: t('library.config.dialogs.edit.prompt_tab') },
+      ...(caps.instructions ? [{ id: 'prompt' as const, label: t('library.config.dialogs.edit.prompt_tab') }] : []),
       { id: 'prompts', label: t('settings.prompts.binding.tabTitle') },
       {
         id: 'tools',
@@ -367,7 +367,7 @@ function AgentEditDialogContent({
       },
       { id: 'advanced', label: t('library.config.dialogs.edit.advanced_tab') }
     ],
-    [caps.knowledgeBases, caps.mcp, caps.skills, t]
+    [caps.instructions, caps.knowledgeBases, caps.mcp, caps.skills, t]
   )
   const leafTabIds = useMemo(() => new Set(getLeafTabIds(tabs)), [tabs])
 
@@ -735,13 +735,15 @@ function AgentBasicFields({
           />
         </>
       ) : null}
-      <PermissionModeField
-        form={form}
-        portalContainer={portalContainer}
-        patchAgentForm={patchAgentForm}
-        permissionModeCards={getPermissionModeCards(agentType)}
-      />
-      <AgentLanguageOverrideField form={form} />
+      {caps.permissionModes.length > 0 ? (
+        <PermissionModeField
+          form={form}
+          portalContainer={portalContainer}
+          patchAgentForm={patchAgentForm}
+          permissionModeCards={getPermissionModeCards(agentType)}
+        />
+      ) : null}
+      {caps.instructions ? <AgentLanguageOverrideField form={form} /> : null}
       {caps.heartbeat ? (
         <div>
           <HeartbeatSettingsField

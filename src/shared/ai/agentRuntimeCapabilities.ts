@@ -1,7 +1,7 @@
 import { claudeUserFacingTools } from '@shared/ai/claudecode/toolRegistry'
 import { PI_BUILTIN_TOOLS } from '@shared/ai/piBuiltinTools'
-import { isPiCompatibleModel } from '@shared/ai/piModelCompatibility'
 import type { AgentPermissionMode } from '@shared/data/api/schemas/agents'
+import { PI_PROVIDER_ID } from '@shared/data/presets/pi'
 import type { AgentType } from '@shared/data/types/agent'
 import type { Model } from '@shared/data/types/model'
 import type { Provider } from '@shared/data/types/provider'
@@ -13,7 +13,10 @@ export interface AgentRuntimeCapabilities {
   /** i18n key for runtime selector option. */
   labelKey: string
   labelFallback: string
+  /** Empty when the runtime never asks for approval. */
   permissionModes: readonly AgentPermissionMode[]
+  /** Cherry's instructions and reply language reach the model. */
+  instructions: boolean
   /** plan/small model fields. */
   modelTiers: boolean
   /** Heartbeat orchestration. */
@@ -70,6 +73,7 @@ export const AGENT_RUNTIME_CAPABILITIES = {
     labelKey: 'library.config.agent.field.runtime.option.claude_code',
     labelFallback: 'Claude Agent',
     permissionModes: ALL_PERMISSION_MODES,
+    instructions: true,
     modelTiers: true,
     heartbeat: true,
     knowledgeBases: true,
@@ -80,7 +84,7 @@ export const AGENT_RUNTIME_CAPABILITIES = {
     createDefaults: { permissionMode: 'auto' },
     // Claude Code reaches non-native providers through the local API Gateway, so its picker must use
     // the same routability rule as the gateway model catalog.
-    isModelCompatible: (_provider, model) => isGatewayRoutableModel(model),
+    isModelCompatible: (provider, model) => provider?.id !== PI_PROVIDER_ID && isGatewayRoutableModel(model),
     transport: 'claude-agent',
     builtinTools: () =>
       claudeUserFacingTools().map((tool) => ({
@@ -95,21 +99,19 @@ export const AGENT_RUNTIME_CAPABILITIES = {
   pi: {
     labelKey: 'library.config.agent.field.runtime.option.pi',
     labelFallback: 'Pi',
-    // Pi has no plan mode. Its `auto` is Cherry's own rule-based gate in the pi approval extension,
-    // not Claude's model-side classifier — same user-facing promise, different mechanism.
-    permissionModes: ALL_PERMISSION_MODES.filter((mode) => mode !== 'plan'),
+    // The user's own pi CLI runs with its own tools, extensions and settings; Cherry only displays it.
+    permissionModes: [],
+    instructions: false,
     modelTiers: false,
     heartbeat: true,
-    knowledgeBases: true,
-    // Native Pi MCP tools retain Cherry's approval gate.
-    mcp: true,
-    skills: true,
+    knowledgeBases: false,
+    mcp: false,
+    skills: false,
     claudeRegistryTools: false,
     slashCommands: PI_BUILTIN_COMMANDS,
-    createDefaults: { permissionMode: 'auto' },
-    // Orphan models are rejected (pre-descriptor behavior): pi needs the provider's endpoint
-    // config to resolve a wire protocol, so no provider ⇒ not drivable.
-    isModelCompatible: (provider, model) => !!provider && isPiCompatibleModel(provider, model),
+    createDefaults: { permissionMode: 'default' },
+    // Pi models are the ones the user configured in pi, listed under the Pi provider.
+    isModelCompatible: (provider) => provider?.id === PI_PROVIDER_ID,
     transport: 'pi-agent',
     builtinTools: () =>
       PI_BUILTIN_TOOLS.map((tool) => ({

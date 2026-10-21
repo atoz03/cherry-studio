@@ -2077,14 +2077,16 @@ describe('edit dialogs', () => {
     expect(screen.getByText('Skill One')).toBeInTheDocument()
   })
 
-  it('projects pi capabilities without exposing Claude-only fields', async () => {
+  it('shows a pi agent only the settings pi uses', async () => {
     render(<AgentEditDialog open resource={PI_AGENT} onOpenChange={vi.fn()} />)
 
     expect(screen.queryByText('Plan model')).not.toBeInTheDocument()
     expect(screen.queryByText('Small model')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Knowledge' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'MCP' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '技能' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Permission mode' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'System Prompt' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Knowledge' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'MCP' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '技能' })).not.toBeInTheDocument()
 
     selectTab('Built-in tools')
     expect(screen.getByRole('switch', { name: 'Read files' })).toBeInTheDocument()

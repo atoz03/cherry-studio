@@ -20,16 +20,10 @@ function model(capabilities: Model['capabilities'] = []): Model {
 }
 
 const providers = {
-  openai: { id: 'openai', defaultChatEndpoint: 'openai-chat-completions', authType: 'api-key' },
-  anthropic: { id: 'anthropic', defaultChatEndpoint: 'anthropic-messages', authType: 'api-key' },
-  gemini: { id: 'gemini', defaultChatEndpoint: 'google-generate-content', authType: 'api-key' },
-  vertex: {
-    id: 'vertex',
-    defaultChatEndpoint: 'google-generate-content',
-    endpointConfigs: { 'google-generate-content': { adapterFamily: 'google-vertex' } },
-    authType: 'iam-gcp'
-  }
+  openai: { id: 'openai', defaultChatEndpoint: 'openai-chat-completions', authType: 'api-key' }
 } as const satisfies Record<string, Partial<Provider>>
+
+const piProvider = { id: 'pi', name: 'Pi', authMethods: ['external-cli'] } as Provider
 
 describe('useAgentModelFilter', () => {
   it('allows Gemini provider models for Claude Code agents', () => {
@@ -46,39 +40,24 @@ describe('useAgentModelFilter', () => {
     expect(result.current(model([MODEL_CAPABILITY.EMBEDDING]))).toBe(false)
   })
 
+  it('keeps Pi models out of Claude Code agents', () => {
+    const { result } = renderHook(() => useAgentModelFilter('claude-code'))
+
+    expect(result.current({ ...model(), providerId: 'pi', id: 'pi::default' }, piProvider)).toBe(false)
+  })
+
   describe('pi agents', () => {
-    it('allows models on providers pi can drive', () => {
+    it('offers only the models listed under the Pi provider', () => {
       const { result } = renderHook(() => useAgentModelFilter('pi'))
 
+      expect(result.current({ ...model(), providerId: 'pi', id: 'pi::default' }, piProvider)).toBe(true)
+      expect(result.current({ ...model(), providerId: 'pi', id: 'pi::anthropic/claude-sonnet-4-5' }, piProvider)).toBe(
+        true
+      )
       expect(
         result.current({ ...model(), providerId: 'openai', id: 'openai::gpt-4o' }, providers.openai as Provider)
-      ).toBe(true)
-      expect(
-        result.current(
-          { ...model(), providerId: 'anthropic', id: 'anthropic::claude-sonnet' },
-          providers.anthropic as Provider
-        )
-      ).toBe(true)
-      expect(
-        result.current({ ...model(), providerId: 'gemini', id: 'gemini::gemini-2.5-pro' }, providers.gemini as Provider)
-      ).toBe(true)
-    })
-
-    it('keeps gateway-routable models available while filtering missing providers', () => {
-      const { result } = renderHook(() => useAgentModelFilter('pi'))
-
-      // Vertex retains its model through the local gateway.
-      expect(
-        result.current({ ...model(), providerId: 'vertex', id: 'vertex::gemini-2.5-pro' }, providers.vertex as Provider)
-      ).toBe(true)
-      // Unknown provider (no entry) cannot be resolved → filtered.
+      ).toBe(false)
       expect(result.current({ ...model(), providerId: 'ghost', id: 'ghost::model' })).toBe(false)
-    })
-
-    it('still rejects non-chat model classes for pi', () => {
-      const { result } = renderHook(() => useAgentModelFilter('pi'))
-
-      expect(result.current({ ...model([MODEL_CAPABILITY.EMBEDDING]), providerId: 'openai' })).toBe(false)
     })
   })
 })

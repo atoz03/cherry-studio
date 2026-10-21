@@ -27,7 +27,7 @@ export function buildCreateAgentCommand(values: ResourceCreateValues): CreateAge
     model: values.modelId,
     ...(caps.modelTiers ? { planModel: values.modelId, smallModel: values.modelId } : {}),
     description: values.description,
-    instructions: values.prompt,
+    ...(caps.instructions ? { instructions: values.prompt } : {}),
     ...(caps.knowledgeBases ? { knowledgeBaseIds: values.knowledgeBaseIds } : {}),
     ...(caps.skills ? { skillIds: values.skillIds } : {}),
     configuration: {

@@ -33,20 +33,23 @@ describe('AGENT_RUNTIME_CAPABILITIES', () => {
   it('keeps permission choices aligned with each runtime approval implementation', () => {
     expect(AGENT_RUNTIME_CAPABILITIES['claude-code'].permissionModes).toContain('plan')
     expect(AGENT_RUNTIME_CAPABILITIES['claude-code'].permissionModes).toContain('auto')
-    expect(AGENT_RUNTIME_CAPABILITIES.pi.permissionModes).not.toContain('plan')
-    // pi implements `auto` itself in the approval extension, so it offers it.
-    expect(AGENT_RUNTIME_CAPABILITIES.pi.permissionModes).toContain('auto')
-    expect(AGENT_RUNTIME_CAPABILITIES['claude-code'].createDefaults.permissionMode).toBe('auto')
-    expect(AGENT_RUNTIME_CAPABILITIES.pi.createDefaults.permissionMode).toBe('auto')
+    // The user's pi CLI runs its tools without asking Cherry.
+    expect(AGENT_RUNTIME_CAPABILITIES.pi.permissionModes).toEqual([])
   })
 
   describe('isModelCompatible', () => {
-    it('pi accepts a normal pi-compatible model', () => {
-      expect(AGENT_RUNTIME_CAPABILITIES.pi.isModelCompatible(makeProvider({}), makeModel({}))).toBe(true)
+    const piProvider = makeProvider({ id: 'pi', authMethods: ['external-cli'] })
+
+    it('pi accepts only models listed under the Pi provider', () => {
+      expect(AGENT_RUNTIME_CAPABILITIES.pi.isModelCompatible(piProvider)).toBe(true)
+      expect(AGENT_RUNTIME_CAPABILITIES.pi.isModelCompatible(makeProvider({}))).toBe(false)
     })
 
-    it('claude accepts a normal model', () => {
+    it('claude accepts a normal model but not a Pi one', () => {
       expect(AGENT_RUNTIME_CAPABILITIES['claude-code'].isModelCompatible(makeProvider({}), makeModel({}))).toBe(true)
+      expect(
+        AGENT_RUNTIME_CAPABILITIES['claude-code'].isModelCompatible(piProvider, makeModel({ providerId: 'pi' }))
+      ).toBe(false)
     })
   })
 })
