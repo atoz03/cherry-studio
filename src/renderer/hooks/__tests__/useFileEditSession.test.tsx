@@ -618,6 +618,32 @@ describe('useFileEditSession', () => {
     }
   })
 
+  it('never reports the previous file content as ready when switching back to a cached file', async () => {
+    const first = { kind: 'path' as const, path: '/ws/first.md' as AbsoluteFilePath }
+    const second = { kind: 'path' as const, path: '/ws/second.md' as AbsoluteFilePath }
+    const contentOf = (path: string) => (path === first.path ? 'first' : 'second')
+    ipcMocks.request.mockImplementation(async (_route: string, { handle }: { handle: { path: string } }) =>
+      readResult(utf8(contentOf(handle.path)))
+    )
+    const readyRenders: Array<{ path: string; draft: string }> = []
+    const { result, rerender } = renderHook(
+      ({ current }: { current: typeof first }) => {
+        const session = useFileEditSession(current)
+        if (session.status === 'ready') readyRenders.push({ path: current.path, draft: session.draft })
+        return session
+      },
+      { wrapper, initialProps: { current: first } }
+    )
+
+    await waitFor(() => expect(result.current.draft).toBe('first'))
+    rerender({ current: second })
+    await waitFor(() => expect(result.current.draft).toBe('second'))
+    rerender({ current: first })
+    await waitFor(() => expect(result.current.draft).toBe('first'))
+
+    expect(readyRenders.filter(({ path, draft }) => draft !== contentOf(path))).toEqual([])
+  })
+
   describe('notifyExternalChange', () => {
     it('ignores a self-save echo via the event mtime without any IPC', async () => {
       vi.useFakeTimers()

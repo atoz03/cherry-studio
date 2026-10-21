@@ -160,7 +160,9 @@ const NotesPage: FC = () => {
 
   const requestFileTransition = useCallback(
     (transition: () => void) => {
-      if (fileSession.isDirty) {
+      // Leaving a note hands its pending draft to a final autosave, so ask only when that cannot save it.
+      const draftAtRisk = fileSession.conflict || fileSession.saveError !== undefined || !activeNode
+      if (fileSession.isDirty && draftAtRisk) {
         pendingFileTransitionRef.current = transition
         setShowDiscardChanges(true)
         return false
@@ -168,7 +170,7 @@ const NotesPage: FC = () => {
       transition()
       return true
     },
-    [fileSession.isDirty]
+    [activeNode, fileSession.conflict, fileSession.isDirty, fileSession.saveError]
   )
 
   const handleDiscardAndContinue = useCallback(() => {

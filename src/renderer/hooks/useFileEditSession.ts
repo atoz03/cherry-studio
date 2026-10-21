@@ -55,6 +55,19 @@ interface FileEditModel {
   writeTask: SingleFlight<void>
 }
 
+/**
+ * React mirror of a model, tagged with its key. The mirror lags a path switch
+ * by one render, so a view whose key is not the current one is never exposed.
+ */
+interface FileEditModelView {
+  key: string
+  draft: string
+  savedContent: string
+  savedSizeBytes: number
+  conflict: boolean
+  saveError?: Error
+}
+
 export interface FileEditSession {
   status: 'idle' | 'loading' | 'ready' | 'unsupported' | 'error'
   /** Last content known to be on disk (feeds an uncontrolled editor on load/reload). */
@@ -139,25 +152,22 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
     errorRetryCount: 0
   })
 
-  const [draft, setDraftState] = useState('')
-  const [savedContent, setSavedContentState] = useState('')
-  const [savedSizeBytes, setSavedSizeBytes] = useState<number | undefined>(undefined)
-  const [conflict, setConflictState] = useState(false)
-  const [saveError, setSaveErrorState] = useState<Error | undefined>(undefined)
+  const [view, setView] = useState<FileEditModelView | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [ready, setReady] = useState(false)
 
   const modelRef = useRef<FileEditModel | null>(null)
 
   // Mirror a model into React state — only while it is still the active model.
   const syncFromModel = useCallback((model: FileEditModel) => {
     if (modelRef.current !== model) return
-    setDraftState(model.draft)
-    setSavedContentState(model.snapshot.content)
-    setSavedSizeBytes(model.snapshot.version.size)
-    setConflictState(model.conflict)
-    setSaveErrorState(model.lastWriteError ?? undefined)
-    setReady(true)
+    setView({
+      key: model.key,
+      draft: model.draft,
+      savedContent: model.snapshot.content,
+      savedSizeBytes: model.snapshot.version.size,
+      conflict: model.conflict,
+      saveError: model.lastWriteError ?? undefined
+    })
   }, [])
 
   // The write loop is rebuilt every render (capturing the current `mutate`) but
@@ -295,7 +305,7 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
 
   // Path switch / unmount: hand the leaving model its final write (serialized
   // on its own chain, against its own rebased baseline — safe even if a write
-  // is still in flight), then detach it and reset the mirrors.
+  // is still in flight), then detach it.
   useEffect(() => {
     return () => {
       debouncedWrite.cancel()
@@ -304,13 +314,7 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
         requestWrite(model)
       }
       modelRef.current = null
-      setDraftState('')
-      setSavedContentState('')
-      setSavedSizeBytes(undefined)
-      setConflictState(false)
-      setSaveErrorState(undefined)
       setIsSaving(false)
-      setReady(false)
     }
   }, [handleKey, debouncedWrite, requestWrite])
 
@@ -319,7 +323,6 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
       const model = modelRef.current
       if (!model) return
       model.draft = next
-      setDraftState(next)
       if (
         model.lastWriteError instanceof IpcError &&
         model.lastWriteError.code === fileErrorCodes.COMMITTED_METADATA_PENDING
@@ -328,14 +331,14 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
         // not an automatic replay of the uncertain operation. A new managed
         // commit can also complete the still-null metadata with its own bytes.
         model.lastWriteError = null
-        setSaveErrorState(undefined)
       }
+      syncFromModel(model)
       // A persistent I/O failure must not turn every keystroke into another
       // doomed write. Keep accepting edits in memory and wait for an explicit
       // retry (`flush`) or discard from the consumer.
       if (!model.lastWriteError) debouncedWrite(model)
     },
-    [debouncedWrite]
+    [debouncedWrite, syncFromModel]
   )
 
   const discard = useCallback(() => {
@@ -435,6 +438,7 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
   )
 
   return useMemo(() => {
+    const current = view?.key === handleKey ? view : null
     let status: FileEditSession['status']
     let unsupportedReason: UnsupportedFileTextReason | undefined
     if (!handle) {
@@ -444,20 +448,21 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
       unsupportedReason = error.reason
     } else if (error) {
       status = 'error'
-    } else if (!ready || isLoading) {
+    } else if (!current || isLoading) {
       status = 'loading'
     } else {
       status = 'ready'
     }
+    const saveError = current?.saveError
 
     return {
       status,
-      savedContent,
-      savedSizeBytes,
-      draft,
-      isDirty: draft !== savedContent,
-      isSaving,
-      conflict,
+      savedContent: current?.savedContent ?? '',
+      savedSizeBytes: current?.savedSizeBytes,
+      draft: current?.draft ?? '',
+      isDirty: current !== null && current.draft !== current.savedContent,
+      isSaving: current !== null && isSaving,
+      conflict: current?.conflict ?? false,
       saveError,
       metadataRecoveryPending:
         saveError instanceof IpcError && saveError.code === fileErrorCodes.COMMITTED_METADATA_PENDING,
@@ -472,15 +477,11 @@ export function useFileEditSession(handle: FileHandle | undefined): FileEditSess
     }
   }, [
     handle,
+    handleKey,
+    view,
     error,
-    ready,
     isLoading,
-    savedContent,
-    savedSizeBytes,
-    draft,
     isSaving,
-    conflict,
-    saveError,
     setDraft,
     discard,
     reload,

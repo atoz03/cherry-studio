@@ -555,13 +555,26 @@ describe('NotesPage print payloads', () => {
     await waitFor(() => expect(screen.getByTestId('notes-editor')).toBeInTheDocument())
   })
 
-  it('prompts before leaving a dirty note and keeps the draft when cancelled', async () => {
+  it('switches away from a dirty note without prompting while autosave can still save it', async () => {
     mocks.sessionIsDirty = true
     mocks.sessionDraft = 'unsaved draft'
     mocks.showWorkspace = true
 
     await renderReadyNotesPage()
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'select other note' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(mocks.discardSession).not.toHaveBeenCalled()
+    expect(mocks.setActiveFilePath).toHaveBeenCalledWith('/notes/other.md')
+  })
+
+  it('prompts before leaving a draft that failed to save and keeps it when cancelled', async () => {
+    mocks.sessionIsDirty = true
+    mocks.sessionSaveError = new Error('disk full')
+    mocks.sessionDraft = 'unsaved draft'
+    mocks.showWorkspace = true
+
+    await renderReadyNotesPage()
     expect(screen.getByTestId('notes-editor')).toHaveAttribute('data-current-content', 'unsaved draft')
     fireEvent.click(screen.getByRole('button', { name: 'select other note' }))
 
@@ -593,6 +606,7 @@ describe('NotesPage print payloads', () => {
 
   it('waits for an in-flight note save before allowing discard and navigation', async () => {
     mocks.sessionIsDirty = true
+    mocks.sessionSaveError = new Error('disk full')
     mocks.sessionIsSaving = true
     mocks.sessionDraft = 'unsaved draft'
     mocks.showWorkspace = true
@@ -611,8 +625,9 @@ describe('NotesPage print payloads', () => {
     expect(mocks.setActiveFilePath).toHaveBeenCalledWith('/notes/other.md')
   })
 
-  it('discards a dirty note before continuing the pending navigation', async () => {
+  it('discards an unsaveable draft before continuing the pending navigation', async () => {
     mocks.sessionIsDirty = true
+    mocks.sessionSaveError = new Error('disk full')
     mocks.sessionDraft = 'unsaved draft'
     mocks.showWorkspace = true
 
