@@ -180,9 +180,8 @@ runs model-authored code with full Node privileges, a privilege-escalation
 surface vs the renderer's prior restrictions. It is meant to be re-enabled
 behind an explicit Preference key once there is a concrete need.
 
-This statement is specific to the AI SDK registry. The Pi agent runtime has a
-native Pi 1.0 `codemode`, `tool_search`, and MCP extensions over its session tools;
-see [Pi code mode](./agent-session-runtime.md#pi-code-mode).
+This statement is specific to the AI SDK registry. Pi agents run the user's own pi CLI
+with its own tools and extensions; see [Pi driver](./agent-session-runtime.md#pi-driver).
 
 ## `applies` and tool-call repair
 

@@ -166,12 +166,11 @@ These are the choices nothing enforces:
   auto-import user-global resources or workspace **executable/code** resources
   (extensions, skills, prompt files) until Cherry has an explicit trust flow.
   Workspace **text** the user already vouched for by hand-picking the workspace
-  (context files like `AGENTS.md`/`CLAUDE.md`) may load — pi does, matching the
-  claude driver's `project` source. Draw the line at the trust class, not at
-  "all workspace resources": widening the runtime's `no*` flags wholesale is the
-  regression to guard against. See
-  [pi driver resource boundary](./agent-session-runtime.md#pi-driver-resource-boundary)
-  for the concrete enforcement pattern.
+  (context files like `AGENTS.md`/`CLAUDE.md`) may load, matching the claude
+  driver's `project` source. Draw the line at the trust class, not at "all
+  workspace resources". A runtime that only displays a CLI the user runs anyway
+  (the [Pi driver](./agent-session-runtime.md#pi-driver)) keeps that CLI's own
+  resources instead.
 - **Permission posture matches the trust roots.** `claude-code` defaults to
   `auto`, with its SDK brokering tool execution. An in-process
   runtime may default to `acceptEdits` only when automatic writes are confined

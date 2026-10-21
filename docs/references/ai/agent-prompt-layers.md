@@ -5,7 +5,6 @@ sources:
   - src/main/ai/runtime
   - src/main/ai/runtime/claudeCode/settingsBuilder.ts
   - src/main/ai/runtime/claudeCode/identityHooks.ts
-  - src/main/ai/runtime/pi/identityExtension.ts
   - src/main/ai/agents/prompt.ts
   - src/main/ai/agents/bootstrap.ts
   - src/main/ai/mcp/servers/agentMemory.ts
@@ -43,8 +42,8 @@ precedence hierarchy is injected.
 
 An explicit `system.md` selects a custom base across runtimes; an empty file
 deliberately selects an empty custom base. Each driver maps the common
-`{ base, append }` result into its SDK: Claude Code uses its preset/custom base,
-Pi uses system/append overrides. Runtime-
+`{ base, append }` result into its SDK: Claude Code uses its preset/custom base.
+Pi agents run the user's own pi prompt and receive none of these layers. Runtime-
 native workspace context can still load according to that driver's trust
 boundary. Cherry-owned persona, memory, workspace-path, security, citation,
 artifact, and language guidance is appended independently of the base.
@@ -70,9 +69,7 @@ The `agent-memory` MCP server owns memory tool instructions: updating durable
 facts, appending events, and searching journal history. Each runtime connection
 gets an in-process protocol instance bound to its Agent's storage. Disabling
 Memory unmounts this server and its instructions; it does not disable the
-SOUL.md, USER.md, or existing FACT.md snapshots. Pi exposes full MCP instructions
-through native namespace discovery, so basic identity application rules remain
-in the stable prompt independently of MCP discovery.
+SOUL.md, USER.md, or existing FACT.md snapshots.
 
 Before each new turn, the harness checks `SOUL.md`, `USER.md`, and `memory/FACT.md`
 in Agent storage and delivers a complete `<agent_identity>` snapshot. This does
@@ -84,9 +81,7 @@ System Prompt and current user instructions.
 
 Claude Code supplies identity through `UserPromptSubmit.additionalContext`,
 deduplicated per connection, and reloads it through `SessionStart` after native
-compaction or session restoration. Pi updates the `agent_identity` system section
-in `before_agent_start`; its native section diffing preserves unchanged context
-and replaces changed content. Neither path rebuilds a connection solely because
+compaction or session restoration. This does not rebuild a connection solely because
 an identity file changed. Changes made during an active turn are picked up at the
 next turn boundary; workspace prompt files retain their existing lifecycle.
 
@@ -103,8 +98,8 @@ not force a rebuild every turn.
 ## Implementation map
 
 - `src/main/ai/runtime/agentPrompt.ts` owns shared precedence, variable materialization, and the `{ base, append }` contract.
-- Runtime drivers under `src/main/ai/runtime/{claudeCode,pi}/` map that contract into their SDK/composition.
+- The Claude Code driver under `src/main/ai/runtime/claudeCode/` maps that contract into its SDK options.
 - `src/main/ai/agents/prompt.ts` owns workspace base selection and persona/memory context.
-- `src/main/ai/runtime/claudeCode/identityHooks.ts` and `src/main/ai/runtime/pi/identityExtension.ts` deliver live identity through native runtime hooks.
+- `src/main/ai/runtime/claudeCode/identityHooks.ts` delivers live identity through native runtime hooks.
 - `src/main/ai/agents/bootstrap.ts` owns first-run persona and user onboarding guidance.
 - `src/main/ai/agentSession/AgentSessionRuntimeService.ts` owns next-turn connection reconciliation.
