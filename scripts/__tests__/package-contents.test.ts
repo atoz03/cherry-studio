@@ -125,10 +125,7 @@ describe('packaged dependency contents', () => {
   )
 
   it('excludes dependency documentation images without removing runtime assets or source JS', () => {
-    for (const file of [
-      'node_modules/selection-hook/docs/images/selection-hook.gif',
-      'node_modules/@earendil-works/pi-coding-agent/docs/images/exy.png'
-    ]) {
+    for (const file of ['node_modules/selection-hook/docs/images/selection-hook.gif']) {
       expect(includesFile(file), file).toBe(false)
     }
     for (const file of [

@@ -76,7 +76,7 @@ files:
   - "!node_modules/mammoth/{mammoth.browser.js,mammoth.browser.min.js}"
   - "!**/node_modules/better-sqlite3/{bin,deps,src}/**"
   - "!**/node_modules/better-sqlite3/build/{Debug,Release/obj}/**"
-  - "!**/node_modules/{selection-hook,@earendil-works/pi-coding-agent}/docs/**"
+  - "!**/node_modules/selection-hook/docs/**"
   # node-gyp-build prefers build/Release over prebuilds/, so ship the prebuilds and drop the
   # host-arch rebuild — a cross-built arm64 package would otherwise load the x86-64 binary (#20530).
   - "!node_modules/selection-hook/build/**"
@@ -108,7 +108,6 @@ asarUnpack:
   - "node_modules/koffi/**"
   - "node_modules/@koromix/koffi-*/**"
   - "node_modules/yaml/**"
-  - "node_modules/@silvia-odwyer/photon-node/**" # pi SDK WASM dep: photon_rs.js does fs.readFileSync(__dirname/photon_rs_bg.wasm)
   - "node_modules/@aiany/sqlite-vec-*/**" # sqlite-vec extension (.dylib/.so/.dll) is dlopen'd at runtime — must live on disk
   - "node_modules/@node-rs/xxhash-*/**" # native N-API binary must be unpacked for runtime loading
   - "node_modules/@firecrawl/anydoc-*/**" # native N-API binary must be unpacked for runtime loading
