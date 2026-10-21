@@ -44,6 +44,10 @@ timeouts, reset, and termination. Initialization is shared across calls and may
 retry up to five times. A run timeout rejects that request's resolver; it does
 not interrupt Python already executing inside the worker.
 
+While `app.memory.release_idle_runtimes` is on (the default), the service
+terminates the worker five minutes after the last run finishes; the next run
+initializes a new one. A run in progress is never stopped.
+
 The service also listens for the legacy
 `IpcChannel.Python_ExecutionRequest` renderer event and replies on
 `Python_ExecutionResponse`, allowing a main-process caller to use the same

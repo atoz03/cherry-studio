@@ -1,3 +1,4 @@
+import { preferenceService } from '@data/PreferenceService'
 import { loggerService } from '@logger'
 import { uuid } from '@renderer/utils/uuid'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -13,6 +14,9 @@ const SERVICE_CONFIG = {
     }
   }
 }
+
+// Restarting costs a few seconds, so only a runtime unused this long is stopped.
+const IDLE_STOP_MS = 5 * 60_000
 
 // 定义结果类型接口
 export interface PyodideOutput {
@@ -35,6 +39,8 @@ class PyodideService {
   private initPromise: Promise<void> | null = null
   private initRetryCount: number = 0
   private resolvers: Map<string, { resolve: (value: any) => void; reject: (error: Error) => void }> = new Map()
+  private activeRuns = 0
+  private idleTimer: ReturnType<typeof setTimeout> | undefined
 
   /**
    * 初始化 Pyodide Worker
@@ -137,6 +143,28 @@ class PyodideService {
     script: string,
     context: Record<string, any> = {},
     timeout: number = SERVICE_CONFIG.WORKER.REQUEST_TIMEOUT.RUN
+  ): Promise<PyodideExecutionResult> {
+    clearTimeout(this.idleTimer)
+    this.activeRuns++
+    try {
+      return await this.execute(script, context, timeout)
+    } finally {
+      if (--this.activeRuns === 0) this.idleTimer = setTimeout(() => void this.stopIfIdle(), IDLE_STOP_MS)
+    }
+  }
+
+  /** Stops the worker after {@link IDLE_STOP_MS} without runs; the next run starts a fresh one. */
+  private async stopIfIdle(): Promise<void> {
+    if (!this.worker || !(await preferenceService.get('app.memory.release_idle_runtimes'))) return
+    if (this.activeRuns > 0) return
+    logger.info('Stopping the idle Python runtime')
+    this.terminate()
+  }
+
+  private async execute(
+    script: string,
+    context: Record<string, any>,
+    timeout: number
   ): Promise<PyodideExecutionResult> {
     // 确保Pyodide已初始化
     try {

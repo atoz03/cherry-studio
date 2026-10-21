@@ -28,7 +28,9 @@ vi.mock('../../workers/shikiStream.worker?worker', () => ({
           ? { lines: [[{ content: message.chunk ?? '', color: '#000000', offset: 0 }]], recall: 0 }
           : message.type === 'highlight-html'
             ? `<pre class="shiki">${message.chunk ?? ''}</pre>`
-            : { success: true }
+            : message.type === 'pre-properties'
+              ? { class: 'shiki one-light', style: 'background-color:#FAFAFA', tabindex: '0' }
+              : { success: true }
 
       queueMicrotask(() => {
         this.onmessage?.({
@@ -272,6 +274,30 @@ describe('ShikiStreamService', () => {
 
         expect(html).toMatch(/^<pre class="shiki/)
         expect(html).toContain('plain')
+      } finally {
+        // @ts-ignore: 恢复 Worker 构造函数
+        globalThis.Worker = originalWorker
+      }
+    })
+  })
+
+  describe('getShikiPreProperties', () => {
+    // A main-thread highlighter created only for <pre> attributes duplicated the worker's in memory.
+    it('reads the <pre> properties from the worker without a main-thread highlighter', async () => {
+      const properties = await shikiStreamService.getShikiPreProperties(language, theme)
+
+      expect(properties).toMatchObject({ class: expect.stringContaining('shiki') })
+      expect(shikiStreamService.hasMainHighlighter()).toBe(false)
+    })
+
+    it('still returns the <pre> properties when the worker is unavailable', async () => {
+      const originalWorker = globalThis.Worker
+      // @ts-ignore: 强制删除 Worker 构造函数
+      globalThis.Worker = undefined
+      try {
+        const properties = await shikiStreamService.getShikiPreProperties(language, theme)
+
+        expect(properties).toMatchObject({ class: expect.stringContaining('shiki') })
       } finally {
         // @ts-ignore: 恢复 Worker 构造函数
         globalThis.Worker = originalWorker

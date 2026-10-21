@@ -12,7 +12,7 @@ import { ShikiStreamTokenizer } from '../services/ShikiStreamTokenizer'
 const logger = loggerService.initWindowSource('Worker').withContext('ShikiStream')
 
 // Worker 消息类型
-type WorkerMessageType = 'init' | 'highlight' | 'highlight-html' | 'cleanup' | 'dispose'
+type WorkerMessageType = 'init' | 'highlight' | 'highlight-html' | 'pre-properties' | 'cleanup' | 'dispose'
 
 interface WorkerRequest {
   id: number
@@ -260,6 +260,23 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         const { actualLanguage, actualTheme } = await ensureLanguageAndThemeLoaded(language, theme)
         const html = highlighter.codeToHtml(chunk, { lang: actualLanguage, theme: actualTheme })
         self.postMessage({ id, type: 'highlight-html-result', result: html } satisfies WorkerResponse)
+        break
+      }
+
+      case 'pre-properties': {
+        if (!highlighter) {
+          throw new Error('Highlighter not initialized')
+        }
+        if (!e.data.theme) {
+          throw new Error('Missing theme for pre-properties')
+        }
+
+        // The <pre> attributes depend on the theme alone, so plain text avoids loading a grammar.
+        const actualTheme = await ensureThemeLoaded(e.data.theme)
+        const hast = highlighter.codeToHast('1', { lang: 'text', theme: actualTheme })
+        const pre = hast.children[0]
+        const result = pre?.type === 'element' ? pre.properties : {}
+        self.postMessage({ id, type: 'pre-properties-result', result } satisfies WorkerResponse)
         break
       }
 

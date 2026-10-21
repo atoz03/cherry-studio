@@ -177,7 +177,8 @@ vi.mock('@main/utils/appEdition', () => ({ getAppEdition: vi.fn(() => 'global') 
 
 vi.mock('@main/utils/windowUtil', () => ({
   getWindowsBackgroundMaterial: vi.fn(() => undefined),
-  replaceDevtoolsFont: vi.fn()
+  replaceDevtoolsFont: vi.fn(),
+  throttleWhileHidden: vi.fn()
 }))
 
 vi.mock('../ContextMenu', () => ({ contextMenu: { contextMenu: vi.fn() } }))

@@ -48,6 +48,13 @@ describe('ReadableContentService integration', () => {
     )
   })
 
+  // fetch_txt runs this so jsdom never loads in the main process; it must keep the whole body.
+  it('extracts the whole body as plain text without scripts or styles in a real worker', async () => {
+    const html = '<style>p{}</style><nav>Menu</nav><script>x()</script><p>Body\n  text</p>'
+
+    await expect(service.extractPlainText(html)).resolves.toBe('MenuBody text')
+  })
+
   it.each([
     ['title and list', '<title>Foo</title><ul><li>Hello</li></ul>'],
     ['preformatted text', '<pre>Hello</pre>'],

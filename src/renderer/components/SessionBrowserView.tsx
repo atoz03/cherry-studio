@@ -43,13 +43,15 @@ export function SessionBrowserView({
   const { t } = useTranslation()
   const resource = useSyncExternalStore(browserRuntime.subscribe, () => browserRuntime.get(sessionId))
   const configuredSource = useRef<string | undefined>(undefined)
+  const unloaded = !resource
   useEffect(() => {
     const key = `${sessionId}:${securityProfile}:${initialUrl}`
-    if (configuredSource.current !== key || !browserRuntime.get(sessionId)) {
+    // A page unloaded while hidden comes back only once its host is shown again.
+    if (configuredSource.current !== key || (unloaded && isHostActive)) {
       configuredSource.current = key
       browserRuntime.ensure(sessionId, initialUrl, securityProfile)
     }
-  }, [browserRuntime, sessionId, initialUrl, securityProfile])
+  }, [browserRuntime, sessionId, initialUrl, securityProfile, unloaded, isHostActive])
   useEffect(() => {
     browserRuntime.update(sessionId, { reloadKey })
   }, [browserRuntime, sessionId, reloadKey, resource?.sessionId])

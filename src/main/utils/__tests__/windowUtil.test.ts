@@ -1,3 +1,5 @@
+import { EventEmitter } from 'node:events'
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const originalGetSystemVersion = process.getSystemVersion
@@ -65,5 +67,55 @@ describe('getWindowsBackgroundMaterial', () => {
     })
 
     expect(getWindowsBackgroundMaterial()).toBeUndefined()
+  })
+})
+
+describe('throttleWhileHidden', () => {
+  /** A window that records whether throttling was allowed at the moment it went hidden. */
+  function fakeWindow() {
+    const state = { throttling: false, hiddenWhileThrottled: [] as boolean[] }
+    const window = Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      webContents: { setBackgroundThrottling: (allowed: boolean) => (state.throttling = allowed) },
+      hide: () => state.hiddenWhileThrottled.push(state.throttling),
+      minimize: () => state.hiddenWhileThrottled.push(state.throttling)
+    })
+    return { window, state }
+  }
+
+  // Electron ignores the flag for a window that is already hidden, so it must be on before hide.
+  it('allows throttling before the window hides or minimizes', async () => {
+    const { throttleWhileHidden } = await loadWindowUtil({ isWin: false })
+    const { window, state } = fakeWindow()
+    throttleWhileHidden(window as never, () => true)
+
+    window.hide()
+    window.emit('show')
+    window.minimize()
+
+    expect(state.hiddenWhileThrottled).toEqual([true, true])
+  })
+
+  it('lifts throttling once the window is visible again', async () => {
+    const { throttleWhileHidden } = await loadWindowUtil({ isWin: false })
+    const { window, state } = fakeWindow()
+    throttleWhileHidden(window as never, () => true)
+
+    window.emit('minimize')
+    expect(state.throttling).toBe(true)
+    window.emit('restore')
+    expect(state.throttling).toBe(false)
+  })
+
+  it('never throttles when the user turned the switch off', async () => {
+    const { throttleWhileHidden } = await loadWindowUtil({ isWin: false })
+    const { window, state } = fakeWindow()
+    throttleWhileHidden(window as never, () => false)
+
+    window.hide()
+    window.emit('minimize')
+
+    expect(state.hiddenWhileThrottled).toEqual([false])
+    expect(state.throttling).toBe(false)
   })
 })

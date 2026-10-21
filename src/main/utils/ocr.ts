@@ -2,9 +2,10 @@ import { readFile } from 'fs/promises'
 
 import type { ImageFileMetadata } from '@shared/data/types/legacyFile'
 
+import { loadSharp } from './sharp'
+
 const preprocessImage = async (buffer: Buffer): Promise<Buffer> => {
-  // Delayed loading: The Sharp module is only loaded when the OCR functionality is actually needed, not at app startup
-  const sharp = (await import('sharp')).default
+  const sharp = await loadSharp()
   return sharp(buffer)
     .grayscale() // 转为灰度
     .normalize()

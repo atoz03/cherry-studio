@@ -5,6 +5,8 @@ import { buildAgentSessionTopicId } from '@renderer/utils/agentSession'
 import { classifyTurn } from '@shared/ai/transport'
 import { WebviewSecurityProfile } from '@shared/utils/webviewSecurity'
 
+import { type HiddenPageTracker, hiddenPageUnloader } from './HiddenPageUnloader'
+
 export interface AgentBrowserResource {
   sessionId: string
   sourceUrl: string
@@ -27,8 +29,13 @@ export class AgentBrowserRuntimeService {
   private readonly listeners = new Set<() => void>()
   private ids: readonly string[] = []
   private readonly turnSubscriptions = new Map<string, () => void>()
+  /** Where an unloaded hidden page was, so showing it again reopens that page. */
+  private readonly released = new Map<string, { sourceUrl: string; url: string }>()
 
-  constructor(private readonly scope: 'agent' | 'topic' = 'agent') {}
+  constructor(
+    private readonly scope: 'agent' | 'topic' = 'agent',
+    private readonly hiddenPages?: HiddenPageTracker
+  ) {}
 
   subscribe = (listener: () => void) => {
     this.listeners.add(listener)
@@ -54,7 +61,9 @@ export class AgentBrowserRuntimeService {
     if (!this.owners.has(sessionId)) return
     const existing = this.resources.get(sessionId)
     if (existing && !url) return
-    const sourceUrl = url ?? 'about:blank'
+    const released = this.released.get(sessionId)
+    this.released.delete(sessionId)
+    const sourceUrl = released && (!url || url === released.sourceUrl) ? released.url : (url ?? 'about:blank')
     const securityProfile = sourceUrl.startsWith('file:') ? WebviewSecurityProfile.AgentHtmlArtifact : profile
     if (existing) {
       if (existing.sourceUrl !== sourceUrl || existing.securityProfile !== securityProfile) {
@@ -76,6 +85,7 @@ export class AgentBrowserRuntimeService {
       failed: false
     })
     this.ids = [...this.resources.keys()]
+    this.trackVisibility(sessionId, null)
     this.emit()
   }
 
@@ -87,6 +97,35 @@ export class AgentBrowserRuntimeService {
     )
       return
     this.resources.set(sessionId, { ...existing, ...patch })
+    if ('anchor' in patch) this.trackVisibility(sessionId, patch.anchor ?? null)
+    this.emit()
+  }
+
+  private hiddenKey(sessionId: string): string {
+    return `${this.scope}-browser:${sessionId}`
+  }
+
+  private trackVisibility(sessionId: string, anchor: HTMLElement | null): void {
+    if (anchor) {
+      this.hiddenPages?.show(this.hiddenKey(sessionId))
+      return
+    }
+    // An agent turn may drive the page while nobody looks at it; keep it until the turn ends.
+    const topicId = this.scope === 'agent' ? buildAgentSessionTopicId(sessionId) : sessionId
+    this.hiddenPages?.hide(
+      this.hiddenKey(sessionId),
+      () => this.release(sessionId),
+      () => classifyTurn(cacheService.getShared(`topic.stream.statuses.${topicId}`)?.status).isTurnActive
+    )
+  }
+
+  /** Unloads the page but keeps its owners: the next `ensure` reopens it where it was. */
+  private release(sessionId: string): void {
+    const resource = this.resources.get(sessionId)
+    if (!resource || resource.anchor) return
+    this.released.set(sessionId, { sourceUrl: resource.sourceUrl, url: resource.url })
+    this.resources.delete(sessionId)
+    this.ids = [...this.resources.keys()]
     this.emit()
   }
 
@@ -121,8 +160,8 @@ export class AgentBrowserRuntimeService {
       owners.add(tabId)
       this.owners.set(sessionId, owners)
     }
-    for (const sessionId of this.resources.keys()) {
-      if (!this.owners.has(sessionId)) this.resources.delete(sessionId)
+    for (const sessionId of [...this.resources.keys(), ...this.released.keys()]) {
+      if (!this.owners.has(sessionId)) this.forget(sessionId)
     }
     if (this.ids.length !== this.resources.size) {
       this.ids = [...this.resources.keys()]
@@ -134,16 +173,24 @@ export class AgentBrowserRuntimeService {
     this.turnSubscriptions.get(sessionId)?.()
     this.turnSubscriptions.delete(sessionId)
     this.owners.delete(sessionId)
-    if (!this.resources.delete(sessionId)) return
+    if (!this.forget(sessionId)) return
     this.ids = [...this.resources.keys()]
     this.emit()
+  }
+
+  private forget(sessionId: string): boolean {
+    this.hiddenPages?.show(this.hiddenKey(sessionId))
+    this.released.delete(sessionId)
+    return this.resources.delete(sessionId)
   }
 
   dispose(): void {
     for (const unsubscribe of this.turnSubscriptions.values()) unsubscribe()
     this.turnSubscriptions.clear()
     this.owners.clear()
+    for (const sessionId of this.resources.keys()) this.hiddenPages?.show(this.hiddenKey(sessionId))
     this.resources.clear()
+    this.released.clear()
     this.ids = []
     this.emit()
   }
@@ -153,6 +200,6 @@ export class AgentBrowserRuntimeService {
   }
 }
 
-export const agentBrowserRuntimeService = new AgentBrowserRuntimeService()
+export const agentBrowserRuntimeService = new AgentBrowserRuntimeService('agent', hiddenPageUnloader)
 
-export const topicBrowserRuntimeService = new AgentBrowserRuntimeService('topic')
+export const topicBrowserRuntimeService = new AgentBrowserRuntimeService('topic', hiddenPageUnloader)

@@ -10,6 +10,7 @@ import { syncTitleBarOverlayWithTheme } from '@main/core/window/titleBarOverlay'
 import type { WindowOptions } from '@main/core/window/types'
 import { WindowType } from '@main/core/window/types'
 import { openTabInMainWindow } from '@main/services/mainWindowNavigation'
+import { throttleWhileHidden } from '@main/utils/windowUtil'
 import type { Tab } from '@shared/data/cache/cacheValueTypes'
 import type { WindowId } from '@shared/ipc/types'
 import { IpcChannel } from '@shared/IpcChannel'
@@ -59,6 +60,14 @@ export class SubWindowService extends BaseService {
   protected async onInit() {
     this.registerIpcHandlers()
     this.registerZoomTracking()
+    const preferenceService = application.get('PreferenceService')
+    this.registerDisposable(
+      application
+        .get('WindowManager')
+        .onWindowCreatedByType(WindowType.SubWindow, ({ window }) =>
+          throttleWhileHidden(window, () => preferenceService.get('app.memory.throttle_hidden_windows'))
+        )
+    )
     if (isWin || isLinux) {
       // Registry gives Windows and Linux sub-windows WCO; synced per window like registerZoomTracking.
       this.registerDisposable(

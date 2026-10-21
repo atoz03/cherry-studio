@@ -40,6 +40,36 @@ export const entries: SettingsSearchEntry[] = [
     aliases: ['tabs', 'memory', '标签页', '内存']
   },
   {
+    anchorId: 'pinned-tabs-keep-alive',
+    titleKey: 'settings.general.memory.pinned_tabs.title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['pin', 'memory', '固定', '内存']
+  },
+  {
+    anchorId: 'mini-app-keep-alive',
+    titleKey: 'settings.miniApps.cache_title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['mini app', 'memory', '小程序', '内存']
+  },
+  {
+    anchorId: 'unload-hidden-pages',
+    titleKey: 'settings.general.memory.unload_hidden_pages.title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['webview', 'browser', 'memory', '网页', '内存']
+  },
+  {
+    anchorId: 'release-idle-runtimes',
+    titleKey: 'settings.general.memory.release_idle_runtimes.title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['python', 'tokenizer', 'memory', '内存']
+  },
+  {
+    anchorId: 'throttle-hidden-windows',
+    titleKey: 'settings.general.memory.throttle_hidden_windows.title',
+    groupKey: 'settings.general.sections.runtime',
+    aliases: ['background', 'memory', '后台', '内存']
+  },
+  {
     anchorId: 'proxy-mode',
     titleKey: 'settings.proxy.mode.title',
     groupKey: 'settings.general.sections.network',

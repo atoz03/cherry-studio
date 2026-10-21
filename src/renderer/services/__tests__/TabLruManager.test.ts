@@ -93,6 +93,24 @@ describe('TabLruManager', () => {
         expect(result).not.toContain('pinned-tab')
       })
 
+      // With pinned tabs counted, the oldest pinned tab is unloaded like any other background tab.
+      it('should hibernate the oldest pinned tab when pinned tabs count toward the limit', () => {
+        const now = Date.now()
+        const tabs = [
+          createTab('pinned-tab', { lastAccessTime: now - 10000, isPinned: true }),
+          ...Array.from({ length: TAB_LIMITS.softCap }, (_, i) =>
+            createTab(`tab-${i}`, { lastAccessTime: now + i * 1000 })
+          )
+        ]
+
+        const result = new TabLruManager(TAB_LIMITS, false).checkAndGetDormantCandidates(
+          tabs,
+          `tab-${TAB_LIMITS.softCap - 1}`
+        )
+
+        expect(result).toEqual(['pinned-tab'])
+      })
+
       it('should not hibernate already dormant tabs', () => {
         const now = Date.now()
         const tabs = [

@@ -1,6 +1,8 @@
 import type { WebviewTag } from 'electron'
 import { isEqual } from 'es-toolkit/compat'
 
+import { type HiddenPageTracker, hiddenPageUnloader } from './HiddenPageUnloader'
+
 export interface WebviewSource {
   src: string
   partition: string
@@ -27,6 +29,8 @@ export class WebviewRuntimeService {
   private resources: readonly WebviewResource[] = []
   private nextInstance = 0
   private readonly listeners = new Set<() => void>()
+
+  constructor(private readonly hiddenPages?: HiddenPageTracker) {}
 
   readonly subscribe = (listener: () => void) => {
     this.listeners.add(listener)
@@ -82,7 +86,26 @@ export class WebviewRuntimeService {
       surviving.delete(item.key)
       return [updated]
     })
-    this.publish([...ordered, ...surviving.values()])
+    const final = [...ordered, ...surviving.values()]
+    this.trackHidden(final, desired)
+    this.publish(final)
+  }
+
+  /** Drops a hidden page; it is recreated, and reloads, once a sync presents it again. */
+  release(key: string): void {
+    this.hiddenPages?.show(key)
+    this.publish(this.resources.filter((resource) => resource.key !== key))
+  }
+
+  private trackHidden(final: readonly WebviewResource[], desired: ReadonlyMap<string, WebviewRequest>): void {
+    if (!this.hiddenPages) return
+    const kept = new Set(final.map((resource) => resource.key))
+    for (const resource of this.resources) if (!kept.has(resource.key)) this.hiddenPages.show(resource.key)
+    for (const { key } of final) {
+      const demand = desired.get(key)!
+      if (demand.visible || demand.protected) this.hiddenPages.show(key)
+      else this.hiddenPages.hide(key, () => this.release(key))
+    }
   }
 
   bind(key: string, instance: number, element: WebviewTag | null): void {
@@ -107,6 +130,7 @@ export class WebviewRuntimeService {
   }
 
   dispose(): void {
+    for (const resource of this.resources) this.hiddenPages?.show(resource.key)
     this.publish([])
   }
 
@@ -117,4 +141,4 @@ export class WebviewRuntimeService {
   }
 }
 
-export const webviewRuntimeService = new WebviewRuntimeService()
+export const webviewRuntimeService = new WebviewRuntimeService(hiddenPageUnloader)

@@ -112,6 +112,8 @@ interface MockBrowserWindow extends EventEmitter {
   isDestroyed: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   isVisible: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   show: ReturnType<typeof vi.fn<(...args: any[]) => any>>
+  hide: ReturnType<typeof vi.fn<(...args: any[]) => any>>
+  minimize: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   setContentBounds: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   setPosition: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   setOpacity: ReturnType<typeof vi.fn<(...args: any[]) => any>>
@@ -123,6 +125,7 @@ interface MockBrowserWindow extends EventEmitter {
   webContents: {
     isLoadingMainFrame: ReturnType<typeof vi.fn<(...args: any[]) => any>>
     setZoomFactor: ReturnType<typeof vi.fn<(...args: any[]) => any>>
+    setBackgroundThrottling: ReturnType<typeof vi.fn<(...args: any[]) => any>>
   }
 }
 
@@ -131,6 +134,8 @@ function createMockWindow(overrides: Partial<MockBrowserWindow> = {}): MockBrows
   win.isDestroyed = vi.fn(() => false)
   win.isVisible = vi.fn(() => true)
   win.show = vi.fn()
+  win.hide = vi.fn()
+  win.minimize = vi.fn()
   win.setContentBounds = vi.fn()
   win.setPosition = vi.fn()
   win.setOpacity = vi.fn()
@@ -139,7 +144,11 @@ function createMockWindow(overrides: Partial<MockBrowserWindow> = {}): MockBrows
   win.getContentBounds = vi.fn(() => ({ x: 100, y: 100, width: 800, height: 600 }))
   win.setAlwaysOnTop = vi.fn()
   win.setTitleBarOverlay = vi.fn()
-  win.webContents = { isLoadingMainFrame: vi.fn(() => true), setZoomFactor: vi.fn() }
+  win.webContents = {
+    isLoadingMainFrame: vi.fn(() => true),
+    setZoomFactor: vi.fn(),
+    setBackgroundThrottling: vi.fn()
+  }
   Object.assign(win, overrides)
   return win
 }

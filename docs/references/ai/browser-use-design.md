@@ -354,7 +354,9 @@ for limits, cleanup and real-runtime acceptance.
 Agent browser resources belong to their session and declared app-tab owners. The window composition
 provides a stable renderer host outside page Activities; it does not keep chat pages active. A pane
 supplies the display rectangle and view-only controls. Hiding it preserves the same native guest,
-binding, document and viewport. Closing its owners or deleting the session releases the resource.
+binding, document and viewport until `app.memory.unload_hidden_pages_minutes` passes with no agent
+turn running in the session; the page is then unloaded and reopens at its last URL when shown again.
+Closing its owners or deleting the session releases the resource.
 
 Creation is requested at the stable host, independently of revealing the pane. Tool execution holds
 a temporary background-throttling lease; screenshots hold a bounded native frame subscription.

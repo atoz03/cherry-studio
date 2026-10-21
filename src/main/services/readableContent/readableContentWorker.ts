@@ -13,6 +13,11 @@ export type ReadableContentWorkerInput =
       readonly source: string
     }
   | {
+      readonly format: 'text'
+      readonly inputKind: 'html'
+      readonly source: string
+    }
+  | {
       readonly format: 'preview'
       readonly inputKind: 'html' | 'text'
       readonly maxLength: number
@@ -83,12 +88,18 @@ try {
     const dom = new JSDOM(input.source, { url: SAFE_JSDOM_URL })
 
     try {
-      const article = new Readability(dom.window.document).parse()
-      title = article?.title || ''
-      content = article?.textContent || ''
+      if (input.format === 'text') {
+        const { document } = dom.window
+        document.querySelectorAll('script, style').forEach((node) => node.remove())
+        content = (document.body.textContent || '').replace(/\s+/g, ' ').trim()
+      } else {
+        const article = new Readability(dom.window.document).parse()
+        title = article?.title || ''
+        content = article?.textContent || ''
 
-      if (article && input.format === 'markdown') {
-        content = new TurndownService().turndown(article.content || '').trim()
+        if (article && input.format === 'markdown') {
+          content = new TurndownService().turndown(article.content || '').trim()
+        }
       }
     } finally {
       dom.window.close()
