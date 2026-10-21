@@ -26,6 +26,7 @@ import { isValidProxyUrl } from '@renderer/utils/url'
 import { isNonChatModel } from '@shared/utils/model'
 
 import { ContextManagementSettings } from './ContextManagementSettings'
+import { MemorySettingsRows } from './MemorySettingsRows'
 import { TabKeepAliveRow } from './TabKeepAliveRow'
 
 const defaultByPassRules = 'localhost,127.0.0.1,::1'
@@ -270,6 +271,7 @@ const GeneralSettings: FC = () => {
           <Switch checked={preventSleepWhenBusy} onCheckedChange={(checked) => void setPreventSleepWhenBusy(checked)} />
         </SettingRow>
         <TabKeepAliveRow />
+        <MemorySettingsRows />
       </SettingGroup>
 
       <ContextManagementSettings />
