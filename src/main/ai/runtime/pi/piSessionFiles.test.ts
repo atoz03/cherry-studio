@@ -141,21 +141,23 @@ describe('pi session files', () => {
     expect(readdirSync(piSessionDirectory(cwd))).toHaveLength(1)
   })
 
-  it('lists sessions newest first and skips files that are not sessions', async () => {
+  it('lists sessions with a user message newest first', async () => {
     const older = writeSession(path.join(store, '--a--', '1_old.jsonl'), [
       header('old', '/a'),
       { type: 'message', id: 'u', parentId: null, message: { role: 'user', content: [{ type: 'text', text: 'hi' }] } }
     ])
     const newer = writeSession(path.join(store, '--b--', '2_new.jsonl'), [
       header('new', '/b'),
-      { type: 'session_info', id: 'n', parentId: null, name: 'Named' }
+      entry('u', null, 'hello'),
+      { type: 'session_info', id: 'n', parentId: 'u', name: 'Named' }
     ])
-    writeSession(path.join(store, '--b--', '3_bad.jsonl'), [{ type: 'message', id: 'x', parentId: null }])
+    writeSession(path.join(store, '--b--', '3_empty.jsonl'), [header('empty', '/b')])
+    writeSession(path.join(store, '--b--', '4_bad.jsonl'), [{ type: 'message', id: 'x', parentId: null }])
     utimesSync(older, 1000, 1000)
     utimesSync(newer, 2000, 2000)
 
     await expect(listPiSessions()).resolves.toMatchObject([
-      { sessionId: 'new', cwd: '/b', name: 'Named', firstMessage: undefined },
+      { sessionId: 'new', cwd: '/b', name: 'Named', firstMessage: 'hello' },
       { sessionId: 'old', cwd: '/a', name: undefined, firstMessage: 'hi' }
     ])
   })

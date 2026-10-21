@@ -191,11 +191,11 @@ export interface PiSessionSummary {
   sessionId: string
   cwd: string
   name: string | undefined
-  firstMessage: string | undefined
+  firstMessage: string
   modifiedAt: number
 }
 
-/** Every session in pi's store, newest first, for the import picker. */
+/** Every session in pi's store that has a user message, newest first, for the import picker. */
 export async function listPiSessions(): Promise<PiSessionSummary[]> {
   const root = application.getPath('external.pi.sessions')
   let directories: string[]
@@ -217,14 +217,14 @@ export async function listPiSessions(): Promise<PiSessionSummary[]> {
       const file = path.join(root, directory, name)
       try {
         const [{ header, entries }, { mtimeMs }] = await Promise.all([readPiSession(file), stat(file)])
-        if (!header?.cwd || !SESSION_ID_PATTERN.test(header.id)) continue
         const firstUser = entries.find((entry) => piMessageRole(entry) === 'user')
+        if (!header?.cwd || !SESSION_ID_PATTERN.test(header.id) || !firstUser) continue
         const name = entries.findLast((entry) => entry.type === 'session_info')?.name
         summaries.push({
           sessionId: header.id,
           cwd: header.cwd,
           name: typeof name === 'string' && name ? name : undefined,
-          firstMessage: firstUser ? piMessageText(firstUser).slice(0, 200) : undefined,
+          firstMessage: piMessageText(firstUser).slice(0, 200),
           modifiedAt: mtimeMs
         })
       } catch {

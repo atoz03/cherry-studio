@@ -23,7 +23,8 @@ import {
 import {
   AgentSessionEntitySchema,
   type ReusableAgentSessionPlaceholdersResponse,
-  ReuseOrCreateAgentSessionSchema
+  ReuseOrCreateAgentSessionSchema,
+  SessionNameEntitySchema
 } from '@shared/data/api/schemas/agentSessions'
 import {
   AgentSessionWorkspaceSourceSchema,
@@ -359,6 +360,28 @@ export const aiRequestSchemas = {
   }),
   'ai.agent.skill_session.create': defineRoute({
     input: z.strictObject({ skillId: z.string().min(1) }),
+    output: z.strictObject({ sessionId: z.string().min(1) })
+  }),
+  /** The user's pi CLI sessions that can be opened in a Pi agent, newest first. */
+  'ai.agent.pi_session.list': defineRoute({
+    input: z.void(),
+    output: z.array(
+      z.strictObject({
+        sessionId: z.string(),
+        cwd: z.string(),
+        name: z.string().optional(),
+        firstMessage: z.string(),
+        modifiedAt: z.number()
+      })
+    )
+  }),
+  'ai.agent.pi_session.import': defineRoute({
+    input: z.strictObject({
+      agentId: z.string().min(1),
+      piSessionId: z.string().min(1),
+      cwd: z.string().trim().pipe(AbsoluteFilePathSchema),
+      name: SessionNameEntitySchema
+    }),
     output: z.strictObject({ sessionId: z.string().min(1) })
   }),
   'ai.agent.session.prewarm': defineRoute({

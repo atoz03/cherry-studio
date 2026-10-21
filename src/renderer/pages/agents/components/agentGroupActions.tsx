@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next'
-import { Archive, Pin, PinOff, Smile, SquarePen } from 'lucide-react'
+import { Archive, Import, Pin, PinOff, Smile, SquarePen } from 'lucide-react'
 
 import { createActionRegistry } from '@renderer/components/chat/actions/actionRegistry'
 import type { ResolvedAction } from '@renderer/components/chat/actions/actionTypes'
@@ -10,14 +10,17 @@ import {
   RESOURCE_ICON_TYPE_OPTIONS
 } from '@renderer/components/chat/resourceList/base'
 import SidebarShortcutIcon from '@renderer/components/icons/SidebarShortcutIcon'
+import type { AgentType } from '@shared/data/api/schemas/agents'
 import type { AssistantIconType } from '@shared/data/preference/preferenceTypes'
 
 export interface AgentGroupActionContext {
   agentId: string
+  agentType?: AgentType
   assistantIconType: AssistantIconType
   deleteSessionsOnly?: boolean
   deleteAgentDisabled?: boolean
   onEdit: (agentId: string) => void
+  onImportFromPi: (agentId: string) => void | Promise<void>
   onDeleteAgent: (agentId: string) => void | Promise<void>
   onSetAgentIconType: (iconType: AssistantIconType) => void | Promise<void>
   onTogglePin: (agentId: string) => void | Promise<void>
@@ -37,6 +40,12 @@ agentGroupActionRegistry.registerCommand({
   run: ({ agentId, onEdit }) => {
     onEdit(agentId)
   }
+})
+
+agentGroupActionRegistry.registerCommand({
+  id: 'agent-group.import-pi-session',
+  availability: ({ agentType }) => ({ visible: agentType === 'pi' }),
+  run: ({ agentId, onImportFromPi }) => onImportFromPi(agentId)
 })
 
 agentGroupActionRegistry.registerCommand({
@@ -70,6 +79,16 @@ agentGroupActionRegistry.registerAction(
     label: ({ t }) => t('agent.edit.title'),
     icon: () => <SquarePen size={14} />,
     order: 10
+  })
+)
+
+agentGroupActionRegistry.registerAction(
+  buildResourceEntityMenuActionDescriptor({
+    id: 'agent-group.import-pi-session',
+    commandId: 'agent-group.import-pi-session',
+    label: ({ t }) => t('agent.session.import_pi.menu'),
+    icon: () => <Import size={14} />,
+    order: 15
   })
 )
 

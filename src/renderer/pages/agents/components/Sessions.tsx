@@ -96,6 +96,7 @@ import { findLatestActive, pickNeighbourAfterRemoval } from '@renderer/utils/res
 import { createSidebarShortcutTarget, SIDEBAR_SHORTCUT_PROVIDER_IDS } from '@renderer/utils/sidebar'
 import { isProtectedBuiltinAgentRole } from '@shared/ai/builtinAgent'
 import type { OrderRequest } from '@shared/data/api/schemas/_endpointHelpers'
+import type { AgentType } from '@shared/data/api/schemas/agents'
 import type { AgentSessionEntity } from '@shared/data/api/schemas/agentSessions'
 import {
   AGENT_WORKSPACE_TYPE,
@@ -116,6 +117,7 @@ const AgentSessionImageCaptureHost = lazy(() => import('../messages/AgentSession
 import type { CreateAgentSessionDefaults } from '../types'
 import { type AgentGroupActionContext, executeAgentGroupAction, resolveAgentGroupActions } from './agentGroupActions'
 import { useOptionalAgentFileNavigation } from './AgentRightPane'
+import { importPiSessionPopup } from './ImportPiSessionPopup'
 import SessionItem, { type SessionItemMenuActions } from './SessionItem'
 import { EMPTY_SESSION_LIST_ITEM_RECONCILIATION, reconcileSessionListItems } from './sessionListItemSharing'
 import {
@@ -167,6 +169,7 @@ type CreateSessionSeed = {
 
 function AgentGroupMoreMenu({
   agentId,
+  agentType,
   assistantIconType,
   deleteAgentDisabled,
   deleteSessionsOnly,
@@ -174,12 +177,14 @@ function AgentGroupMoreMenu({
   pinned,
   onDeleteAgent,
   onEdit,
+  onImportFromPi,
   onSetAgentIconType,
   onTogglePin,
   onToggleSidebar,
   sidebarPinned
 }: {
   agentId: string
+  agentType?: AgentType
   assistantIconType: AssistantIconType
   deleteAgentDisabled?: boolean
   deleteSessionsOnly?: boolean
@@ -188,6 +193,7 @@ function AgentGroupMoreMenu({
   sidebarPinned: boolean
   onDeleteAgent: (agentId: string) => void | Promise<void>
   onEdit: (agentId: string) => void
+  onImportFromPi: (agentId: string) => void | Promise<void>
   onSetAgentIconType: (iconType: AssistantIconType) => void | Promise<void>
   onTogglePin: (agentId: string) => void | Promise<void>
   onToggleSidebar: (agentId: string) => void | Promise<void>
@@ -195,11 +201,13 @@ function AgentGroupMoreMenu({
   const { t } = useTranslation()
   const actionContext: AgentGroupActionContext = {
     agentId,
+    agentType,
     assistantIconType,
     deleteAgentDisabled,
     deleteSessionsOnly,
     onDeleteAgent,
     onEdit,
+    onImportFromPi,
     onSetAgentIconType,
     onTogglePin,
     onToggleSidebar,
@@ -1547,6 +1555,13 @@ const Sessions = ({
   const openAgentEditor = useCallback((agentId: string) => {
     setEditDialogTarget({ kind: 'agent', id: agentId })
   }, [])
+  const handleImportFromPi = useCallback(
+    async (agentId: string) => {
+      const sessionId = await importPiSessionPopup.show({ agentId })
+      if (sessionId) setActiveSessionId(sessionId)
+    },
+    [setActiveSessionId]
+  )
   const openSessionInNewTab = useCallback(
     (session: AgentSessionEntity) => {
       conversationNav.openConversationTab(session.id, session.name || t('common.unnamed'), { forceNew: true })
@@ -1853,6 +1868,7 @@ const Sessions = ({
             <Tooltip title={t('common.more')} delay={500}>
               <AgentGroupMoreMenu
                 agentId={agentGroupId}
+                agentType={agentById.get(agentGroupId)?.type}
                 assistantIconType={assistantIconType}
                 deleteAgentDisabled={deletingAgentId !== null}
                 deleteSessionsOnly={isProtectedBuiltinAgentRole(
@@ -1862,6 +1878,7 @@ const Sessions = ({
                 pinned={agentPinnedIdSet.has(agentGroupId)}
                 onDeleteAgent={handleDeleteAgent}
                 onEdit={openAgentEditor}
+                onImportFromPi={handleImportFromPi}
                 onSetAgentIconType={setAssistantIconType}
                 onTogglePin={handleToggleAgentPin}
                 onToggleSidebar={handleToggleAgentSidebar}
@@ -1915,6 +1932,7 @@ const Sessions = ({
       handleToggleAgentPin,
       handleToggleAgentSidebar,
       handleDeleteWorkdirGroup,
+      handleImportFromPi,
       handleOpenWorkdirGroup,
       handleStartRenameWorkdirGroup,
       isAgentPinActionDisabled,
@@ -2024,11 +2042,13 @@ const Sessions = ({
 
         const actionContext: AgentGroupActionContext = {
           agentId,
+          agentType: agentById.get(agentId)?.type,
           assistantIconType,
           deleteAgentDisabled: deletingAgentId !== null,
           deleteSessionsOnly: isProtectedBuiltinAgentRole(agentById.get(agentId)?.configuration?.builtin_role),
           onDeleteAgent: handleDeleteAgent,
           onEdit: openAgentEditor,
+          onImportFromPi: handleImportFromPi,
           onSetAgentIconType: setAssistantIconType,
           onTogglePin: handleToggleAgentPin,
           onToggleSidebar: handleToggleAgentSidebar,
@@ -2076,6 +2096,7 @@ const Sessions = ({
       displayMode,
       handleDeleteAgent,
       handleDeleteWorkdirGroup,
+      handleImportFromPi,
       handleOpenWorkdirGroup,
       handleStartRenameWorkdirGroup,
       handleToggleAgentPin,

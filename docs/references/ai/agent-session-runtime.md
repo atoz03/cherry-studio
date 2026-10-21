@@ -668,6 +668,12 @@ the branch is used; a history that cannot be aligned is only re-marked, never du
 runs when a connection starts, and before a turn when pi's session file changed while pi was
 running.
 
+**Import from Pi…** in a Pi agent's menu lists pi sessions that contain a user message
+(`ai.agent.pi_session.list`) and opens the chosen one as a session of that agent, in the pi
+session's folder, with its history synced (`ai.agent.pi_session.import`). A live session of the
+agent that already resumes that pi session is reopened instead, so two Cherry sessions never drive
+one pi session.
+
 Fork copies the source branch up to the chosen entry into a new pi session file in the target
 workspace's directory (`piFork.ts`), keeping entry ids so the copied fork checkpoints stay valid.
 
