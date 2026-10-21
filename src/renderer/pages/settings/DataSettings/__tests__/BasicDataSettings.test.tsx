@@ -37,6 +37,7 @@ vi.mock('@renderer/components/SettingsPrimitives', () => ({
 vi.mock('../BackupPopup', () => ({ default: { show: vi.fn() } }))
 vi.mock('../RestorePopup', () => ({ default: { show: vi.fn() } }))
 vi.mock('../V1RemigrationPopup', () => ({ default: { show: vi.fn() } }))
+vi.mock('../StorageLocationSettings', () => ({ default: () => null }))
 vi.mock('../ClearCachePopup', async (importOriginal) => {
   const actual = await importOriginal<typeof ClearCachePopupModule>()
   return { ...actual, default: { show: clearCacheShowMock } }

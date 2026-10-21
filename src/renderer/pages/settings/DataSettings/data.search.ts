@@ -27,6 +27,13 @@ export const entries: SettingsSearchEntry[] = [
     aliases: ['data directory', '数据目录']
   },
   {
+    anchorId: 'data-storage-locations',
+    titleKey: 'settings.data.storage_locations.title',
+    panel: 'data',
+    groupKey: 'settings.data.data.title',
+    aliases: ['models folder', 'browser data', 'tools folder', '存储位置', '模型目录', '浏览器数据']
+  },
+  {
     anchorId: 'data-app-logs',
     titleKey: 'settings.data.app_logs.label',
     panel: 'data',

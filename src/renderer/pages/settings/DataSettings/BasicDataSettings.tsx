@@ -42,7 +42,9 @@ import {
   finalizeLegacyV1Cleanup,
   mergeLegacyV1CleanupResults
 } from './legacyV1BrowserData'
+import { relocationValidationMessageKey } from './relocationValidation'
 import RestorePopup from './RestorePopup'
+import StorageLocationSettings from './StorageLocationSettings'
 import V1RemigrationPopup from './V1RemigrationPopup'
 
 const DATA_SETTINGS_SUBTLE_TEXT_COLOR = 'var(--foreground-tertiary)'
@@ -121,25 +123,7 @@ const BasicDataSettings: React.FC = () => {
   }
 
   const showRelocationValidationError = (reason: UserDataRelocationValidationReason) => {
-    if (reason === 'target_root') {
-      toast.error(t('settings.data.app_data.select_error_root_path'))
-    } else if (reason === 'same_path' || reason === 'target_inside_source' || reason === 'target_contains_source') {
-      toast.error(t('settings.data.app_data.select_error_same_path'))
-    } else if (reason === 'target_protected') {
-      toast.error(t('settings.data.app_data.select_error_protected_path'))
-    } else if (reason === 'target_in_use') {
-      toast.error(t('settings.data.app_data.select_error'))
-    } else if (reason === 'target_not_empty') {
-      toast.error(t('settings.data.app_data.select_not_empty_dir'))
-    } else if (
-      reason === 'target_parent_unwritable' ||
-      reason === 'source_missing' ||
-      reason === 'target_not_directory'
-    ) {
-      toast.error(t('settings.data.app_data.select_error_write_permission'))
-    } else {
-      toast.error(t('settings.data.app_data.path_change_failed'))
-    }
+    toast.error(t(relocationValidationMessageKey(reason)))
   }
 
   const showMigrationConfirmModal = async (originalPath: string, newPath: string, targetNotEmpty: boolean) => {
@@ -349,6 +333,7 @@ const BasicDataSettings: React.FC = () => {
             </RowFlex>
           </PathRow>
         </SettingRow>
+        <StorageLocationSettings />
         <SettingDivider />
         <SettingRow id="setting-data-data-app-logs" className="scroll-mt-6">
           <SettingRowTitle>{t('settings.data.app_logs.label')}</SettingRowTitle>
