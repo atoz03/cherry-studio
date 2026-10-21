@@ -273,6 +273,22 @@ class ShikiStreamService {
    * @returns pre 标签属性
    */
   async getShikiPreProperties(language: string, theme: string): Promise<ShikiPreProperties> {
+    // The worker already holds a highlighter; a second one on the main thread only for this costs memory.
+    if (!this.hasWorkerHighlighter()) {
+      try {
+        await this.initWorker()
+      } catch (error) {
+        logger.warn('Failed to initialize worker, falling back to main thread:', error as Error)
+      }
+    }
+    if (this.hasWorkerHighlighter()) {
+      try {
+        return (await this.sendWorkerMessage({ type: 'pre-properties', theme })) as ShikiPreProperties
+      } catch (error) {
+        logger.error('Worker pre-properties failed, falling back to main thread:', error as Error)
+      }
+    }
+
     const { loadedLanguage, loadedTheme } = await this.ensureHighlighterConfigured(language, theme)
 
     if (!this.highlighter) {
