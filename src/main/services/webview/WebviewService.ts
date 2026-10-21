@@ -99,7 +99,7 @@ export class WebviewService extends BaseService {
         const configuredPort = Number(app.commandLine.getSwitchValue('remote-debugging-port'))
         if (Number.isInteger(configuredPort) && configuredPort > 0 && configuredPort < 65535) return configuredPort
         const activePort = Number(
-          (await fs.readFile(application.getPath('app.userdata', 'DevToolsActivePort'), 'utf8')).split(/\r?\n/)[0]
+          (await fs.readFile(application.getPath('app.session', 'DevToolsActivePort'), 'utf8')).split(/\r?\n/)[0]
         )
         if (!Number.isInteger(activePort) || activePort < 1 || activePort > 65535) {
           throw new Error('Remote debugging port is not available')
