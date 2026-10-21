@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Pornește",
   "apiGateway.actions.stop": "Oprește",
   "apiGateway.authHeader.title": "Header de autorizare",
+  "apiGateway.autoStart.description": "Când este dezactivat, gateway-ul rămâne oprit după repornire până când apeși Pornește sau o funcție care are nevoie de el îl pornește.",
+  "apiGateway.autoStart.title": "Pornește la lansare",
   "apiGateway.description": "Expune capacitățile AI ale Cherry Studio prin API-uri HTTP compatibile cu OpenAI",
   "apiGateway.documentation.title": "Documentație API",
   "apiGateway.fields.apiKey.copyTooltip": "Copiază cheia API",

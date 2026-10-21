@@ -64,6 +64,8 @@ vi.mock('@renderer/components/icons/GatewayIcon', () => ({
 
 vi.mock('@renderer/components/SettingsPrimitives', () => ({
   SettingGroup: ({ children }: PropsWithChildren) => <section>{children}</section>,
+  SettingHelpText: ({ children }: PropsWithChildren) => <div>{children}</div>,
+  SettingRow: ({ children }: PropsWithChildren) => <div>{children}</div>,
   SettingRowTitle: ({ children }: PropsWithChildren) => <div>{children}</div>,
   SettingsContentColumn: ({ children }: PropsWithChildren) => <div>{children}</div>,
   SettingTitle: ({ children }: PropsWithChildren) => <div>{children}</div>

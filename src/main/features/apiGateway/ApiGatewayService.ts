@@ -80,9 +80,12 @@ export class ApiGatewayService extends BaseService implements Activatable {
     const config = this.getCurrentConfig()
     // Never log the raw API key — redact before emitting.
     logger.info('API gateway config:', { ...config, apiKey: config.apiKey ? REDACTED : null })
-    this.desiredEnabled = config.enabled
-    this.reconciler.request()
-    await this.reconciler.flush()
+    // A launch starts from the auto-start choice, so a gateway started during the last session
+    // (by the user or implicitly by the Code page) does not come back on its own.
+    const preferences = application.get('PreferenceService')
+    const autoStart = preferences.get('feature.api_gateway.auto_start')
+    if (config.enabled !== autoStart) await preferences.set('feature.api_gateway.enabled', autoStart)
+    await this.converge(autoStart)
   }
 
   async onActivate(): Promise<void> {

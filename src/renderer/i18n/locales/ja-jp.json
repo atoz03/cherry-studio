@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "開始",
   "apiGateway.actions.stop": "停止",
   "apiGateway.authHeader.title": "認証ヘッダー",
+  "apiGateway.autoStart.description": "オフにすると、再起動後もゲートウェイは停止したままになり、「開始」を押すか、必要とする機能が起動するまで動作しません。",
+  "apiGateway.autoStart.title": "起動時に開始",
   "apiGateway.description": "OpenAI 互換の HTTP API を通じて Cherry Studio の AI 機能を公開します",
   "apiGateway.documentation.title": "API ドキュメント",
   "apiGateway.fields.apiKey.copyTooltip": "API キーをコピー",

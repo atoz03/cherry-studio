@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Start",
   "apiGateway.actions.stop": "Stop",
   "apiGateway.authHeader.title": "Authorization Header",
+  "apiGateway.autoStart.description": "When off, the gateway stays stopped after a restart until you press Start or a feature that needs it starts it.",
+  "apiGateway.autoStart.title": "Start on launch",
   "apiGateway.description": "Expose Cherry Studio's AI capabilities through OpenAI- and Anthropic-compatible HTTP APIs",
   "apiGateway.documentation.title": "API Documentation",
   "apiGateway.fields.apiKey.copyTooltip": "Copy API Key",

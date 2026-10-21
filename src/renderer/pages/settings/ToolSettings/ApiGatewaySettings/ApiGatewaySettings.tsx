@@ -13,12 +13,16 @@ import {
   InputGroupButton,
   InputGroupInput,
   InputNumber,
+  Switch,
   Tooltip
 } from '@cherrystudio/ui'
+import { usePreference } from '@data/hooks/usePreference'
 import CopyButton from '@renderer/components/CopyButton'
 import { GatewayIcon } from '@renderer/components/icons/GatewayIcon'
 import {
   SettingGroup,
+  SettingHelpText,
+  SettingRow,
   SettingRowTitle,
   SettingsContentColumn,
   SettingTitle
@@ -42,6 +46,7 @@ const ApiGatewaySettings: FC = () => {
   const { theme } = useTheme()
   const { t } = useTranslation()
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
+  const [autoStart, setAutoStart] = usePreference('feature.api_gateway.auto_start')
 
   // API Gateway state from useApiGateway hook
   const {
@@ -170,6 +175,18 @@ const ApiGatewaySettings: FC = () => {
       </StatusCard>
 
       <Sections>
+        <SettingGroup theme={theme} className="mt-0 p-4">
+          <SettingRow>
+            <SettingRowTitle>{t('apiGateway.autoStart.title')}</SettingRowTitle>
+            <Switch
+              aria-label={t('apiGateway.autoStart.title')}
+              checked={autoStart}
+              onCheckedChange={(checked) => void setAutoStart(checked)}
+            />
+          </SettingRow>
+          <SettingHelpText className="mt-2">{t('apiGateway.autoStart.description')}</SettingHelpText>
+        </SettingGroup>
+
         {!apiGatewayRunning && (
           <SettingGroup theme={theme} className="mt-0 overflow-hidden p-0">
             <ConnectionFields>

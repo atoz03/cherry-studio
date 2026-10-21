@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Başlat",
   "apiGateway.actions.stop": "Durdur",
   "apiGateway.authHeader.title": "Yetkilendirme Üstbilgisi",
+  "apiGateway.autoStart.description": "Kapalıyken ağ geçidi yeniden başlatmadan sonra, Başlat’a basana veya ona ihtiyaç duyan bir özellik onu başlatana kadar durdurulmuş kalır.",
+  "apiGateway.autoStart.title": "Açılışta başlat",
   "apiGateway.description": "Cherry Studio'nun yapay zekâ özelliklerini OpenAI ve Anthropic uyumlu HTTP API'leri üzerinden sunar",
   "apiGateway.documentation.title": "API Belgeleri",
   "apiGateway.fields.apiKey.copyTooltip": "API Anahtarını Kopyala",

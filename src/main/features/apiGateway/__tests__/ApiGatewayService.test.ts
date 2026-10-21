@@ -19,6 +19,7 @@ const { mockStart, mockStop, mockGetActiveUsageContext, mockPreferenceSet, captu
   captured: {
     prefHandler: undefined as ((enabled: boolean) => void) | undefined,
     enabledPreference: false,
+    autoStartPreference: false,
     hostPreference: '127.0.0.1',
     portPreference: 23333
   }
@@ -38,7 +39,10 @@ vi.mock('@application', async () => {
         captured.prefHandler = cb
         return () => {}
       }),
-      get: vi.fn((key: string) => (key.endsWith('api_key') ? 'existing-key' : false)),
+      get: vi.fn((key: string) => {
+        if (key.endsWith('api_key')) return 'existing-key'
+        return key === 'feature.api_gateway.auto_start' ? captured.autoStartPreference : false
+      }),
       getMultiple: vi.fn(() => ({
         enabled: captured.enabledPreference,
         host: captured.hostPreference,
@@ -62,6 +66,7 @@ beforeEach(() => {
   BaseService.resetInstances()
   captured.prefHandler = undefined
   captured.enabledPreference = false
+  captured.autoStartPreference = false
   captured.hostPreference = '127.0.0.1'
   captured.portPreference = 23333
   mockPreferenceSet.mockReset()
@@ -178,8 +183,8 @@ describe('ApiGatewayService reconcile', () => {
     expect(service.isActivated).toBe(false)
   })
 
-  it('starts at boot when the preference is enabled', async () => {
-    captured.enabledPreference = true
+  it('starts at launch when auto-start is on, even if it was stopped last session', async () => {
+    captured.autoStartPreference = true
     const service = new ApiGatewayService()
 
     const ready = service._doInit()
@@ -188,11 +193,25 @@ describe('ApiGatewayService reconcile', () => {
     await ready
 
     expect(service.isActivated).toBe(true)
+    expect(service.getCurrentConfig().enabled).toBe(true)
+  })
+
+  // A gateway started during a session (Settings, the Code page, DeepSeek Harness) used to persist
+  // `enabled` and so came back on every launch.
+  it('stays stopped at launch when it ran last session but auto-start is off', async () => {
+    captured.enabledPreference = true
+    const service = new ApiGatewayService()
+
+    await service._doInit()
+
+    expect(mockStart).not.toHaveBeenCalled()
+    expect(service.isActivated).toBe(false)
+    expect(service.getCurrentConfig().enabled).toBe(false)
   })
 
   // A host persisted by an upstream build with Device Connections must never expose the gateway.
   it('listens on loopback even when the persisted host is every interface', async () => {
-    captured.enabledPreference = true
+    captured.autoStartPreference = true
     captured.hostPreference = '0.0.0.0'
     const service = new ApiGatewayService()
 
@@ -207,7 +226,7 @@ describe('ApiGatewayService reconcile', () => {
   // The command and the persisted intent must land together: a stop whose preference write never
   // happened comes back on the next launch, which is the whole of #18521.
   it('persists the intent before converging, and reports a failed persist instead of stopping', async () => {
-    captured.enabledPreference = true
+    captured.autoStartPreference = true
     const service = new ApiGatewayService()
     const ready = service._doInit()
     await vi.waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1))
@@ -235,7 +254,7 @@ describe('ApiGatewayService reconcile', () => {
   // A re-bind must not resurrect a gateway another window disabled while the restart was queued:
   // that would leave runtime=running with the preference persisted as disabled.
   it('aborts a restart when the gateway was disabled meanwhile', async () => {
-    captured.enabledPreference = true
+    captured.autoStartPreference = true
     const service = new ApiGatewayService()
     const ready = service._doInit()
     await vi.waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1))

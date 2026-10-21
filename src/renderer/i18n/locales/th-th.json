@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "เริ่ม",
   "apiGateway.actions.stop": "หยุด",
   "apiGateway.authHeader.title": "ส่วนหัวการยืนยันตัวตน",
+  "apiGateway.autoStart.description": "เมื่อปิดไว้ เกตเวย์จะหยุดทำงานหลังรีสตาร์ทจนกว่าคุณจะกด เริ่ม หรือฟีเจอร์ที่ต้องใช้จะเริ่มมันเอง",
+  "apiGateway.autoStart.title": "เริ่มเมื่อเปิดแอป",
   "apiGateway.description": "เปิดเผยความสามารถ AI ของ Cherry Studio ผ่าน HTTP API ที่เข้ากันได้กับ OpenAI และ Anthropic",
   "apiGateway.documentation.title": "เอกสาร API",
   "apiGateway.fields.apiKey.copyTooltip": "คัดลอก API Key",

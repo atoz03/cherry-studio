@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Запустить",
   "apiGateway.actions.stop": "Остановить",
   "apiGateway.authHeader.title": "Авторизация",
+  "apiGateway.autoStart.description": "Если выключено, после перезапуска шлюз остаётся остановленным, пока вы не нажмёте «Запустить» или его не запустит функция, которой он нужен.",
+  "apiGateway.autoStart.title": "Запускать при старте",
   "apiGateway.description": "Предоставляет возможности ИИ Cherry Studio через HTTP API, совместимые с OpenAI",
   "apiGateway.documentation.title": "Документация API",
   "apiGateway.fields.apiKey.copyTooltip": "Копировать API ключ",

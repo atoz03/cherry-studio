@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Démarrer",
   "apiGateway.actions.stop": "Arrêtez",
   "apiGateway.authHeader.title": "En-tête d'autorisation",
+  "apiGateway.autoStart.description": "Si désactivé, la passerelle reste arrêtée après un redémarrage jusqu’à ce que vous cliquiez sur Démarrer ou qu’une fonctionnalité qui en a besoin la démarre.",
+  "apiGateway.autoStart.title": "Démarrer au lancement",
   "apiGateway.description": "Expose les capacités IA de Cherry Studio via des APIs HTTP compatibles OpenAI",
   "apiGateway.documentation.title": "Documentation API",
   "apiGateway.fields.apiKey.copyTooltip": "Copier la Clé API",

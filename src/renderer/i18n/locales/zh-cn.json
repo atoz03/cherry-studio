@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "启动",
   "apiGateway.actions.stop": "停止",
   "apiGateway.authHeader.title": "授权标头",
+  "apiGateway.autoStart.description": "关闭后，重启应用时网关保持停止，直到你点击“启动”或需要它的功能将其启动。",
+  "apiGateway.autoStart.title": "启动时自动运行",
   "apiGateway.description": "通过 OpenAI 和 Anthropic 兼容的 HTTP API 暴露 Cherry Studio 的 AI 功能",
   "apiGateway.documentation.title": "API 文档",
   "apiGateway.fields.apiKey.copyTooltip": "复制 API 密钥",

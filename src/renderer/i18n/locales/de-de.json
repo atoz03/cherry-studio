@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Starten",
   "apiGateway.actions.stop": "Stoppen",
   "apiGateway.authHeader.title": "Autorisierungs-Header",
+  "apiGateway.autoStart.description": "Wenn deaktiviert, bleibt das Gateway nach einem Neustart gestoppt, bis du auf „Starten“ klickst oder eine Funktion, die es benötigt, es startet.",
+  "apiGateway.autoStart.title": "Beim Start ausführen",
   "apiGateway.description": "Stellen Sie die KI-Funktionen von Cherry Studio über eine OpenAI-kompatible HTTP-API bereit",
   "apiGateway.documentation.title": "API-Dokumentation",
   "apiGateway.fields.apiKey.copyTooltip": "API-Schlüssel kopieren",

@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Εκκίνηση",
   "apiGateway.actions.stop": "σταματήστε",
   "apiGateway.authHeader.title": "Επικεφαλίδα εξουσιοδότησης",
+  "apiGateway.autoStart.description": "Όταν είναι απενεργοποιημένο, η πύλη παραμένει σταματημένη μετά από επανεκκίνηση, μέχρι να πατήσετε «Εκκίνηση» ή να την εκκινήσει μια λειτουργία που τη χρειάζεται.",
+  "apiGateway.autoStart.title": "Εκκίνηση κατά το άνοιγμα",
   "apiGateway.description": "Εκθέτει τις δυνατότητες AI του Cherry Studio μέσω API HTTP συμβατών με OpenAI",
   "apiGateway.documentation.title": "Τεκμηρίωση API",
   "apiGateway.fields.apiKey.copyTooltip": "Αντιγραφή Κλειδιού API",

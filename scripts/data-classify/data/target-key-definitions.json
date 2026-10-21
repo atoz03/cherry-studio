@@ -882,6 +882,13 @@
       "description": "Notes line-break rendering mode: a single newline renders as a line break (v2 new feature, no v1 source)"
     },
     {
+      "targetKey": "feature.api_gateway.auto_start",
+      "type": "boolean",
+      "defaultValue": false,
+      "status": "classified",
+      "description": "Start the API gateway when the app launches. `feature.api_gateway.enabled` is reset to this value at launch, so starting the gateway during a session (Settings, Code page, DeepSeek Harness) no longer makes it start on every launch (fork feature, no v1 source)"
+    },
+    {
       "targetKey": "feature.notes.git.enabled",
       "type": "boolean",
       "defaultValue": false,

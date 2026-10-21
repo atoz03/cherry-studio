@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "Bắt đầu",
   "apiGateway.actions.stop": "Dừng lại",
   "apiGateway.authHeader.title": "Tiêu đề ủy quyền",
+  "apiGateway.autoStart.description": "Khi tắt, cổng sẽ vẫn dừng sau khi khởi động lại cho đến khi bạn nhấn Bắt đầu hoặc một tính năng cần nó khởi động nó.",
+  "apiGateway.autoStart.title": "Khởi động cùng ứng dụng",
   "apiGateway.description": "Phơi bày khả năng AI của Cherry Studio qua các API HTTP tương thích với OpenAI",
   "apiGateway.documentation.title": "Tài liệu API",
   "apiGateway.fields.apiKey.copyTooltip": "Sao chép Khóa API",

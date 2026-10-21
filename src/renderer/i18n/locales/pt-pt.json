@@ -560,6 +560,8 @@
   "apiGateway.actions.start": "iniciar",
   "apiGateway.actions.stop": "parar",
   "apiGateway.authHeader.title": "Cabeçalho de autorização",
+  "apiGateway.autoStart.description": "Quando desativado, o gateway permanece parado após reiniciar até carregar em Iniciar ou uma funcionalidade que precise dele o iniciar.",
+  "apiGateway.autoStart.title": "Iniciar ao abrir",
   "apiGateway.description": "Expõe as capacidades de IA do Cherry Studio através de APIs HTTP compatíveis com OpenAI",
   "apiGateway.documentation.title": "Documentação API",
   "apiGateway.fields.apiKey.copyTooltip": "Copiar Chave API",
