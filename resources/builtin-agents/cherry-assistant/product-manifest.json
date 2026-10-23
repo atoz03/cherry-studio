@@ -498,8 +498,8 @@
     }
   ],
   "providers": {
-    "version": "1b44511badb438e6",
-    "count": 66,
+    "version": "2dd99baed66e9055",
+    "count": 67,
     "entries": [
       {
         "id": "cherryin",
@@ -612,6 +612,10 @@
       {
         "id": "grok-cli",
         "name": "Grok CLI"
+      },
+      {
+        "id": "pi",
+        "name": "Pi"
       },
       {
         "id": "omlx",
