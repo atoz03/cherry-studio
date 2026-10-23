@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat } from 'node:fs/promises'
+import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { Locator } from '@playwright/test'
@@ -6,6 +6,7 @@ import type { Locator } from '@playwright/test'
 import { AgentEntitySchema } from '../../../src/shared/data/api/schemas/agents'
 import { AgentSessionEntitySchema } from '../../../src/shared/data/api/schemas/agentSessions'
 import type { UnifiedPreferenceType } from '../../../src/shared/data/preference/preferenceTypes'
+import { PI_DEFAULT_MODEL_ID, PI_PROVIDER_ID } from '../../../src/shared/data/presets/pi'
 import { createUniqueModelId } from '../../../src/shared/data/types/model'
 import { type MockChatRequest, startMockChatServer } from '../../helpers/http/mockChatServer'
 import { selectSidebarApp } from '../regression/navigation'
@@ -142,15 +143,33 @@ for (const variant of ['Chat', 'Work Agent'] as const) {
         await row.getByRole('button', { name: 'New Chat', exact: true }).click()
         await expect(page.getByRole('button', { name: 'Selected models', exact: true })).toContainText(server.modelId)
       } else {
+        // Pi agents run the installed pi CLI; an isolated pi config points it at the mock server.
+        const piAgentDir = testInfo.outputPath('pi-agent')
+        await mkdir(piAgentDir, { recursive: true })
+        const piModels = {
+          providers: {
+            mock: {
+              baseUrl: server.baseUrl,
+              api: 'openai-completions',
+              apiKey: 'mock-key',
+              models: [{ id: server.modelId }]
+            }
+          }
+        }
+        await writeFile(path.join(piAgentDir, 'models.json'), JSON.stringify(piModels))
+        await writeFile(
+          path.join(piAgentDir, 'settings.json'),
+          JSON.stringify({ defaultProvider: 'mock', defaultModel: server.modelId })
+        )
         const created = await page.evaluate(
-          ({ name, model }) =>
+          ({ name, model, piAgentDir }) =>
             window.api.ipcApi.request('ai.agent.create', {
               type: 'pi',
               name,
               model,
-              instructions: 'Answer briefly without using tools.'
+              configuration: { env_vars: { PI_CODING_AGENT_DIR: piAgentDir } }
             }),
-          { name, model: modelId }
+          { name, model: createUniqueModelId(PI_PROVIDER_ID, PI_DEFAULT_MODEL_ID), piAgentDir }
         )
         expect(created).toMatchObject({ ok: true })
         const agent = AgentEntitySchema.parse((created as { data: unknown }).data)

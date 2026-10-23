@@ -328,20 +328,13 @@ describe('ResourceCreateWizard', () => {
     expect(() => rerender(<ResourceCreateWizard {...props} kind="assistant" open={false} />)).not.toThrow()
   })
 
-  it('shows capability and knowledge steps for pi agents', async () => {
+  it('creates a pi agent from the basic step alone', async () => {
     const user = userEvent.setup()
     render(<ResourceCreateWizard kind="agent" open onOpenChange={vi.fn()} onSubmit={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: 'fill pi basic' }))
-    await user.click(screen.getByRole('button', { name: NEXT }))
-    await user.click(screen.getByRole('button', { name: NEXT }))
 
-    expect(screen.getByTestId('capability-step')).toBeInTheDocument()
-    expect(screen.queryByTestId('knowledge-step')).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: NEXT }))
-
-    expect(screen.getByTestId('knowledge-step')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: NEXT })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: CREATE })).toBeInTheDocument()
   })
 

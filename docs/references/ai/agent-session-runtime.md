@@ -11,8 +11,7 @@ sources:
   - src/main/ai/runtime/claudeCode
   - src/main/ai/runtime/pi
   - src/shared/ai/piBuiltinTools.ts
-  - patches/@sting8k__pi-vcc@0.8.1.patch
-  - scripts/piVccBundle.ts
+  - src/shared/data/presets/pi.ts
   - src/main/ai/runtime/agentPrompt.ts
   - src/main/ai/toolApproval/userDataSqliteGuard.ts
   - src/main/ai/messages/readConversation.ts
@@ -95,7 +94,7 @@ also require their own lifecycle and product decisions.
 
 ## System prompt ownership
 
-`src/main/ai/runtime/agentPrompt.ts` is the single materializer for Cherry-owned Agent prompt policy. Every runtime passes the same Agent, workspace, agent-data path, channel state, and resolved citation guidance into `buildAgentRuntimePrompt()`, then maps its `{ base, append }` result into the runtime SDK.
+`src/main/ai/runtime/agentPrompt.ts` is the single materializer for Cherry-owned Agent prompt policy. Every runtime with the `instructions` capability (currently only Claude Code; Pi agents keep the user's own pi prompt) passes the same Agent, workspace, agent-data path, channel state, and resolved citation guidance into `buildAgentRuntimePrompt()`, then maps its `{ base, append }` result into the runtime SDK.
 
 The common materializer owns Cherry policy content, semantic authority, and the ordering of blocks carried through its `append` result:
 
@@ -114,10 +113,10 @@ Runtime adapters own only native mechanics:
 
 | Runtime-neutral Cherry policy | Runtime-specific carrier |
 |---|---|
-| `system.md` selects native vs custom base; Cherry append survives either choice | Claude maps into its preset/custom prompt, Pi uses system/append overrides. |
-| Common append text and block order | Claude uses the preset's `append`; Pi uses `appendSystemPromptOverride`. |
-| Workspace instruction authority | Claude uses native `CLAUDE.md` / `AGENTS.md` loading with `claude-md-and-agents-md`; sealed sessions disable both through `settingSources: []`. Pi permits native context files. Semantic precedence stays common. |
-| Enabled managed skill content | Claude injects plugin/config representation; Pi uses `additionalSkillPaths`. |
+| `system.md` selects native vs custom base; Cherry append survives either choice | Claude maps into its preset/custom prompt. |
+| Common append text and block order | Claude uses the preset's `append`. |
+| Workspace instruction authority | Claude uses native `CLAUDE.md` / `AGENTS.md` loading with `claude-md-and-agents-md`; sealed sessions disable both through `settingSources: []`. Semantic precedence stays common. |
+| Enabled managed skill content | Claude injects plugin/config representation. |
 | Current workspace guarantee | Each driver supplies cwd/workspace context through its native base or the common custom-base compensation block. |
 | Coding/runtime handbook and native tool snippets | Owned by each runtime's native base, never copied into the common materializer. |
 
@@ -505,9 +504,9 @@ to restore files.
 ## Native user-data SQLite guard
 
 `userDataSqliteGuard.ts` is the single policy source that protects Cherry Studio's SQLite files
-across Claude Code and Pi. Native structured write tools cannot bypass it through a permission
-mode: Claude calls it from the common `PreToolUse` guard table, Pi calls it in the shared native and
-code-mode authorizer before Full Access handling.
+from Claude Code. Native structured write tools cannot bypass it through a permission mode: Claude
+calls it from the common `PreToolUse` guard table. Pi agents run the user's own pi CLI, whose tools
+Cherry does not gate (see [Pi driver](#pi-driver)).
 
 The main application database and its `-wal`, `-shm`, and `-journal` sidecars are always protected.
 Existing symlink and hard-link aliases to those files are protected by canonical path and file
@@ -621,265 +620,62 @@ reconciles are serialized per connection. A rejected update is failed closed
 by the host (the connection is torn down) rather than left running under the
 old policy.
 
-## pi driver resource boundary
+## Pi driver
 
-pi runs in-process through the SDK, but Cherry still owns the runtime boundary.
-The driver must not import the user's standalone pi setup from `~/.pi/agent`
-(apart from the Windows `shellPath` field below), and must not silently trust
-executable or prompt resources from a workspace.
+Pi agents run the user's installed `pi` CLI in RPC mode (`pi --mode rpc`, see pi's
+`docs/rpc.md`). Cherry displays the session and does not bundle pi: pi's own models,
+extensions, skills, prompts, settings, and credentials apply, and pi updates independently
+of Cherry.
 
-Allowed in v1:
+- **Launch.** `resolvePiLaunch()` finds `pi` on the login-shell `PATH` and runs it with that
+  environment plus the agent's environment variables, in the session's workspace directory,
+  with `--session-id <resume token>` and `--exclude-tools` for the agent's disabled built-in
+  tools (`read`, `bash`, `edit`, `write`). A missing `pi` fails the turn with
+  `agent.session.pi.cli_not_found`.
+- **Lifetime.** Opening a session view connects without starting pi. The first message starts
+  one pi process for the session, which stays up between turns until the host's idle teardown
+  or a rebuild. `reconcile()` returns `rebuild` when the model, the excluded tools, or the
+  environment variables change.
+- **Model.** `pi::<provider>/<model>` selects that pi model through `set_model`; `pi::default`
+  leaves the choice to pi (the session's last model, else pi's default). The Pi provider's model
+  list comes from pi's `get_available_models` (`listModels.ts`), and `PiDefaultModelSeeder`
+  enables the provider once with its default model.
+- **Not passed to pi.** Cherry's Agent prompt and reply language, MCP servers, Cherry tools,
+  knowledge bases, skills, and permission modes: the `instructions`, `mcp`, `knowledgeBases`,
+  and `skills` capabilities are false and `permissionModes` is empty. Tool approvals and the
+  user-data SQLite guard do not apply; pi's tools run as they would in a terminal.
+- **Plugin dialogs.** `extension_ui_request` select, confirm, input, and editor dialogs become
+  an `AskUserQuestion` approval; dismissing it cancels the dialog. Fire-and-forget UI requests
+  (notifications, status lines, widgets) are ignored.
+- **Commands.** `/compact [instructions]` maps to pi's `compact`, and pi's `get_commands` list
+  feeds the slash-command menu. Follow-ups use pi's `steer`; steers pi did not deliver are
+  re-queued by the host as the next turn.
 
-- Cherry-owned pi home under `Data/Agents/.pi`: `application.getPath('feature.agents.pi.root')`,
-  passed explicitly as `agentDir`. This is not a prompt/skill import surface.
-- Cherry-owned pi sessions: `application.getPath('feature.agents.pi.sessions')`,
-  passed explicitly as `sessionDir`. The resume token is the pi session id;
-  reopen resolves it by scanning this directory for `*_<id>.jsonl`, so the
-  directory can be relocated without invalidating stored tokens.
-- Cherry's runtime-neutral Agent prompt, materialized by `buildAgentRuntimePrompt()` and injected
-  through `systemPromptOverride` and `appendSystemPromptOverride`. The materializer uses
-  `PromptBuilder` for workspace `system.md` and the current agent data directory's `SOUL.md`,
-  `USER.md`, and `memory/FACT.md`, and adds the same instruction authority, channel security,
-  citation, artifact-reporting, and language contracts as the Claude Code runtime.
-  These files are a **connection-lifetime snapshot**: editing them deliberately
-  does not invalidate a warm connection or its provider prompt cache. Changes
-  apply when that connection is naturally rebuilt or the session is reopened.
-- Inline Cherry-owned extensions required for the integration: provider
-  injection and tool approval/policy enforcement.
-- The complete runtime-neutral result of `buildAgentMcpServers()` — Cherry
-  knowledge, memory, skills, assistant/autonomy tools, plus the agent's selected
-  MCP servers — converted uniformly to pi `customTools` through an in-memory MCP
-  bridge. Every adapted call therefore uses the same naming, metadata, abort,
-  and error translation path. A server that cannot connect or list tools is logged
-  and omitted, preserving the existing best-effort MCP availability contract; a
-  duplicate normalized tool identity is different — it makes approval/routing
-  ambiguous, so startup closes all bridge clients and fails materialization.
-  The approval extension still distinguishes Cherry-owned
-  safe tools, Cherry tools that always require approval, and third-party MCP
-  tools; `disabledTools` hard-blocks every class.
-- New pi agents start in `acceptEdits`: reads and writes inside the selected
-  workspace and current agent data directory do not prompt repeatedly. Shell,
-  third-party MCP, Cherry approval-required mutations, external paths, and
-  symlink escapes remain gated. `bypassPermissions` does not override the
-  runtime-neutral Cherry approval-required policy. Pi exposes neither `plan`
-  nor `auto`: the latter depends on Claude's model-side approval classifier,
-  which the Pi approval gate does not implement.
-- The agent's enabled Cherry-managed skills, passed explicitly as
-  `additionalSkillPaths` (their canonical `{dataPath}/Skills/<folderName>` dirs).
-  These load even under `noSkills` because the paths are Cherry-owned and
-  resolved from the `agent_skill` join, not discovered from disk.
-- Workspace context files discovered from the cwd ancestry (`AGENTS.md`,
-  `AGENTS.MD`, `CLAUDE.md`, `CLAUDE.MD`). The workspace is trusted because the
-  user picked it by hand in Cherry — there is no separate "do you trust this
-  project?" prompt, matching the claude driver's `project` context source.
-  Context files are workspace **text**, a different trust class than executable
-  extensions (which stay off). This is the only project-discovered resource pi
-  loads; everything else below is still disabled.
-- On Windows, the top-level `shellPath` from the user's global pi
-  `settings.json` — read as a single field, validated to name an available
-  `bash.exe`, and passed to the in-memory settings manager and the managed Bash
-  tool. Without it pi resolves `bash` from PATH and silently lands in the WSL
-  shim. An invalid configured path fails startup rather than switching
-  execution environments behind the user's back; an absent one falls back to
-  Cherry's own Git Bash discovery.
+### Pi sessions and history
 
-Disallowed in v1 unless Cherry adds an explicit trust/import flow:
+Sessions are pi's own JSONL files under `~/.pi/agent/sessions/--<cwd>--/`
+(`application.getPath('external.pi.sessions')`). The resume token is the pi session id, so
+`pi -r` in a terminal resumes a Cherry chat from the same directory. Sessions of the former
+bundled runtime move from `feature.agents.pi.legacy_sessions` into that store the first time
+they are opened.
 
-- User-global pi resources under the standalone pi home (`~/.pi/agent`) other
-  than the `shellPath` field above, or user skill folders such as
-  `~/.agents/skills`.
-- Disk prompts from any pi home, including Cherry-owned `SYSTEM.md` and
-  `APPEND_SYSTEM.md`; Cherry's `PromptBuilder` is the only persona source.
-- Workspace project resources: `.pi/extensions`, `.pi/skills`, `.pi/prompts`,
-  `.pi/themes`, `.pi/SYSTEM.md`, `.pi/APPEND_SYSTEM.md`.
-- Project `.agents/skills` discovered from the cwd ancestry.
+`syncPiSessionHistory()` imports turns added outside Cherry, such as a terminal `pi -r`, as
+Cherry messages. It replays each stored assistant message through `PiStreamAdapter`, so imported
+turns render like live ones. A per-session watermark in `app_state`
+(`pi-session-sync:<sessionId>`) records the last pi entry Cherry has shown, and Cherry's own
+turns advance it, so nothing is imported twice. Without a watermark the newest fork checkpoint on
+the branch is used; a history that cannot be aligned is only re-marked, never duplicated. Sync
+runs when a connection starts, and before a turn when pi's session file changed while pi was
+running.
 
-The implementation enforces this by creating pi `SettingsManager` with
-`projectTrusted: true` (the user-selected workspace is trusted, so its context
-files load — parity with the claude driver), then constructing
-`DefaultResourceLoader` with `noExtensions`, `noSkills`,
-`noPromptTemplates`, and `noThemes` — but `noContextFiles: false`, the one
-project-discovered surface pi is allowed. Cherry's prompt overrides suppress
-pi-home `SYSTEM.md` discovery. Inline extension factories still load because
-they are passed by Cherry code, not discovered from disk; likewise enabled
-managed skills load via `additionalSkillPaths` because Cherry supplies those
-paths explicitly.
+**Import from Pi…** in a Pi agent's menu lists pi sessions that contain a user message
+(`ai.agent.pi_session.list`) and opens the chosen one as a session of that agent, in the pi
+session's folder, with its history synced (`ai.agent.pi_session.import`). A live session of the
+agent that already resumes that pi session is reopened instead, so two Cherry sessions never drive
+one pi session.
 
-The trust boundary is therefore **executable/prompt resources off, workspace
-text on**: `noExtensions`/`noSkills`/`noPromptTemplates`/`noThemes` keep arbitrary
-code and Cherry-managed resources from being disk-discovered, while
-`projectTrusted: true` + `noContextFiles: false` load only the workspace's own
-`AGENTS.md`/`CLAUDE.md` text. If future work enables the still-disabled workspace
-resources (extensions, project skills/prompts/themes), it must add a Cherry-owned
-trust prompt and persisted decision first, then selectively pass that decision
-into pi resource loading rather than widening the `no*` flags wholesale.
-
-Before constructing the prompt or SDK session, Pi startup prepares the captured
-session workspace: it creates an app-owned system directory or validates that a
-user directory exists, preventing missing system directories from aborting startup.
-
-Connection startup uses an optimistic materialization snapshot. Cherry warms
-the MCP catalog, captures every reconcilable database/catalog fact, constructs
-the runtime from that captured provider, model, enabled-key set, skill paths,
-MCP rows, and linked channel, then captures those facts again before publishing
-the connection.
-If the signatures differ, startup fails closed and cleans up the connection's
-generation-scoped provider registration. Prompt-file content is deliberately
-outside this signature because it follows the connection-lifetime cache
-contract above.
-
-Warm Pi reconciles serialize push and pull calls per connection so a slower
-older snapshot cannot overwrite a newer policy result. `permission_mode` is
-live policy and stays frozen for an active turn. `disabledTools` has two jobs:
-the live gate applies newly disabled tools immediately, while the spawn-time
-`excludeTools` list controls which tools the model can see. It therefore remains
-a rebuild-signature fact; adding or removing a disabled tool returns `rebuild`
-after any applicable live tightening has landed.
-
-### Pi conversation compaction
-
-Cherry bundles `@sting8k/pi-vcc` and explicitly loads it for every Pi session.
-Users do not need to install the npm package or enable disk extension discovery.
-The main-process build compiles the extension into `out/main/pi-vcc.mjs`.
-`loadPiVccExtension` imports that ESM bundle and registers it through
-`DefaultResourceLoader.extensionFactories`; `noExtensions` remains enabled to
-prevent discovery of unrelated executable extensions. The source package is a
-build-time dependency; no TypeScript extension sources ship in `node_modules`.
-The separate ESM bundle preserves Pi SDK's import-only entry point while
-Cherry's main bundle remains CommonJS.
-
-#### User-visible behavior
-
-With the default pi-vcc configuration, compaction works as follows:
-
-| Input | Compaction behavior |
-|---|---|
-| Automatic compaction or bare `/compact` | pi-vcc extracts transcript content algorithmically instead of asking an LLM to generate a summary. |
-| `/compact Focus on the API decisions` | Pi's native LLM summarizer receives `Focus on the API decisions` as summary instructions. |
-| `/compact keep:3` | Pi's native LLM summarizer receives `keep:3` as summary instructions; this does not select pi-vcc's keep-three-turns behavior. |
-| `/pi-vcc` or `/pi-vcc-recall` | These extension commands are not registered in Cherry. Use `/compact` to compact; the model can call `vcc_recall` to retrieve history. |
-
-Compaction reduces the model's active context; it does not erase the persisted
-session transcript. The `vcc_recall` tool searches the current session's raw
-JSONL history, so the model can retrieve details omitted from the compacted
-context, including after reopening that session. It cannot choose another
-session file or an arbitrary filesystem path.
-
-Cherry lists recall in the agent's tool settings. It is auto-approved in default
-and acceptEdits permission modes, including unattended turns, because it reads
-only the current session history. Explicitly disabling it still blocks access;
-disabling recall does not disable compaction.
-
-#### Why the bundled dependency is patched
-
-The version-pinned
-[pnpm patch](../../../patches/@sting8k__pi-vcc@0.8.1.patch) changes two integration
-behaviors. pnpm applies it during installation; there is no runtime source rewrite.
-
-First, unpatched pi-vcc does not interpret `/compact` text the same way as Pi's
-native summarizer. For `/compact Focus on the API decisions`, the call chain is:
-
-1. Cherry passes the text unchanged to `session.compact(customInstructions)`.
-2. pi-vcc intercepts the compaction and treats that text as a follow-up user
-   message, rather than instructions for the summary.
-3. Its `session_compact` handler calls `pi.sendUserMessage` with that text.
-4. Pi emits this event before clearing its manual-compaction state, so the
-   resulting prompt is rejected because compaction is still in progress. The
-   text neither guides the summary nor reaches the model as a follow-up.
-
-This failure occurs between pi-vcc and the Pi SDK; Cherry does not discard or
-rewrite the instructions. A thin wrapper that makes the same SDK call encounters
-the same failure. The patch makes pi-vcc defer to native compaction when ordinary
-nonempty custom instructions are present. Bare `/compact` and automatic
-compaction still use VCC. Merely delaying the follow-up would not preserve the
-original contract: summary instructions would still become a new user turn.
-
-Second, the patch removes registration of `/pi-vcc` and `/pi-vcc-recall`, while
-retaining the compaction hook and recall tool. Cherry tracks `/compact` as a
-manual compaction turn and closes that turn from compaction events. An extension
-command invoked through `session.prompt()` can return before its work completes,
-causing Cherry to finish the turn before the later compaction events arrive.
-Removing these command entry points keeps operations on the existing tracked
-paths without adding another command lifecycle to Cherry.
-
-The patch does not implement compaction or recall in Cherry. Pi and pi-vcc still
-own those operations; Cherry owns loading, permissions, and UI turn completion.
-Recall's tool-catalog entry and auto-approval are Cherry code, separate from the
-dependency patch. Remove the corresponding patch changes when an upstream
-version preserves native instruction semantics and offers a way to omit these
-commands, after verifying the same integration contracts.
-
-#### Configuration and verification
-
-All Cherry Pi sessions share
-`application.getPath('feature.agents.pi.root', 'pi-vcc-config.json')`, supplied to
-pi-vcc through `PI_VCC_CONFIG_PATH`. This is isolated from standalone Pi's
-configuration. Setting `overrideDefaultCompaction` to `false` restores native
-LLM compaction for bare `/compact` and automatic compaction; instruction-bearing
-`/compact` already uses native compaction. No separate compaction toggle is added
-to Cherry's UI.
-
-The real-SDK integration tests in
-[piVcc.test.ts](../../../src/main/ai/runtime/pi/piVcc.test.ts) cover default
-compaction without an LLM call, native instruction-guided compaction, recall
-after reopening, unattended approval, explicit disabling, command exclusion,
-and production file filtering. They build and load the real ESM artifact,
-including a native Node import with source-package resolution blocked.
-These checks do not replace a full installed Electron/asar smoke test.
-
-### Pi code mode
-
-Pi 1.0 supplies the native `codemode`, `tool_search`, and MCP extensions. Cherry
-injects only its managed Bash definition and mounts the session's complete MCP
-server set through an in-memory transport. Pi owns discovery, tool definitions,
-structured results, cancellation, and MCP connection teardown. Disk-discovered
-Pi MCP configuration stays disabled; Cherry remains the configuration owner.
-
-`codemode` runs JavaScript in QuickJS with no Node, filesystem, or network
-access. Scripts call `tools.<identifier>(args)` and discover deferred MCP tools
-through `searchTools`, `describeTool`, `describeNamespace`, or `ALL_TOOLS`.
-Native file and shell tools remain available both directly and from scripts.
-Every nested call emits its own tool events and passes Cherry's `tool_call`
-approval extension, including disabled-tool, SQLite, global-install, and
-permission-mode policies. The script itself needs no separate approval because
-all outward effects pass through those tool calls.
-
-Scripts have no default time limit. An explicit `timeout_ms` includes time spent
-waiting for tool approval and cancels pending calls when it expires. Native MCP
-may save large text results to a temporary file; reading that file outside the
-workspace follows the normal approval policy.
-
-Pi sanitizes MCP identifiers to `[A-Za-z0-9_]`; Cherry uses those identifiers for
-policy and disabled-tool lookups. A stored `tool_exec` disable applies to
-`codemode`. Historical `tool_call`/`tool_exec` results remain readable, while new
-MCP tool results retain their structured payloads and Cherry citation metadata.
-Closing a connection emits `session_shutdown` before disposing the SDK session.
-
-## Retired Agent runtime migration
-
-Existing DSH agents are converted to Pi by `RetiredAgentRuntimeSeeder`, including archived
-agents. IDs, models, workspaces, message content, and resource links are preserved. Plan
-permissions become `default`; equivalent disabled file/shell tools keep their restrictions.
-Legacy MCP restrictions are mapped against the actual tool catalog before Pi starts; an
-unresolved restriction blocks startup and asks the user to reconfigure tool access.
-CodeMate's separately installed DeepSeek Harness tool is unchanged.
-
-The seeder records each affected session in `app_state` and leaves native tokens intact.
-Fork recovery retires already-published retired-runtime journals without deleting their files.
-After fork recovery and crash-message reconciliation, `retiredSessionHistory` imports the
-persisted Cherry transcript through Pi's `SessionManager`, validates the generated file,
-and transactionally replaces resume tokens, fork checkpoints, and edited native identities.
-Tools appear as historical text and are never executed during import. Attachments retain
-managed file paths. Native DSH goals and child-process state are not carried over.
-
-A failed import retains its progress marker and original message metadata. Startup continues
-for other sessions; validation, connection, editing, and forking retry the import before
-using that session. No failed conversion silently starts an empty context. The original DSH
-files remain untouched. Restoring an older backup repeats the same conversion.
-
-Pi retains direct transport for supported models. Other gateway-routable chat models use
-the existing local Gateway's OpenAI-compatible route, preserving model identity, consent,
-credential invalidation, and provider-owned usage capture.
+Fork copies the source branch up to the chosen entry into a new pi session file in the target
+workspace's directory (`piFork.ts`), keeping entry ids so the copied fork checkpoints stay valid.
 
 ## Internal Agent continuation normalization
 
@@ -992,7 +788,10 @@ Focused tests:
 - `src/main/ai/__tests__/AiService.test.ts`
 - `src/main/ai/runtime/claudeCode/__tests__/streamAdapter.test.ts`
 - `src/main/ai/runtime/claudeCode/__tests__/ClaudeCodeWarmQueryManager.test.ts`
-- `src/main/ai/runtime/pi/PiRuntimeConnection.test.ts`
+- `src/main/ai/runtime/pi/piRpcClient.test.ts`
+- `src/main/ai/runtime/pi/piSessionFiles.test.ts`
+- `src/main/ai/runtime/pi/piHistorySync.test.ts`
+- `src/main/ai/runtime/pi/piFork.test.ts`
 
 Cross-Session delivery acceptance tests additionally pin these crash and security boundaries:
 

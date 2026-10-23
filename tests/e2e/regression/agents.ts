@@ -75,9 +75,9 @@ export async function createAgent(
   }
   await dialog.getByRole('button', { name: 'Model', exact: true }).click()
   await selectVisibleModel(page, options.model)
-  await dialog.getByRole('button', { name: 'Next', exact: true }).click()
-  await dialog.getByRole('button', { name: 'Next', exact: true }).click()
-  await dialog.getByRole('button', { name: 'Next', exact: true }).click()
+  // Runtimes without Cherry instructions, skills or knowledge bases have fewer steps.
+  const next = dialog.getByRole('button', { name: 'Next', exact: true })
+  while (await next.isVisible()) await next.click()
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(agentView.getByText(options.name, { exact: true }).first()).toBeVisible()
 }

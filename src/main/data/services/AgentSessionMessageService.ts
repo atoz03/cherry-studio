@@ -409,8 +409,32 @@ export class AgentSessionMessageService {
     return rows.slice(0, end + 1).filter((row) => !excluded.has(row.id))
   }
 
+  listSessionRowsTx(tx: DbOrTx, sessionId: string): SessionMessageRow[] {
+    return tx
+      .select()
+      .from(sessionMessagesTable)
+      .where(eq(sessionMessagesTable.sessionId, sessionId))
+      .orderBy(asc(sessionMessagesTable.createdAt), asc(sessionMessagesTable.id))
+      .all()
+  }
+
   /** Inserts historical facts only, never delivery, billing, queue or approval ownership. */
-  insertForkMessagesTx(tx: DbOrTx, sessionId: string, rows: readonly SessionMessageRow[]): void {
+  insertForkMessagesTx(
+    tx: DbOrTx,
+    sessionId: string,
+    rows: readonly Pick<
+      SessionMessageRow,
+      | 'id'
+      | 'role'
+      | 'data'
+      | 'status'
+      | 'modelId'
+      | 'messageSnapshot'
+      | 'runtimeResumeToken'
+      | 'createdAt'
+      | 'updatedAt'
+    >[]
+  ): void {
     for (const row of rows) {
       tx.insert(sessionMessagesTable)
         .values({

@@ -49,6 +49,7 @@ import p_openrouter from './openrouter'
 import p_ovms from './ovms'
 import p_perplexity from './perplexity'
 import p_ph8 from './ph8'
+import p_pi from './pi'
 import p_poe from './poe'
 import p_ppio from './ppio'
 import p_qiniu from './qiniu'
@@ -96,6 +97,7 @@ export const PROVIDERS: Provider[] = [
   p_claude_code,
   p_openai_codex,
   p_grok_cli,
+  p_pi,
   p_omlx,
   p_openai,
   p_opencode,

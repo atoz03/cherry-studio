@@ -124,14 +124,13 @@ describe('buildPathRegistry', () => {
     expect(shouldAutoEnsure('app.utility_process')).toBe(false)
   })
 
-  it('keeps pi runtime state under the Agents data directory', () => {
+  it('never creates the legacy pi session directory', () => {
     const registry = buildPathRegistry()
-    const piRoot = path.join('/mock/userData', 'Data', 'Agents', '.pi')
 
-    expect(registry['feature.agents.pi.root']).toBe(piRoot)
-    expect(registry['feature.agents.pi.sessions']).toBe(path.join(piRoot, 'sessions'))
-    expect(registry['feature.agents.pi.vcc_file']).toBe(path.join('/mock/app', 'out', 'main', 'pi-vcc.mjs'))
-    expect(shouldAutoEnsure('feature.agents.pi.vcc_file')).toBe(false)
+    expect(registry['feature.agents.pi.legacy_sessions']).toBe(
+      path.join('/mock/userData', 'Data', 'Agents', '.pi', 'sessions')
+    )
+    expect(shouldAutoEnsure('feature.agents.pi.legacy_sessions')).toBe(false)
   })
 
   it('keeps the provider registry override under userData Runtime', () => {
@@ -255,11 +254,9 @@ describe('buildPathRegistry', () => {
     expect(registry['external.deepseek_harness.config']).toBe(path.join(os.homedir(), '.dsh'))
   })
 
-  it('registers standalone Pi settings as external data', () => {
-    expect(buildPathRegistry()['external.pi.settings_file']).toBe(
-      path.join(os.homedir(), '.pi', 'agent', 'settings.json')
-    )
-    expect(shouldAutoEnsure('external.pi.settings_file')).toBe(false)
+  it('registers the pi CLI session store as external data', () => {
+    expect(buildPathRegistry()['external.pi.sessions']).toBe(path.join(os.homedir(), '.pi', 'agent', 'sessions'))
+    expect(shouldAutoEnsure('external.pi.sessions')).toBe(false)
   })
 
   it('registers the platform-native default Hermes home as external data', () => {

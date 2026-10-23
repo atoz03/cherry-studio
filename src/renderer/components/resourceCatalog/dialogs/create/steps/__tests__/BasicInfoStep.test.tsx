@@ -121,25 +121,17 @@ describe('BasicInfoStep', () => {
     expect(screen.queryByText('library.config.agent.field.runtime.pi_hint')).not.toBeInTheDocument()
   })
 
-  it('uses smart approval when switching between Claude and Pi', async () => {
+  it('hides the permission mode for Pi and restores smart approval for Claude', async () => {
     const user = userEvent.setup()
     render(<Harness runtimeSelectable />)
-
-    expect(screen.getByLabelText('library.config.agent.field.permission_mode.label')).toHaveTextContent(
-      'agent.settings.tooling.permissionMode.auto.title'
-    )
 
     await user.click(screen.getByRole('radio', { name: /runtime.option.pi/ }))
 
     expect(screen.getByRole('radio', { name: /runtime.option.pi/ })).toBeChecked()
-    expect(screen.getByLabelText('library.config.agent.field.permission_mode.label')).toHaveTextContent(
-      'agent.settings.tooling.permissionMode.auto.title'
-    )
-    expect(screen.getByTestId('permission-mode')).toHaveTextContent('auto')
+    expect(screen.queryByLabelText('library.config.agent.field.permission_mode.label')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: /runtime.option.claude_code/ }))
 
-    expect(screen.getByRole('radio', { name: /runtime.option.claude_code/ })).toBeChecked()
     expect(screen.getByLabelText('library.config.agent.field.permission_mode.label')).toHaveTextContent(
       'agent.settings.tooling.permissionMode.auto.title'
     )

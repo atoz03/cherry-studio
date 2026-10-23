@@ -11,11 +11,7 @@ import { application } from '@application'
 import { aiUsageRecordTable } from '@data/db/schemas/aiUsageRecord'
 import { userModelTable } from '@data/db/schemas/userModel'
 import { userProviderTable } from '@data/db/schemas/userProvider'
-import { aiUsageRecordService } from '@data/services/AiUsageRecordService'
-import { modelService } from '@data/services/ModelService'
 import { providerService } from '@data/services/ProviderService'
-import { buildPiProviderInjection } from '@main/ai/runtime/pi/modelInjection'
-import { createAiUsageCaptureContext } from '@main/ai/utils/usageCapture'
 import { BaseService } from '@main/core/lifecycle/BaseService'
 import { ENDPOINT_TYPE, MODEL_CAPABILITY } from '@shared/data/types/model'
 import type { ProviderBilling } from '@shared/data/types/providerBilling'
@@ -102,40 +98,6 @@ describe('provider billing through AiService and the real SDK', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
-  })
-
-  it('uses frozen peak pricing for Pi while preserving trusted reported costs', () => {
-    vi.setSystemTime(new Date('2026-10-11T23:00:00+08:00'))
-    const injection = buildPiProviderInjection(
-      providerService.getByProviderId('billing-group'),
-      modelService.getByKey('billing-group', 'model'),
-      'test-only-key'
-    )
-    const capture = injection.usageCapture
-    if (capture.owner !== 'agent-sdk') throw new Error('Expected direct SDK capture')
-    providerService.update('billing-group', { providerSettings: { billing: { defaultMultiplier: 100 } } })
-    const context = createAiUsageCaptureContext({
-      providerId: capture.providerId,
-      modelId: capture.frozenModels[0].modelId,
-      pricingSnapshot: capture.frozenModels[0].pricingSnapshot,
-      trustProviderReportedCost: true,
-      reportedCostCurrency: 'USD'
-    })
-    for (const providerCost of [undefined, { amount: 0.7, currency: 'USD' as const }]) {
-      aiUsageRecordService.recordInvocation({
-        requestId: providerCost ? 'pi:reported' : 'pi:computed',
-        context,
-        modality: 'language',
-        usage: { inputTokens: 1000, outputTokens: 1000 },
-        providerCost,
-        completedAt: Date.now()
-      })
-    }
-    expect(dbh.db.select().from(aiUsageRecordTable).all()).toMatchObject([
-      { cost: 0.016, costSource: 'computed', pricingSnapshot: { billing: { reason: 'peak_fallback', multiplier: 2 } } },
-      { cost: 0.7, costSource: 'provider', costCurrency: 'USD' }
-    ])
-    expect(context.pricingSnapshot?.billing?.pricedAt).toBeUndefined()
   })
 
   it('keeps request-start prices across midnight and configuration changes', async () => {

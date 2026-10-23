@@ -59,7 +59,6 @@ import {
 } from '@shared/ai/claudecode/toolRegistry'
 import { COMPUTER_USE_TOOL_GROUP } from '@shared/ai/computerUseTools'
 import { AGENT_PROMPT } from '@shared/ai/prompts'
-import { LEGACY_DSH_TOOL_PREFIX } from '@shared/ai/retiredAgentRuntime'
 import type { UpdateAgentDto } from '@shared/data/api/schemas/agents'
 import type { AgentType } from '@shared/data/types/agent'
 import type { UniqueModelId } from '@shared/data/types/model'
@@ -350,7 +349,7 @@ function AgentEditDialogContent({
   const tabs = useMemo<EditDialogTab[]>(
     () => [
       { id: 'basic', label: t('library.config.dialogs.edit.basic_tab') },
-      { id: 'prompt', label: t('library.config.dialogs.edit.prompt_tab') },
+      ...(caps.instructions ? [{ id: 'prompt' as const, label: t('library.config.dialogs.edit.prompt_tab') }] : []),
       { id: 'prompts', label: t('settings.prompts.binding.tabTitle') },
       {
         id: 'tools',
@@ -368,7 +367,7 @@ function AgentEditDialogContent({
       },
       { id: 'advanced', label: t('library.config.dialogs.edit.advanced_tab') }
     ],
-    [caps.knowledgeBases, caps.mcp, caps.skills, t]
+    [caps.instructions, caps.knowledgeBases, caps.mcp, caps.skills, t]
   )
   const leafTabIds = useMemo(() => new Set(getLeafTabIds(tabs)), [tabs])
 
@@ -736,13 +735,15 @@ function AgentBasicFields({
           />
         </>
       ) : null}
-      <PermissionModeField
-        form={form}
-        portalContainer={portalContainer}
-        patchAgentForm={patchAgentForm}
-        permissionModeCards={getPermissionModeCards(agentType)}
-      />
-      <AgentLanguageOverrideField form={form} />
+      {caps.permissionModes.length > 0 ? (
+        <PermissionModeField
+          form={form}
+          portalContainer={portalContainer}
+          patchAgentForm={patchAgentForm}
+          permissionModeCards={getPermissionModeCards(agentType)}
+        />
+      ) : null}
+      {caps.instructions ? <AgentLanguageOverrideField form={form} /> : null}
       {caps.heartbeat ? (
         <div>
           <HeartbeatSettingsField
@@ -1125,7 +1126,6 @@ function AgentToolsFields({
   // so hide their toggles here when the agent has none — they would otherwise read as
   // "on" while doing nothing.
   const hasKnowledgeScope = knowledgeBaseIds.length > 0
-  const legacyRestrictions = disabledTools.filter((name) => name.startsWith(LEGACY_DSH_TOOL_PREFIX))
   const disabledSet = useMemo(() => new Set(disabledTools), [disabledTools])
   const builtinSections = useMemo(() => {
     const tools = caps
@@ -1234,30 +1234,6 @@ function AgentToolsFields({
       ) : null}
       {activeToolTab === 'tools.knowledge' ? (
         <KnowledgeBaseField form={form} portalContainer={portalContainer} />
-      ) : null}
-      {activeToolTab === 'tools.mcp' && legacyRestrictions.length > 0 ? (
-        <div className="grid gap-2">
-          <p className="text-muted-foreground text-xs">{t('library.config.tools.legacy_restrictions.description')}</p>
-          <ul className="grid gap-1 text-xs">
-            {legacyRestrictions.map((name) => (
-              <li key={name}>{name.slice(LEGACY_DSH_TOOL_PREFIX.length)}</li>
-            ))}
-          </ul>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="justify-self-start"
-            onClick={() =>
-              form.setValue(
-                'disabledTools',
-                disabledTools.filter((name) => !name.startsWith(LEGACY_DSH_TOOL_PREFIX)),
-                { shouldDirty: true }
-              )
-            }>
-            {t('library.config.tools.legacy_restrictions.remove')}
-          </Button>
-        </div>
       ) : null}
       {activeToolTab === 'tools.mcp' ? (
         <McpServerCatalogGrid

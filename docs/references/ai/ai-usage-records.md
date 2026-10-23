@@ -141,7 +141,7 @@ settings; Save applies them, Cancel discards edits, and Reset removes only
 | --- | --- |
 | Language calls and gateway agents | Each `doGenerate` / `doStream`. |
 | Embedding, SDK image and rerank | Each provider call, below SDK batching/retries. Rerank may still lack billable usage. |
-| Custom async images / direct Pi | Image submission / native `streamSimple` start. |
+| Custom async images | Image submission. |
 | Direct DSH / Claude Code / external CLI | Frozen connection prices, refreshed at reconciliation. Without a reliable start time, use the highest active daily multiplier and record `peak_fallback`; include the default only for uncovered time. |
 
 Missing required prices remain unpriced. Billing is stored in provider JSON and
@@ -396,7 +396,7 @@ serial.
 
 The connection carries `{ owner: 'agent-sdk', credentialReceipt, frozenModels }`.
 Every emitted invocation id is globally namespaced by its driver (`claude-agent:`
-`pi-agent:`; historical records can also use `dsh-agent:`) before it crosses the runtime contract; the host persists that id
+historical records can also use `pi-agent:` and `dsh-agent:`) before it crosses the runtime contract; the host persists that id
 verbatim for cross-runtime idempotency.
 
 Each Claude SDK assistant message supplies provider request id, actual nested
@@ -420,14 +420,9 @@ The driver commits pending usage before emitting a steer boundary, so the old
 provider call attaches to the pre-steer message and the next call attaches to
 the continuation.
 
-Pi records one invocation when each provider stream completes, including the
-streams used by compaction. Provider `responseId` is preferred; session id plus
-message timestamp/model is the stable fallback. Error/aborted responses do not
-create records, duplicate completed ids are ignored, and Pi's
-input/cache/reasoning buckets are preserved rather than re-derived from the
-message-level running total.
-
-Historical DSH invocation records remain available after runtime migration.
+Pi agents run the user's own pi CLI, which holds its own credentials and accounts
+for its own usage, so they create no usage records. Records from the former bundled
+Pi runtime and from DSH remain available.
 
 ### Gateway-backed Agent
 
@@ -527,6 +522,5 @@ global SWR focus/reconnect revalidation is disabled.
 | `src/main/ai/hooks/billingHook.ts` | Language middleware and operation coverage |
 | `packages/aiCore/src/core/runtime/` | Embedding/image/rerank provider-call events |
 | `src/main/ai/runtime/claudeCode/ClaudeCodeRuntimeDriver.ts` | Direct Agent SDK capture |
-| `src/main/ai/runtime/pi/PiRuntimeConnection.ts` | Pi provider-stream capture |
 | `src/main/data/migration/v2/migrators/AiUsageRecordMigrator.ts` | v1 aggregate migration |
 | `src/renderer/pages/settings/UsageSettings/` | Usage read model consumers |

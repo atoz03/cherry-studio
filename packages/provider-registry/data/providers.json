@@ -1054,6 +1054,19 @@
       "name": "Grok CLI"
     },
     {
+      "authMethods": ["external-cli"],
+      "availableInEditions": ["global", "cn"],
+      "description": "Pi - AI model provider",
+      "endpointConfigs": {},
+      "id": "pi",
+      "metadata": {
+        "website": {
+          "official": "https://pi.dev"
+        }
+      },
+      "name": "Pi"
+    },
+    {
       "authOptional": true,
       "availableInEditions": ["global", "cn"],
       "defaultChatEndpoint": "openai-responses",
@@ -2726,5 +2739,5 @@
       "presetProviderId": "minimax"
     }
   ],
-  "version": "1b44511badb438e6"
+  "version": "2dd99baed66e9055"
 }

@@ -46,22 +46,13 @@ describe('resource create DTO mapping', () => {
     })
   })
 
-  it('uses pi runtime defaults and omits unsupported model tiers', () => {
+  it('omits the fields a pi agent does not use', () => {
     expect(buildCreateAgentCommand({ ...values, agentType: 'pi', permissionMode: 'acceptEdits' })).toEqual({
       type: 'pi',
       name: 'Researcher',
       model: 'provider::model',
       description: 'Investigates a topic',
-      instructions: 'Use cited sources',
-      knowledgeBaseIds: ['kb-1'],
-      skillIds: ['skill-1'],
-      configuration: { avatar: '🤖', permission_mode: 'acceptEdits' }
+      configuration: { avatar: '🤖', permission_mode: 'default' }
     })
-  })
-
-  it('falls back to the runtime default when a stale mode is unsupported', () => {
-    expect(
-      buildCreateAgentCommand({ ...values, agentType: 'pi', permissionMode: 'plan' }).configuration?.permission_mode
-    ).toBe('auto')
   })
 })

@@ -4,14 +4,6 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 import { query, type McpSdkServerConfigWithInstance, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import { InMemoryCredentialStore } from '@earendil-works/pi-ai'
-import {
-  createAgentSession,
-  DefaultResourceLoader,
-  ModelRuntime,
-  SessionManager,
-  SettingsManager
-} from '@earendil-works/pi-coding-agent'
 import { serveMcpTestServer } from '@test-helpers/mcp/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
@@ -20,7 +12,6 @@ import { PromptBuilder } from '@main/ai/agents/prompt'
 import { createAgentMemoryServer } from '@main/ai/mcp/servers/agentMemory'
 
 import { createClaudeCodeIdentityHooks } from './claudeCode/identityHooks'
-import { createPiIdentityExtension } from './pi/identityExtension'
 
 type Request = { system: unknown; messages: unknown; model: string; stream?: boolean }
 
@@ -245,94 +236,5 @@ describe('Identity delivered by the native SDKs', () => {
     expect(lastMessages()).toContain('IDENTITY_SOUL_C')
     expect(lastMessages()).toContain('IDENTITY_USER_C')
     expect(lastMessages()).toContain('IDENTITY_FACT_C')
-  }, 30_000)
-
-  it('replaces the Pi system section, preserves it after compaction, and reloads on resume', async () => {
-    const settingsManager = SettingsManager.inMemory({
-      compaction: { enabled: false, keepRecentTokens: 1 },
-      retry: { enabled: false }
-    })
-    const modelRuntime = await ModelRuntime.create({
-      credentials: new InMemoryCredentialStore(),
-      modelsPath: null,
-      refreshOnCreate: false
-    })
-    modelRuntime.registerProvider('identity-test', {
-      api: 'anthropic-messages',
-      baseUrl,
-      apiKey: 'local-test-key',
-      models: [
-        {
-          id: 'test',
-          name: 'Test',
-          reasoning: false,
-          input: ['text'],
-          contextWindow: 100000,
-          maxTokens: 1024,
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
-        }
-      ]
-    })
-    const resourceLoader = new DefaultResourceLoader({
-      cwd: root,
-      agentDir: root,
-      settingsManager,
-      noExtensions: true,
-      noSkills: true,
-      noPromptTemplates: true,
-      noThemes: true,
-      noContextFiles: true,
-      extensionFactories: [createPiIdentityExtension(root)]
-    })
-    await resourceLoader.reload()
-    const sessionManager = SessionManager.create(root, path.join(root, 'sessions'))
-    const options = {
-      cwd: root,
-      agentDir: root,
-      modelRuntime,
-      model: modelRuntime.getModel('identity-test', 'test'),
-      settingsManager,
-      resourceLoader,
-      tools: []
-    }
-    const { session } = await createAgentSession({ ...options, sessionManager })
-    try {
-      await writeIdentity('A')
-      await session.prompt('first')
-      expect(lastSystem()).toContain('IDENTITY_SOUL_A')
-      await writeIdentity('B')
-      await session.prompt('changed')
-      for (const kind of ['SOUL', 'USER', 'FACT']) {
-        expect(lastSystem()).toContain(`IDENTITY_${kind}_B`)
-        expect(lastSystem()).not.toContain(`IDENTITY_${kind}_A`)
-      }
-      const countSystemEntries = () =>
-        sessionManager.getEntries().filter((e) => e.type === 'message' && e.message.role === 'system').length
-      const countBefore = countSystemEntries()
-      await session.prompt('unchanged')
-      expect(countSystemEntries()).toBe(countBefore)
-      await session.compact()
-      await session.prompt('after compact')
-      expect(lastSystem()).toContain('IDENTITY_SOUL_B')
-      await rm(path.join(root, 'SOUL.md'))
-      await rm(path.join(root, 'USER.md'))
-      await rm(path.join(root, 'memory', 'FACT.md'))
-      await session.prompt('after deletion')
-      expect(lastSystem()).not.toContain('IDENTITY_')
-      expect(lastSystem()).toContain('<soul>\\n\\n</soul>')
-    } finally {
-      session.dispose()
-    }
-    await writeIdentity('C')
-    const resumedManager = SessionManager.open(sessionManager.getSessionFile()!)
-    const { session: resumed } = await createAgentSession({ ...options, sessionManager: resumedManager })
-    try {
-      await resumed.prompt('after resume')
-      expect(lastSystem()).toContain('IDENTITY_SOUL_C')
-      expect(lastSystem()).toContain('IDENTITY_USER_C')
-      expect(lastSystem()).toContain('IDENTITY_FACT_C')
-    } finally {
-      resumed.dispose()
-    }
   }, 30_000)
 })

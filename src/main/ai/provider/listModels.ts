@@ -20,10 +20,12 @@ import {
 import * as z from 'zod'
 
 import { loggerService } from '@logger'
+import { listPiCliModels } from '@main/ai/runtime/pi/piCli'
 import { providerRegistryService } from '@main/data/services/ProviderRegistryService'
 import { providerService } from '@main/data/services/ProviderService'
 import { copilotService } from '@main/services/CopilotService'
 import { mergeHeaders } from '@main/utils/http'
+import { PI_DEFAULT_MODEL_ID, PI_PROVIDER_ID } from '@shared/data/presets/pi'
 import type { EndpointType, ListedModels, Model } from '@shared/data/types/model'
 import {
   createUniqueModelId,
@@ -1146,6 +1148,23 @@ export async function probeOllamaModel(
   return { latency: performance.now() - start }
 }
 
+/** The models the user configured in their pi CLI, named `provider/id` as pi selects them. */
+const piFetcher: ModelFetcher = {
+  match: (p) => matchesPreset(p, PI_PROVIDER_ID),
+  fetch: async (provider) =>
+    listing([
+      toModel(PI_DEFAULT_MODEL_ID, provider, { name: 'Pi default', group: provider.id }),
+      ...(await listPiCliModels()).map((model) =>
+        toModel(`${model.provider}/${model.id}`, provider, {
+          name: model.name || model.id,
+          group: model.provider,
+          contextWindow: model.contextWindow,
+          maxOutputTokens: model.maxTokens
+        })
+      )
+    ])
+}
+
 // ── Registry (order matters: first match wins) ──
 
 const fetchers: ModelFetcher[] = [
@@ -1156,6 +1175,7 @@ const fetchers: ModelFetcher[] = [
   geminiFetcher,
   vertexFetcher,
   copilotFetcher,
+  piFetcher,
   ovmsFetcher,
   comfyuiFetcher,
   togetherFetcher,

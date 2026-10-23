@@ -1,7 +1,9 @@
 import { caseDefinition } from '../../../scripts/e2e/regression/cases'
+import { PI_DEFAULT_MODEL_ID } from '../../../src/shared/data/presets/pi'
 import { createAgent, runAgentFileTask, selectAgentWorkspace, startBuiltinAssistantTask } from './agents'
+import { configureTool, openCodeTool } from './codeTools'
 import { expect, test } from './fixture'
-import { ensureCustomChatProvider, selectVisibleModel } from './models'
+import { CUSTOM_CHAT_PROVIDER, ensureCustomChatProvider, selectVisibleModel } from './models'
 import { dismissOnboarding, selectSidebarApp } from './navigation'
 import { closeSettings } from './settings'
 
@@ -36,15 +38,13 @@ test(...caseDefinition('A-03'), async ({ app, mainWindow: page }) => {
 
 test(...caseDefinition('A-04'), async ({ app, mainWindow: page }) => {
   test.setTimeout(15 * 60_000)
+  // Pi agents run the installed pi CLI, which uses the model configured for it in Code Mate.
   const model = await ensureAgentModel(app, page)
-  await createAgent(page, {
-    name: 'Pi Regression Agent',
-    permission: 'Ask Before Acting',
-    runtime: 'Pi',
-    model
-  })
+  await openCodeTool(page, 'Pi')
+  await configureTool(page, model, CUSTOM_CHAT_PROVIDER)
+  await createAgent(page, { name: 'Pi Regression Agent', runtime: 'Pi', model: PI_DEFAULT_MODEL_ID })
   await selectAgentWorkspace(app, page)
-  await runAgentFileTask(app, page, 'pi-agent-result.txt', true)
+  await runAgentFileTask(app, page, 'pi-agent-result.txt', false)
 })
 
 test(...caseDefinition('A-01'), async ({ app, mainWindow: page }) => {

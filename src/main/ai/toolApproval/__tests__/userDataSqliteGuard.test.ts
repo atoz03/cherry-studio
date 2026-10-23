@@ -19,13 +19,6 @@ const DENIAL = {
   reason: USER_DATA_SQLITE_GUARD_REASON
 } as const
 
-const PI_UNICODE_SPACE_CASES = [
-  0x00a0, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007, 0x2008, 0x2009, 0x200a, 0x202f, 0x205f, 0x3000
-].map(
-  (codePoint) =>
-    [`U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`, String.fromCodePoint(codePoint)] as const
-)
-
 let root: string
 let homePath: string
 let userDataPath: string
@@ -112,48 +105,20 @@ describe('evaluateUserDataSqliteGuard', () => {
       evaluate({ cwd: outsideWorkspace, workspacePath: outsideWorkspace, args: { file_path: outsideDatabase } })
     ).resolves.toBeUndefined()
     await expect(evaluate({ toolName: 'Read' })).resolves.toBeUndefined()
-    await expect(evaluate({ runtime: 'pi', toolName: 'read', args: { path: databaseFile } })).resolves.toBeUndefined()
   })
 
   it.each([
     ['claude-code', 'Write', 'file_path'],
     ['claude-code', 'Edit', 'file_path'],
     ['claude-code', 'MultiEdit', 'file_path'],
-    ['claude-code', 'NotebookEdit', 'notebook_path'],
-    ['pi', 'write', 'path'],
-    ['pi', 'edit', 'path']
+    ['claude-code', 'NotebookEdit', 'notebook_path']
   ] as const)('binds %s %s.%s to the same policy', async (runtime, toolName, field) => {
     await expect(evaluate({ runtime, toolName, args: { [field]: databaseFile } })).resolves.toEqual(DENIAL)
   })
 
-  it.each(['write', 'edit'] as const)('matches Pi %s handling of the @ path prefix', async (toolName) => {
-    await expect(evaluate({ runtime: 'pi', toolName, args: { path: `@${databaseFile}` } })).resolves.toEqual(DENIAL)
-
-    const localDatabase = path.join(workspacePath, 'artifact.sqlite')
-    await expect(evaluate({ runtime: 'pi', toolName, args: { path: `@${localDatabase}` } })).resolves.toBeUndefined()
-  })
-
-  it.each(PI_UNICODE_SPACE_CASES)('matches Pi handling of Unicode space %s', async (_name, unicodeSpace) => {
-    const protectedPath = databaseFile.replace('Application Support', `Application${unicodeSpace}Support`)
-    const localDirectory = path.join(workspacePath, 'artifact folder')
-    const localPath = path
-      .join(localDirectory, 'data.sqlite')
-      .replace('artifact folder', `artifact${unicodeSpace}folder`)
-    await mkdir(localDirectory, { recursive: true })
-
-    for (const toolName of ['write', 'edit'] as const) {
-      await expect(evaluate({ runtime: 'pi', toolName, args: { path: protectedPath } })).resolves.toEqual(DENIAL)
-      await expect(evaluate({ runtime: 'pi', toolName, args: { path: localPath } })).resolves.toBeUndefined()
-    }
-  })
-
-  it('does not apply Pi path spelling rules to other runtimes', async () => {
-    await expect(evaluate({ args: { file_path: `@${databaseFile}` } })).resolves.toBeUndefined()
-  })
-
   it('does not scan third-party MCP arguments', async () => {
     await expect(
-      evaluate({ runtime: 'pi', toolName: 'mcp__sqlite__execute', args: { path: databaseFile } })
+      evaluate({ toolName: 'mcp__sqlite__execute', args: { file_path: databaseFile } })
     ).resolves.toBeUndefined()
   })
 
@@ -202,10 +167,7 @@ describe('evaluateUserDataSqliteGuard', () => {
   })
 
   describe('literal shell scanning', () => {
-    it.each([
-      ['claude-code', 'Bash'],
-      ['pi', 'bash']
-    ] as const)('protects %s %s commands', async (runtime, toolName) => {
+    it.each([['claude-code', 'Bash']] as const)('protects %s %s commands', async (runtime, toolName) => {
       await expect(evaluate({ runtime, toolName, args: { command: `sqlite3 "${databaseFile}"` } })).resolves.toEqual(
         DENIAL
       )
@@ -224,7 +186,7 @@ describe('evaluateUserDataSqliteGuard', () => {
 
     it.each([
       ['claude-code', 'Bash', (target: string) => `python -c "import sqlite3; sqlite3.connect('${target}')"`],
-      ['pi', 'bash', (target: string) => `node -e "require('better-sqlite3')('${target}')"`]
+      ['claude-code', 'Bash', (target: string) => `node -e "require('better-sqlite3')('${target}')"`]
     ] as const)(
       'checks protected SQLite literals inside %s %s interpreter code',
       async (runtime, toolName, command) => {

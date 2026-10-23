@@ -13,6 +13,8 @@ import { createBuiltinSupportSession } from '@main/ai/agents/createBuiltinSuppor
 import { buildAgentSessionTopicId } from '@main/ai/agentSession/topic'
 import { findPersistedToolOutput } from '@main/ai/messages/persistedToolOutput'
 import { AgentSessionForkError } from '@main/ai/runtime/fork'
+import { importPiSession } from '@main/ai/runtime/pi/importPiSession'
+import { listPiSessions } from '@main/ai/runtime/pi/piSessionFiles'
 import { AiStreamAdmissionError, type MainDispatchRequest, WebContentsListener } from '@main/ai/streamManager'
 import { openRequestPath } from '@main/services/file'
 import { PathStaleVersionError } from '@main/utils/file'
@@ -192,6 +194,8 @@ export const aiHandlers: IpcHandlersFor<typeof aiRequestSchemas> = {
     exposeAgentSessionArchiveError(() => application.get('AgentLifecycleService').archiveAgentSessions(agentId)),
   'ai.agent.support_session.create': async () => ({ sessionId: createBuiltinSupportSession().id }),
   'ai.agent.skill_session.create': async ({ skillId }) => ({ sessionId: createBuiltinSkillSession(skillId).id }),
+  'ai.agent.pi_session.list': () => listPiSessions(),
+  'ai.agent.pi_session.import': async (input) => ({ sessionId: await importPiSession(input) }),
   // Warm-lease acquire: opens the live connection eagerly (not just a warm-query park) so the
   // session's slash-command catalog is read into the cache before the first message — the
   // warm-query handle can't expose it. Trace mode is no exception: the primed connection resolves

@@ -10,9 +10,9 @@ import { LegacyFileCleanupPolicySeeder } from './seeders/legacyFileCleanupPolicy
 import { LocalModelSeeder } from './seeders/LocalModelSeeder'
 import { LongTextPastePreferenceUpgradeSeeder } from './seeders/longTextPastePreferenceUpgradeSeeder'
 import { MiniAppSeeder } from './seeders/miniAppSeeder'
+import { PiDefaultModelSeeder } from './seeders/PiDefaultModelSeeder'
 import { PreferenceSeeder } from './seeders/preferenceSeeder'
 import { PresetProviderSeeder } from './seeders/presetProviderSeeder'
-import { RetiredAgentRuntimeSeeder } from './seeders/RetiredAgentRuntimeSeeder'
 import { SidebarShortcutMigrationSeeder } from './seeders/sidebarShortcutMigrationSeeder'
 import { TranslateLanguageSeeder } from './seeders/translateLanguageSeeder'
 import { WebSearchPreferenceUpgradeSeeder } from './seeders/WebSearchPreferenceUpgradeSeeder'
@@ -24,11 +24,11 @@ import { WebSearchPreferenceUpgradeSeeder } from './seeders/WebSearchPreferenceU
  * No changes to DbService needed.
  */
 export const seeders: ISeeder[] = [
-  new RetiredAgentRuntimeSeeder(),
   new KnowledgeBaseOrderSeeder(),
   new BrowserCapabilityUpgradeSeeder(),
   new LegacyFileCleanupPolicySeeder(),
   new PresetProviderSeeder(),
+  new PiDefaultModelSeeder(),
   new CherryAssistantSeeder(),
   new CherryAssistantInstructionsUpgradeSeeder(),
   new CherrySupportSeeder(),

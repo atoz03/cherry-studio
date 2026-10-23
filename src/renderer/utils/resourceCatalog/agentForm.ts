@@ -6,7 +6,6 @@ import {
   isHeartbeatEnabled,
   normalizeHeartbeatTimeoutMinutes
 } from '@shared/ai/agentHeartbeat'
-import { normalizePiDisabledToolId } from '@shared/ai/piBuiltinTools'
 import type { AgentSkillUpdateDto, UpdateAgentDto } from '@shared/data/api/schemas/agents'
 import type { AgentConfiguration } from '@shared/data/types/agent'
 import type { UniqueModelId } from '@shared/data/types/model'
@@ -108,9 +107,7 @@ export function buildInitialAgentFormState(agent?: AgentDetail | null, skillIds:
     mcps: [...(agent?.mcps ?? [])],
     knowledgeBaseIds: [...(agent?.knowledgeBaseIds ?? [])],
     skillIds: [...skillIds],
-    disabledTools: (agent?.disabledTools ?? []).map((name) =>
-      agent?.type === 'pi' ? normalizePiDisabledToolId(name) : name
-    ),
+    disabledTools: [...(agent?.disabledTools ?? [])],
     avatar: asString(cfg.avatar),
     permissionMode: asString(cfg.permission_mode),
     envVarsText: envVarsToText(cfg.env_vars),

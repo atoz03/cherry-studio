@@ -1,58 +1,19 @@
 import { randomUUID } from 'node:crypto'
-import { readFileSync } from 'node:fs'
-
-import type { AssistantMessage, AssistantMessageEvent } from '@earendil-works/pi-ai'
-import type {
-  AgentSession,
-  AgentSessionEvent,
-  CompactionResult,
-  ContextUsage,
-  ProviderConfig,
-  ToolDefinition
-} from '@earendil-works/pi-coding-agent'
-import { type Span, SpanKind, SpanStatusCode } from '@opentelemetry/api'
+import { setTimeout as delay } from 'node:timers/promises'
 
 import { application } from '@application'
+import { agentService } from '@data/services/AgentService'
+import { agentSessionService } from '@data/services/AgentSessionService'
 import { loggerService } from '@logger'
-import { ensureAgentDataDirectory } from '@main/ai/agents/agentDataDirectory'
-import { resolveAgentCapabilities, resolveMountedMcpServers } from '@main/ai/agents/builtin/builtinAgentCapabilities'
-import { endAgentRuntimeSpan, startAgentRuntimeChildSpan } from '@main/ai/observability'
-import { buildAgentMcpServers, warmAgentMcpToolCatalogs } from '@main/ai/runtime/agentMcpServers'
-import { buildAgentRuntimePrompt } from '@main/ai/runtime/agentPrompt'
-import { prepareAgentSessionWorkspaceDirectory } from '@main/ai/runtime/agentSessionWorkspace'
 import { buildAgentUserContent } from '@main/ai/runtime/agentUserContent'
-import { buildCitationsGuidance } from '@main/ai/runtime/citationsGuidance'
 import { wrapSteerReminder } from '@main/ai/steerReminder'
-import { CHERRY_MCP_SERVER, listBuiltinToolPolicies } from '@main/ai/toolApproval/builtinToolPolicy'
 import { toolApprovalRegistry } from '@main/ai/toolApproval/ToolApprovalRegistry'
-import { chatErrorContext } from '@main/ai/utils/chatErrorContext'
-import { customFetch } from '@main/ai/utils/customFetch'
-import { resolveKnowledgeBaseScope } from '@main/ai/utils/knowledgeScope'
-import { createAiUsageCaptureContext } from '@main/ai/utils/usageCapture'
-import { modelService } from '@main/data/services/ModelService'
-import { providerService } from '@main/data/services/ProviderService'
-import { CHERRY_NODE_PROXY_RULES_ENV, getProxyEnvironment, proxyUrlHasCredentials } from '@main/services/proxy/proxyEnv'
-import {
-  getBinarySearchDirs,
-  getBinaryShimsDir,
-  mergeBinaryExecutionEnv,
-  mergePathSuffixes
-} from '@main/utils/binaryEnv'
-import { autoDiscoverGitBash, validateGitBashPath } from '@main/utils/commandResolver'
-import { getPathFromEnvironment, getShellEnv } from '@main/utils/shellEnv'
+import { t } from '@main/i18n'
 import type { AgentSessionCompactionAnchorData, AgentSessionCompactionTrigger } from '@shared/ai/agentSessionCompaction'
 import type { AgentSessionContextUsage } from '@shared/ai/agentSessionContextUsage'
-import {
-  KB_READ_TOOL_NAME,
-  KB_SEARCH_TOOL_NAME,
-  WEB_FETCH_TOOL_NAME,
-  WEB_SEARCH_TOOL_NAME
-} from '@shared/ai/builtinTools'
-import { normalizePiDisabledToolId } from '@shared/ai/piBuiltinTools'
-import { LEGACY_DSH_TOOL_PREFIX } from '@shared/ai/retiredAgentRuntime'
-import { buildFunctionCallToolName } from '@shared/ai/tools/mcpToolName'
-import type { AgentPermissionMode } from '@shared/data/api/schemas/agents'
-import type { AiUsagePricingSnapshot } from '@shared/data/types/aiUsageRecord'
+import type { AgentSessionSlashCommand } from '@shared/ai/agentSessionSlashCommands'
+import { PI_BUILTIN_TOOL_NAMES } from '@shared/ai/piBuiltinTools'
+import { PI_DEFAULT_MODEL_ID, PI_PROVIDER_ID } from '@shared/data/presets/pi'
 import { parseUniqueModelId, type UniqueModelId } from '@shared/data/types/model'
 
 import { AsyncEventQueue } from '../AsyncEventQueue'
@@ -61,1040 +22,552 @@ import type {
   AgentRuntimeConnection,
   AgentRuntimeEvent,
   AgentRuntimeReconcileResult,
-  AgentRuntimeTraceContext,
-  AgentRuntimeUserInput,
-  AgentSessionUsageCapture
+  AgentRuntimeUserInput
 } from '../types'
-import { createPiApprovalExtension } from './approvalExtension'
 import { PiForkCheckpointSchema } from './forkCheckpoint'
-import { createPiIdentityExtension } from './identityExtension'
-import { legacyDisabledToolId, assertLegacyDisabledToolsResolved } from './legacyToolPolicy'
+import { resolvePiLaunch } from './piCli'
 import {
-  materializePiProviderStream,
-  type PiProviderInjection,
-  resolvePiProviderInjectionForSession,
-  usesPiGateway
-} from './modelInjection'
-import {
-  capturePiConnectionSnapshot,
-  type PiConnectionSnapshot,
-  PiInvalidConnectionSnapshotError
-} from './piConnectionSignature'
-import { buildPiMcpToolName, createPiMcpExtension } from './piMcpExtension'
-import { loadPiAi, loadPiSdk, loadPiVccExtension } from './piSdk'
-import { resolveResumeTokenSessionFile } from './piSessionFile'
-import { PiStreamAdapter, resolvePiMcpToolMetadata } from './piStreamAdapter'
-import { createPiProviderExtension } from './providerExtension'
+  buildPiDialogQuestion,
+  buildPiDialogResponse,
+  type PiDialogLabels,
+  type PiDialogRequest,
+  parsePiDialogRequest
+} from './piExtensionUi'
+import { markPiSessionSynced, syncPiSessionHistory } from './piHistorySync'
+import { PiRpcClient, type PiRpcRecord } from './piRpcClient'
+import { adoptLegacyPiSession, piSessionFileSize, readPiSessionTail } from './piSessionFiles'
+import { type PiContentEvent, PI_TRANSPORT, PiStreamAdapter } from './piStreamAdapter'
 
 const logger = loggerService.withContext('PiRuntimeConnection')
 
-function quoteShellWord(value: string): string {
-  return `'${value.replaceAll("'", `'"'"'`)}'`
+const ASK_USER_QUESTION_TOOL = 'AskUserQuestion'
+
+interface PiModelSelection {
+  provider: string
+  modelId: string
 }
 
-/** Preserve pi's own PATH prefix while appending directories resolved by the user's login shell. */
-export function buildPiLoginPathPrefix(
-  loginPath: string | undefined,
-  platform: NodeJS.Platform = process.platform
-): string | undefined {
-  return platform !== 'win32' && loginPath ? `export PATH="$PATH":${quoteShellWord(loginPath)}` : undefined
+/** A Pi-provider model names pi's `provider/id`; the default model or any other provider leaves the choice to pi. */
+export function resolvePiModelSelection(uniqueModelId: UniqueModelId): PiModelSelection | undefined {
+  const { providerId, modelId } = parseUniqueModelId(uniqueModelId)
+  if (providerId !== PI_PROVIDER_ID || modelId === PI_DEFAULT_MODEL_ID) return undefined
+  const separator = modelId.indexOf('/')
+  return separator > 0 ? { provider: modelId.slice(0, separator), modelId: modelId.slice(separator + 1) } : undefined
 }
 
-/** Read the one field Cherry honors from the user's global pi settings; absent or malformed means unset. */
-function readPiShellPathSetting(): string | undefined {
-  try {
-    const settings: unknown = JSON.parse(readFileSync(application.getPath('external.pi.settings_file'), 'utf8'))
-    const shellPath = (settings as Record<string, unknown> | null)?.shellPath
-    return typeof shellPath === 'string' && shellPath.trim() ? shellPath.trim() : undefined
-  } catch {
-    return undefined
+/** Agent settings pi starts with. Disabled names other than pi built-ins (e.g. from an older runtime) are dropped. */
+function piSpawnOptions(agentId: string) {
+  const agent = agentService.getAgent(agentId)
+  if (!agent) return undefined
+  return {
+    excludedTools: (agent.disabledTools ?? []).filter((name) => PI_BUILTIN_TOOL_NAMES.has(name)).sort(),
+    envVars: agent.configuration?.env_vars ?? {}
   }
 }
 
-function resolvePiShellPath(): string | undefined {
-  if (process.platform !== 'win32') return undefined
-  const configured = readPiShellPathSetting()
-  if (!configured) return autoDiscoverGitBash() ?? undefined
-
-  const shellPath = validateGitBashPath(configured)
-  if (!shellPath) throw new Error(`Configured Pi shellPath is unavailable or is not bash.exe: ${configured}`)
-  return shellPath
+/** Facts fixed when pi starts; a change makes the host rebuild the connection. */
+function spawnSignature(agentId: string, modelId: UniqueModelId): string | undefined {
+  const options = piSpawnOptions(agentId)
+  return options && JSON.stringify([resolvePiModelSelection(modelId) ?? null, options])
 }
 
-function mergePiBashExecutionEnv(env: NodeJS.ProcessEnv): Record<string, string> {
-  const definedEnv = Object.fromEntries(
-    Object.entries(env).filter((entry): entry is [string, string] => entry[1] !== undefined)
-  )
-  const binarySearchDirs = getBinarySearchDirs()
-  const managedShimsDir = getBinaryShimsDir()
-  const standaloneBinaryDirs = binarySearchDirs.filter((directory) => directory !== managedShimsDir)
-  const callerOwnsMiseEnvironment = Object.keys(definedEnv).some((key) => key.toUpperCase().startsWith('MISE_'))
-
-  if (callerOwnsMiseEnvironment) {
-    // A generic shell may already be activated against the user's mise installation. Do not
-    // redirect that installation to Cherry's isolated data directory or expose Cherry's shims
-    // under an incompatible MISE_* contract. Bundled standalone binaries remain a safe fallback,
-    // but stay behind the caller's PATH so they cannot replace the user's own tool versions.
-    return mergePathSuffixes(definedEnv, standaloneBinaryDirs, [managedShimsDir])
-  }
-
-  return mergeBinaryExecutionEnv(definedEnv, standaloneBinaryDirs)
+interface PiStateData {
+  sessionFile?: string
+  steeringMode?: string
+  model?: { provider?: string; id?: string }
 }
 
-interface PendingSteer {
-  input: AgentRuntimeUserInput
+interface PendingDialog {
+  client: PiRpcClient
+  request: PiDialogRequest
 }
 
+/**
+ * One Cherry agent session served by the user's `pi --mode rpc`. pi starts on the first message and
+ * keeps running until the host closes the connection; the session file is the user's own pi session,
+ * so turns added from a terminal are imported before Cherry continues it.
+ */
 export class PiRuntimeConnection implements AgentRuntimeConnection {
-  private readonly generation = randomUUID()
   private readonly eventQueue = new AsyncEventQueue<AgentRuntimeEvent>()
-  private readonly committedInvocationIds = new Set<string>()
-  private readonly providerSpans = new Set<Span>()
-  private readonly toolSpans = new Map<string, Span>()
-  private readonly adapter = new PiStreamAdapter(
-    { enqueue: (chunk) => this.eventQueue.push({ type: 'chunk', chunk }) },
-    (name) => this.resolveMcpToolMetadata(name)
-  )
-  private mcpServerSnapshots: PiConnectionSnapshot['mcpServerSnapshots'] = new Map()
-  private session?: AgentSession
-  private unsubscribe?: () => void
-  private resumeToken?: string
+  private readonly adapter = new PiStreamAdapter({ enqueue: (chunk) => this.eventQueue.push({ type: 'chunk', chunk }) })
+  private readonly piSessionId: string
+  private readonly signature: string | undefined
+  private client?: PiRpcClient
+  private starting?: Promise<PiRpcClient>
+  private sessionFile?: string
+  /** File size after pi's last settled run; any other size means something else wrote to it. */
+  private knownSize?: number
+  private steeringMode = 'one-at-a-time'
+  private runActive = false
+  private autonomousRun = false
+  private manualCompactInFlight = false
+  private resumeTokenEmitted: boolean
   private lastStopReason?: string
   private lastAgentError?: string
+  private readonly pendingSteers: AgentRuntimeUserInput[] = []
+  private readonly pendingDialogs = new Map<string, PendingDialog>()
+  private commands?: AgentSessionSlashCommand[]
   private closed = false
-  /** Injected model id (pi `apiModelId`), stamped on context-usage so the renderer's
-   *  per-model usage filter matches the composer's model candidates. */
-  private modelId = ''
-  /** Live tool policy read by the approval extension at fire-time (plan D4). */
-  private permissionMode: AgentPermissionMode = 'default'
-  private disabledTools = new Set<string>()
-  /** Spawn-frozen agent/model facts, excluding the live permission gate. */
-  private connectionSignature?: string
-  /** Serializes push/pull reconciles so snapshot reads and live policy writes cannot land out of order. */
-  private reconcileChain: Promise<unknown> = Promise.resolve()
-  private traceContext?: AgentRuntimeTraceContext
-  private _usageCapture?: AgentSessionUsageCapture
-  private promptRunActive = false
-  /** Manual compact is a Cherry user turn, but pi only emits compaction events for `compact()` —
-   *  no `agent_end`. This flag lets that path close exactly one host turn without making auto-compacts terminal. */
-  private manualCompactInFlight = false
-  /** Steers accepted by pi but not yet observed as delivered. pi emits the delivery boundary as a
-   *  user `message_start`; default steering mode is one-at-a-time, so the delivery drain is mode-aware. */
-  private readonly pendingSteers: PendingSteer[] = []
 
   readonly events = this.eventQueue
 
-  get usageCapture(): AgentSessionUsageCapture | undefined {
-    return this._usageCapture
+  constructor(
+    private readonly input: AgentRuntimeConnectInput,
+    private readonly workspacePath: string
+  ) {
+    this.piSessionId = input.resumeToken ?? input.nativeSessionId ?? input.sessionId
+    this.resumeTokenEmitted = input.resumeToken === this.piSessionId
+    this.signature = spawnSignature(input.agentId, input.modelId)
   }
 
-  constructor(private readonly input: AgentRuntimeConnectInput) {
-    this.resumeToken = input.resumeToken
-    this.traceContext = input.trace
-  }
-
+  /** Cheap by design: opening a session view connects, but only a message starts pi. */
   async start(): Promise<this> {
-    const resolveInjection = (snapshot: PiConnectionSnapshot): Promise<PiProviderInjection> =>
-      resolvePiProviderInjectionForSession(
-        this.input.sessionId,
-        snapshot.provider,
-        snapshot.model,
-        snapshot.enabledApiKeys
-      )
-
-    // Warm the catalog before the authoritative snapshot so a cold cache does not look like a
-    // configuration change halfway through materialization. A concurrent agent edit is caught by
-    // the final snapshot check below.
-    const discoverySnapshot = await capturePiConnectionSnapshot(
-      this.input.sessionId,
-      this.input.agentId,
-      this.input.modelId,
-      this.input.knowledgeBaseIds
-    )
-    // Gateway startup and first-key creation change its fingerprint, so settle them before the
-    // authoritative snapshot. The actual injection is resolved again from that snapshot below.
-    if (usesPiGateway(discoverySnapshot.provider, discoverySnapshot.model)) {
-      await resolveInjection(discoverySnapshot)
-    }
-    await warmAgentMcpToolCatalogs(discoverySnapshot.agent.mcps ?? [])
-    const initialSnapshot = await capturePiConnectionSnapshot(
-      this.input.sessionId,
-      this.input.agentId,
-      this.input.modelId,
-      this.input.knowledgeBaseIds
-    )
-    const { agent, session } = initialSnapshot
-    const workspacePath = session?.workspace?.path
-    if (!session?.agentId || !workspacePath) {
-      throw new Error(`pi agent session ${this.input.sessionId} has no agent or workspace configured`)
-    }
-
-    await prepareAgentSessionWorkspaceDirectory(session)
-
-    // pi has no native permission modes; the approval extension enforces them.
-    // `plan` is unsupported for pi (deferred) — it falls through to gate-all.
-    this.permissionMode = agent.configuration?.permission_mode ?? 'default'
-    this.mcpServerSnapshots = initialSnapshot.mcpServerSnapshots
-    this.disabledTools = normalizeDisabledTools(agent.disabledTools, initialSnapshot)
-    const injection = await resolveInjection(initialSnapshot)
-    this.modelId = injection.modelId
-    this._usageCapture = injection.usageCapture
-
-    const agentDir = application.getPath('feature.agents.pi.root')
-    const sessionDir = application.getPath('feature.agents.pi.sessions')
-    const pi = await loadPiSdk()
-
-    const materializedProvider = await materializePiProviderStream(injection)
-    const providerConfig = withPiInvocationCapture(
-      materializedProvider.providerConfig,
-      withPiRequestEnvironment(materializedProvider.streamSimple, injection.requestEnvironment),
-      (message, metrics, pricingSnapshot) => this.recordProviderInvocation(message, metrics, pricingSnapshot),
-      (model) => this.startProviderSpan(model),
-      (model) => this.captureInvocationPricing(model.id)
-    )
-
-    // Cherry owns the credential + model registry: in-memory only, never pi's
-    // global auth.json/models.json. The real key is a runtime override; the
-    // registered provider config carries only the placeholder (plan D1).
-    const runtimeProviderName = `${injection.providerName}:${this.input.sessionId}:${this.generation}`
-    const runtimeApi = `cherry-${this.input.sessionId}-${this.generation}-${injection.api}`
-    const isolatedProviderConfig: ProviderConfig = {
-      ...providerConfig,
-      api: runtimeApi,
-      models: providerConfig.models?.map((model) => ({ ...model, api: runtimeApi }))
-    }
-    const { InMemoryCredentialStore } = await loadPiAi()
-    const modelRuntime = await pi.ModelRuntime.create({
-      credentials: new InMemoryCredentialStore(),
-      modelsPath: null,
-      refreshOnCreate: false
+    await adoptLegacyPiSession(this.workspacePath, this.piSessionId)
+    await syncPiSessionHistory({
+      sessionId: this.input.sessionId,
+      cwd: this.workspacePath,
+      piSessionId: this.piSessionId
     })
-    modelRuntime.registerProvider(runtimeProviderName, isolatedProviderConfig)
-    await modelRuntime.setRuntimeApiKey(runtimeProviderName, injection.apiKey)
-    try {
-      const model = modelRuntime.getModel(runtimeProviderName, injection.modelId)
-      if (!model)
-        throw new Error(`pi model ${runtimeProviderName}/${injection.modelId} could not be resolved after injection`)
-
-      // The workspace is always trusted: the user picked it by hand in Cherry, so there is
-      // no separate "do you trust this project?" prompt. What actually loads from it is
-      // still governed by the explicit `no*` flags below.
-      const shellPath = resolvePiShellPath()
-      const settingsManager = pi.SettingsManager.inMemory(
-        {
-          ...(shellPath ? { shellPath } : {}),
-          defaultTools: ['read', 'bash', 'edit', 'write', '+codemode', '+tool_search']
-        },
-        { projectTrusted: true }
-      )
-      const loginPathPrefix = buildPiLoginPathPrefix(getPathFromEnvironment(await getShellEnv()))
-      if (loginPathPrefix) settingsManager.setShellCommandPrefix(loginPathPrefix)
-
-      // The agent's ENABLED Cherry-managed skills, resolved to absolute on-disk dirs
-      // from the same store the claude driver reads. These are injected explicitly
-      // via `additionalSkillPaths` below; disk auto-discovery stays off (see comment).
-      const additionalSkillPaths = [...initialSnapshot.additionalSkillPaths]
-
-      const agentDataPath = await ensureAgentDataDirectory(application.getPath('feature.agents.data'), agent.id)
-      const linkedChannel = initialSnapshot.linkedChannel
-      const knowledgeBaseScope = resolveKnowledgeBaseScope(agent.knowledgeBaseIds, this.input.knowledgeBaseIds)
-      const isToolEnabled = (serverName: string, toolName: string) =>
-        !this.disabledTools.has(buildPiMcpToolName(serverName, toolName))
-      const citationsGuidance = buildCitationsGuidance({
-        web: isToolEnabled('cherry-tools', WEB_SEARCH_TOOL_NAME) || isToolEnabled('cherry-tools', WEB_FETCH_TOOL_NAME),
-        kb:
-          (resolveAgentCapabilities(agent).allKnowledgeBases || knowledgeBaseScope.length > 0) &&
-          (isToolEnabled('cherry-tools', KB_SEARCH_TOOL_NAME) || isToolEnabled('cherry-tools', KB_READ_TOOL_NAME))
-      })
-      const prompt = await buildAgentRuntimePrompt({
-        workspacePath,
-        agentDataPath,
-        agent,
-        citationsGuidance,
-        effectiveLanguage: initialSnapshot.effectiveLanguage
-      })
-      const mountedServers = resolveMountedMcpServers(agent, {
-        browserEnabled: application.get('PreferenceService').get('app.browser.agent_control.enabled'),
-        computerUseEnabled: application.get('PreferenceService').get('app.computer_use.agent_control.enabled'),
-        channelLinked: linkedChannel !== null
-      })
-      const mountedPolicies = listBuiltinToolPolicies({ mountedServers })
-      const approvalContext = {
-        sessionId: this.input.sessionId,
-        workspacePath,
-        agentDataPath,
-        emit: (event: AgentRuntimeEvent) => this.eventQueue.push(event),
-        getInteractionState: () =>
-          application.get('AgentSessionRuntimeService').getInteractionState(this.input.sessionId),
-        getPermissionMode: () => this.permissionMode,
-        isDisabled: (toolName: string) => this.isToolDisabled(toolName),
-        additionalReadOnlyRoots: additionalSkillPaths,
-        // Approval follows the mounted server set; disabledTools still blocks at fire-time.
-        autoApprovedTools: new Set(
-          mountedPolicies
-            .filter(({ approval }) => approval === 'auto')
-            .map(({ serverName, toolName }) => buildPiMcpToolName(serverName, toolName))
-        ),
-        approvalRequiredTools: new Set(
-          mountedPolicies
-            .filter(({ approval }) => approval === 'required')
-            .map(({ serverName, toolName }) => buildPiMcpToolName(serverName, toolName))
-        ),
-        nonBypassableApprovalTools: new Set(
-          mountedPolicies
-            .filter(({ approval, bypassApproval }) => approval === 'required' && bypassApproval === 'enforce')
-            .map(({ serverName, toolName }) => buildPiMcpToolName(serverName, toolName))
-        )
-      }
-      const mcpServers = buildAgentMcpServers(
-        session,
-        agent,
-        mountedServers,
-        initialSnapshot.mcpServerSnapshots,
-        linkedChannel,
-        agentDataPath,
-        this.input.knowledgeBaseIds
-      )
-      const resourceLoader = new pi.DefaultResourceLoader({
-        cwd: workspacePath,
-        agentDir,
-        settingsManager,
-        // Provider injection re-applies across reloads (plan D1); the approval/policy
-        // gate enforces disabledTools/global-install/rtk/approval per turn (plan D4).
-        // The workspace is trusted (user-selected), so its AGENTS.md/CLAUDE.md context
-        // files load — parity with the claude driver's `project` setting source. Other
-        // disk auto-discovery stays off: extensions are arbitrary JS running inside
-        // Cherry's main process (a different trust class than workspace text), and
-        // skills/prompt-templates/themes are Cherry-managed — the agent's enabled
-        // skills are injected explicitly via `additionalSkillPaths`, which loads even
-        // under `noSkills` because the paths are Cherry-owned, not discovered.
-        noExtensions: true,
-        noSkills: true,
-        noPromptTemplates: true,
-        noThemes: true,
-        noContextFiles: false,
-        additionalSkillPaths,
-        extensionFactories: [
-          createPiProviderExtension(runtimeProviderName, isolatedProviderConfig),
-          createPiApprovalExtension(approvalContext),
-          createPiIdentityExtension(agentDataPath),
-          pi.createCodemodeExtension({ models: false }),
-          pi.createToolSearchExtension(),
-          createPiMcpExtension(pi, mcpServers, application.getPath('feature.agents.pi.root', 'mcp.log')),
-          await loadPiVccExtension(application.getPath('feature.agents.pi.root', 'pi-vcc-config.json'))
-        ],
-        // Suppress pi's disk-discovered SYSTEM.md / APPEND_SYSTEM.md before the
-        // override runs; Cherry owns the agent persona.
-        systemPromptOverride: () => (prompt.base.kind === 'custom' ? prompt.base.content : undefined),
-        appendSystemPromptOverride: () => (prompt.append ? [prompt.append] : [])
-      })
-      await resourceLoader.reload()
-
-      const sessionManager = this.resolveSessionManager(pi, workspacePath, sessionDir)
-
-      // Replace pi's built-in bash with its SDK definition plus a spawn hook that preserves pi's
-      // agent-bin PATH and safely layers the applicable Cherry-managed binary contract.
-      const managedBashTool = pi.createBashToolDefinition(workspacePath, {
-        commandPrefix: loginPathPrefix,
-        shellPath,
-        spawnHook: (context) => ({
-          ...context,
-          env: mergePiBashExecutionEnv(context.env)
-        })
-      }) as ToolDefinition
-      const finalSnapshot = await capturePiConnectionSnapshot(
-        this.input.sessionId,
-        this.input.agentId,
-        this.input.modelId,
-        this.input.knowledgeBaseIds
-      )
-      if (finalSnapshot.signature !== initialSnapshot.signature) {
-        throw new Error(`Pi connection materialization changed during startup: ${this.input.sessionId}`)
-      }
-      this.connectionSignature = initialSnapshot.signature
-
-      const created = await pi.createAgentSession({
-        cwd: workspacePath,
-        agentDir,
-        modelRuntime,
-        settingsManager,
-        sessionManager,
-        resourceLoader,
-        model,
-        customTools: [managedBashTool],
-        // Bake disabled tools out of built-in and custom tool sets; the approval gate also blocks
-        // them live so a mid-session disable is enforced.
-        ...(this.disabledTools.size > 0 ? { excludeTools: [...this.disabledTools] } : {})
-      })
-      const piSession = created.session
-
-      this.session = piSession
-      await piSession.bindExtensions({})
-      this.unsubscribe = piSession.subscribe((event) => this.handlePiEvent(event))
-      this.maybeEmitResumeToken()
-      return this
-    } catch (error) {
-      const cleanup = await Promise.allSettled([
-        this.session?.extensionRunner.emit({ type: 'session_shutdown', reason: 'quit' })
-      ])
-      this.session?.dispose()
-      this.session = undefined
-      for (const result of cleanup) {
-        if (result.status === 'rejected') logger.warn('Pi startup cleanup failed', { error: result.reason })
-      }
-      throw error
-    }
-  }
-
-  private resolveMcpToolMetadata(name: string) {
-    return resolvePiMcpToolMetadata(this.session?.getToolDefinition(name), this.mcpServerSnapshots)
-  }
-
-  private isToolDisabled(name: string): boolean {
-    if (this.disabledTools.has(name)) return true
-    const tool = this.resolveMcpToolMetadata(name)
-    return (
-      tool !== undefined &&
-      (this.disabledTools.has(buildFunctionCallToolName(tool.serverName, tool.name)) ||
-        this.disabledTools.has(`mcp__${tool.serverId}__${tool.name}`))
-    )
-  }
-
-  /** Pi allocates session IDs before lazily flushing history, so an unflushed ID can still initialize. */
-  private resolveSessionManager(pi: Awaited<ReturnType<typeof loadPiSdk>>, workspacePath: string, sessionDir: string) {
-    if (this.resumeToken) {
-      const file = resolveResumeTokenSessionFile(this.resumeToken, sessionDir)
-      if (file) return pi.SessionManager.open(file, sessionDir, workspacePath)
-      if (this.input.nativeSessionId) throw new Error('Edited native session history is missing')
-    }
-    return pi.SessionManager.create(workspacePath, sessionDir, {
-      id: this.resumeToken ?? this.input.nativeSessionId ?? this.input.sessionId
-    })
+    return this
   }
 
   send(input: AgentRuntimeUserInput): void {
-    const session = this.session
-    if (!session) {
-      this.eventQueue.push({ type: 'error', error: new Error('pi session is not started') })
-      return
-    }
-    const rawContent = buildAgentUserContent(input.message)
+    void this.sendTurn(input)
+  }
 
-    // A `systemReminder` message is a steer the host re-queued as its own turn (an undelivered steer
-    // or a mid-turn-queued message). It must reach pi wrapped as a redirect (invariant 7, mirroring
-    // the claude driver) and is never a manual `/compact` command — so skip the compact parse and
-    // only wrapped, non-reminder text is considered for `/compact`.
-    const manualCompact = input.systemReminder ? undefined : parseManualCompactCommand(rawContent)
-    if (manualCompact) {
-      this.manualCompactInFlight = true
-      void session.compact(manualCompact.instructions || undefined).then(
-        // compaction_end normally settles the turn first (events fire before resolve); this
-        // settles the no-op case where pi resolves without emitting any compaction event.
-        () => this.maybeCompleteManualCompactTurn(),
-        (error) => {
-          // pi always emits compaction_end (which already settled the turn and cleared the flag)
-          // before rejecting, so this is normally a no-op. Only settle here defensively if the flag
-          // is somehow still set (compaction_end never arrived) — never push a second terminal.
-          if (!this.manualCompactInFlight) return
-          this.manualCompactInFlight = false
-          if (this.closed) return
-          logger.error('pi compact failed', error as Error)
-          this.eventQueue.push({ type: 'error', error })
-        }
-      )
-      return
+  private async sendTurn(input: AgentRuntimeUserInput): Promise<void> {
+    const raw = buildAgentUserContent(input.message)
+    const manualCompact = input.systemReminder ? undefined : parseManualCompactCommand(raw)
+    if (manualCompact) this.manualCompactInFlight = true
+    else this.runActive = true
+    try {
+      const client = await this.ensureClient()
+      this.emitResumeToken()
+      if (manualCompact) {
+        await client.request({ type: 'compact', customInstructions: manualCompact.instructions || undefined })
+        // compaction_end normally settles the turn first; this covers a compact pi skipped.
+        this.completeManualCompact()
+        return
+      }
+      const message = input.systemReminder ? wrapSteerReminder(raw) : raw
+      // A run an extension started on its own is still streaming; pi rejects a bare prompt then.
+      const result = await client.request<{ disposition?: string }>({
+        type: 'prompt',
+        message,
+        ...(this.autonomousRun ? { streamingBehavior: 'followUp' } : {})
+      })
+      // An extension command consumed the prompt without starting a run.
+      if (result?.disposition === 'handled') await this.finishRun()
+    } catch (error) {
+      if (this.closed) return
+      if (!this.runActive && !this.manualCompactInFlight) return
+      this.runActive = false
+      this.manualCompactInFlight = false
+      logger.error('pi prompt failed', error as Error)
+      this.eventQueue.push({ type: 'error', error })
     }
-
-    // Native steer lives in redirect() (plan D6); send() starts normal turns. pi only exposes
-    // `/compact` as an SDK method; other Claude CLI commands stay Claude-only slash text.
-    // `followUp` is a defensive guard in case a message arrives while a turn is still winding down.
-    const content = input.systemReminder ? wrapSteerReminder(rawContent) : rawContent
-    const options = session.isStreaming ? ({ streamingBehavior: 'followUp' } as const) : undefined
-    this.promptRunActive = true
-    void session.prompt(content, options).then(
-      () => this.finishPromptRun(),
-      (error) => this.finishPromptRun(error)
-    )
   }
 
   redirect(input: AgentRuntimeUserInput): boolean {
-    const session = this.session
-    if (!session?.isStreaming) return false
-
-    // buildAgentUserContent intentionally flattens attachments to filenames and absolute paths for
-    // filesystem agents; pi's native image channel stays unused until Cherry models multimodal agent
-    // attachments end-to-end.
-    const wrappedText = wrapSteerReminder(buildAgentUserContent(input.message))
-    const pending: PendingSteer = { input }
-    this.pendingSteers.push(pending)
-    void session.steer(wrappedText).catch((error) => {
-      this.removePendingSteer(pending)
-      if (this.closed) return
-      logger.error('pi steer failed', error as Error)
-      this.eventQueue.push({ type: 'error', error })
-    })
+    const client = this.client
+    if (!client?.running || !this.runActive) return false
+    this.pendingSteers.push(input)
+    client
+      .request({ type: 'steer', message: wrapSteerReminder(buildAgentUserContent(input.message)) })
+      .catch((error) => {
+        const index = this.pendingSteers.indexOf(input)
+        if (index !== -1) this.pendingSteers.splice(index, 1)
+        if (this.closed) return
+        logger.error('pi steer failed', error as Error)
+        this.eventQueue.push({ type: 'error', error })
+      })
     return true
   }
 
-  refreshTraceContext(context: AgentRuntimeTraceContext): void {
-    this.traceContext = context
-  }
-
-  /**
-   * Reconcile Pi against the current agent snapshot. Disabled tools tighten immediately;
-   * permission-mode changes wait for an idle boundary. Any spawn-frozen difference is
-   * rebuilt by the host at the next safe boundary.
-   */
-  async reconcile(input: {
-    modelId: UniqueModelId
-    knowledgeBaseIds?: readonly string[]
-  }): Promise<AgentRuntimeReconcileResult> {
-    const run = this.reconcileChain.then(
-      () => this.reconcileOnce(input),
-      () => this.reconcileOnce(input)
-    )
-    this.reconcileChain = run.catch(() => undefined)
-    return run
-  }
-
-  private async reconcileOnce(input: {
-    modelId: UniqueModelId
-    knowledgeBaseIds?: readonly string[]
-  }): Promise<AgentRuntimeReconcileResult> {
-    let snapshot
-    try {
-      snapshot = await capturePiConnectionSnapshot(
-        this.input.sessionId,
-        this.input.agentId,
-        input.modelId,
-        input.knowledgeBaseIds
-      )
-    } catch (error) {
-      if (error instanceof PiInvalidConnectionSnapshotError) return 'invalid'
-      throw error
+  async reconcile(input: { modelId: UniqueModelId }): Promise<AgentRuntimeReconcileResult> {
+    const session = agentSessionService.getById(this.input.sessionId)
+    if (!session || session.agentId !== this.input.agentId || session.workspace?.path !== this.workspacePath) {
+      return session ? 'rebuild' : 'invalid'
     }
-    const { agent } = snapshot
-
-    const nextPermissionMode = agent.configuration?.permission_mode ?? 'default'
-    // Changing the permission mode can alter admission for the current tool loop, so defer it until
-    // pi is idle. Disabled tools only tighten policy and still apply immediately below.
-    const applicablePermissionMode = this.session?.isStreaming ? this.permissionMode : nextPermissionMode
-    const nextDisabledTools = normalizeDisabledTools(agent.disabledTools, snapshot)
-    const applicableDisabledTools = this.session?.isStreaming
-      ? new Set([...this.disabledTools, ...nextDisabledTools])
-      : nextDisabledTools
-    const policyChanged =
-      applicablePermissionMode !== this.permissionMode || !setsEqual(applicableDisabledTools, this.disabledTools)
-    this.permissionMode = applicablePermissionMode
-    this.disabledTools = applicableDisabledTools
-
-    if (snapshot.signature !== this.connectionSignature) {
-      return 'rebuild'
-    }
-    return policyChanged ? 'patched' : 'current'
+    const signature = spawnSignature(this.input.agentId, input.modelId)
+    if (!signature) return 'invalid'
+    return signature === this.signature ? 'current' : 'rebuild'
   }
 
-  /**
-   * Live context-window usage, read straight from pi's own accounting (no token
-   * re-derivation). Returns null before the first assistant response, when pi
-   * cannot yet estimate occupancy. The host also pulls this on `turn-complete`
-   * and `compaction-complete`, so the renderer indicator stays current.
-   */
   async getContextUsage(): Promise<AgentSessionContextUsage | null> {
-    const usage = this.session?.getContextUsage()
-    // pi returns a truthy `ContextUsage` with `tokens: null` right after compaction
-    // (before the next LLM response) — treat that as "not yet known" and return null
-    // rather than projecting a misleading 0 / 0%.
-    return usage && usage.tokens != null ? this.projectContextUsage(usage) : null
+    const client = this.client
+    if (!client?.running) return null
+    const stats = await client.request<{
+      contextUsage?: { tokens: number | null; contextWindow: number; percent: number | null }
+    }>({ type: 'get_session_stats' })
+    const usage = stats?.contextUsage
+    if (!usage || usage.tokens == null) return null
+    const percentage =
+      usage.percent ?? (usage.contextWindow > 0 ? Math.min(100, (usage.tokens / usage.contextWindow) * 100) : 0)
+    return {
+      categories: [],
+      totalTokens: usage.tokens,
+      maxTokens: usage.contextWindow,
+      percentage,
+      model: parseUniqueModelId(this.input.modelId).modelId
+    }
   }
 
-  private closePromise?: Promise<void>
+  async getSupportedCommands(): Promise<AgentSessionSlashCommand[] | null> {
+    return this.commands ?? null
+  }
 
   close(): Promise<void> {
     this.closed = true
     return (this.closePromise ??= this.finishClose())
   }
 
+  closeForEdit(): Promise<void> {
+    return this.close()
+  }
+
+  private closePromise?: Promise<void>
+
   private async finishClose(): Promise<void> {
-    // Deny any approval still awaiting a renderer decision so its held tool
-    // promise resolves instead of hanging past teardown (plan Phase 3).
     toolApprovalRegistry.abort(this.input.sessionId, 'pi-session-closed')
-    // Unsubscribe first so the abort's terminal events do not race into a
-    // closing queue.
-    this.unsubscribe?.()
-    this.unsubscribe = undefined
     try {
-      await this.session?.abort()
+      const client = this.client ?? (await this.starting?.catch(() => undefined))
+      if (client?.running && this.runActive) await withTimeout(client.request({ type: 'abort' }), 5000)
+      await client?.close()
+    } catch (error) {
+      logger.warn('pi did not stop cleanly', { error })
     } finally {
-      try {
-        await this.session?.extensionRunner.emit({ type: 'session_shutdown', reason: 'quit' })
-      } finally {
-        this.session?.dispose()
-        this.session = undefined
-        this.endOpenTraceSpans('pi connection closed')
-        this.eventQueue.close()
-      }
+      this.eventQueue.close()
     }
   }
 
-  private handlePiEvent(event: AgentSessionEvent): void {
+  private async ensureClient(): Promise<PiRpcClient> {
+    const current = this.client
+    if (current?.running) {
+      if (!(await this.changedElsewhere())) return current
+      // The user continued this session in a terminal: show those turns and restart pi on them.
+      this.client = undefined
+      await current.close()
+      await syncPiSessionHistory({
+        sessionId: this.input.sessionId,
+        cwd: this.workspacePath,
+        piSessionId: this.piSessionId
+      })
+    }
+    this.starting ??= this.spawn().finally(() => {
+      this.starting = undefined
+    })
+    return this.starting
+  }
+
+  private async changedElsewhere(): Promise<boolean> {
+    if (!this.sessionFile || this.knownSize === undefined) return false
+    return (await piSessionFileSize(this.sessionFile)) !== this.knownSize
+  }
+
+  private async spawn(): Promise<PiRpcClient> {
+    const { command, env } = await resolvePiLaunch()
+    const { excludedTools, envVars } = piSpawnOptions(this.input.agentId) ?? { excludedTools: [], envVars: {} }
+    const client: PiRpcClient = new PiRpcClient({
+      command,
+      args: [
+        '--mode',
+        'rpc',
+        '--session-id',
+        this.piSessionId,
+        ...(excludedTools.length > 0 ? ['--exclude-tools', excludedTools.join(',')] : [])
+      ],
+      cwd: this.workspacePath,
+      env: { ...env, ...envVars },
+      onRecord: (record) => {
+        if (this.client === client) this.handleRecord(record)
+        else if (record.type === 'extension_ui_request') this.handleUiRequest(client, record)
+      },
+      onExit: (error) => this.handleExit(client, error)
+    })
+    try {
+      let state = await client.request<PiStateData>({ type: 'get_state' })
+      const model = resolvePiModelSelection(this.input.modelId)
+      if (model && (state.model?.provider !== model.provider || state.model?.id !== model.modelId)) {
+        await client.request({ type: 'set_model', provider: model.provider, modelId: model.modelId })
+        state = await client.request<PiStateData>({ type: 'get_state' })
+      }
+      this.steeringMode = state.steeringMode ?? 'one-at-a-time'
+      this.sessionFile = state.sessionFile
+      this.knownSize = state.sessionFile ? await piSessionFileSize(state.sessionFile) : undefined
+      this.client = client
+      void this.refreshCommands(client)
+      return client
+    } catch (error) {
+      await client.close()
+      throw error
+    }
+  }
+
+  private async refreshCommands(client: PiRpcClient): Promise<void> {
+    try {
+      const { commands } = await client.request<{ commands: Array<{ name: string; description?: string }> }>({
+        type: 'get_commands'
+      })
+      this.commands = [
+        { name: 'compact', description: 'Compact conversation with optional focus instructions', argumentHint: '' },
+        ...commands.map((command) => ({ name: command.name, description: command.description ?? '', argumentHint: '' }))
+      ]
+      if (!this.closed) this.eventQueue.push({ type: 'supported-commands', commands: this.commands })
+    } catch (error) {
+      logger.warn('Could not read pi commands', { error })
+    }
+  }
+
+  private handleExit(client: PiRpcClient, error: Error | undefined): void {
+    for (const [approvalId, dialog] of this.pendingDialogs) {
+      if (dialog.client === client) toolApprovalRegistry.dispatch(approvalId, { approved: false, reason: 'pi exited' })
+    }
+    if (client !== this.client) return
+    this.client = undefined
+    if (this.closed || (!this.runActive && !this.manualCompactInFlight)) return
+    this.runActive = false
+    this.manualCompactInFlight = false
+    this.pendingSteers.length = 0
+    this.eventQueue.push({ type: 'error', error: error ?? new Error('pi exited during the turn') })
+  }
+
+  private handleRecord(record: PiRpcRecord): void {
     if (this.closed) return
-
-    if (event.type === 'tool_execution_start') this.startToolSpan(event)
-
-    if (isUserMessageStart(event) && this.pendingSteers.length > 0) {
-      const delivered = this.takeDeliveredSteers()
-      if (delivered.length > 0) this.eventQueue.push({ type: 'steer-boundary', inputs: delivered })
-    }
-
-    this.adapter.handleEvent(event)
-
-    if (event.type === 'tool_execution_end') this.endToolSpan(event)
-
-    if (event.type === 'turn_end') {
-      const stopReason = (event.message as { stopReason?: string }).stopReason
-      if (stopReason) this.lastStopReason = stopReason
-      return
-    }
-
-    if (event.type === 'compaction_start') {
-      this.eventQueue.push({ type: 'compaction-start', trigger: mapCompactionTrigger(event.reason) })
-      return
-    }
-
-    if (event.type === 'compaction_end') {
-      this.handleCompactionEnd(event)
-      return
-    }
-
-    if (event.type === 'agent_end') {
-      // Auto-retry pending — the loop is not actually done, so hold the turn open.
-      // Clear the stop-reason so a retry that succeeds isn't tainted by a prior
-      // turn_end's `error` and mislabeled as a failed turn.
-      if (event.willRetry) {
-        this.lastStopReason = undefined
-        this.lastAgentError = undefined
+    switch (record.type) {
+      case 'extension_ui_request':
+        this.handleUiRequest(this.client!, record)
         return
+      case 'extension_error':
+        logger.warn('pi extension failed', {
+          extension: record.extensionPath,
+          event: record.event,
+          error: record.error
+        })
+        return
+      case 'agent_start':
+        if (!this.runActive && !this.manualCompactInFlight && !this.autonomousRun) {
+          // An extension started this run on its own; the host opens a receive-only turn for it.
+          this.autonomousRun = true
+          this.eventQueue.push({ type: 'autonomous-turn-state', state: 'started', origin: { kind: 'background-work' } })
+        }
+        break
+      case 'message_start':
+        if ((record.message as { role?: string } | undefined)?.role === 'user' && this.pendingSteers.length > 0) {
+          const count = this.steeringMode === 'all' ? this.pendingSteers.length : 1
+          this.eventQueue.push({ type: 'steer-boundary', inputs: this.pendingSteers.splice(0, count) })
+        }
+        break
+      case 'turn_end': {
+        const stopReason = (record.message as { stopReason?: string } | undefined)?.stopReason
+        if (stopReason) this.lastStopReason = stopReason
+        break
       }
-      this.lastAgentError = lastErrorMessage(event.messages)
-      this.endOpenToolSpans(this.lastAgentError ?? 'pi agent run ended before tool completion')
-      // Defensive compatibility for SDK-originated runs not started through send(). Normal Cherry
-      // turns settle from session.prompt(), after retry/compaction continuation has fully drained.
-      if (!this.promptRunActive) this.finishPromptRun()
+      case 'agent_end':
+        if (record.willRetry) {
+          this.lastStopReason = undefined
+          this.lastAgentError = undefined
+        } else {
+          this.lastAgentError = lastErrorMessage(record.messages)
+        }
+        return
+      case 'agent_settled':
+        void this.finishRun()
+        return
+      case 'compaction_start':
+        this.eventQueue.push({ type: 'compaction-start', trigger: mapCompactionTrigger(record.reason) })
+        return
+      case 'compaction_end':
+        this.handleCompactionEnd(record)
+        return
+      case 'auto_retry_start':
+        this.eventQueue.push({
+          type: 'api-retry',
+          retry: {
+            attempt: Number(record.attempt) || 1,
+            maxRetries: Number(record.maxAttempts) || 1,
+            retryDelayMs: Number(record.delayMs) || 0,
+            errorStatus: null,
+            errorCategory: typeof record.errorMessage === 'string' ? record.errorMessage : 'unknown'
+          }
+        })
+        return
     }
+    this.adapter.handleEvent(record as PiContentEvent)
   }
 
-  private finishPromptRun(error?: unknown): void {
+  private async finishRun(): Promise<void> {
     if (this.closed) return
-    this.promptRunActive = false
-    this.maybeEmitResumeToken()
-    const undelivered = this.pendingSteers.splice(0).map((pending) => pending.input)
+    const autonomous = this.autonomousRun
+    if (!this.runActive && !autonomous) return
+    this.runActive = false
+    this.autonomousRun = false
+    const undelivered = this.pendingSteers.splice(0)
     if (undelivered.length > 0) {
-      // pi does not drain its steering queue when a run ends. The host owns re-queuing.
-      this.session?.clearQueue()
+      // pi keeps undelivered steers queued; the host re-queues them as the next turn instead.
+      await this.client?.request({ type: 'clear_queue' }).catch(() => undefined)
       this.eventQueue.push({ type: 'steer-undelivered', inputs: undelivered })
     }
-    if (error || this.lastStopReason === 'error' || this.lastStopReason === 'length') {
-      let failure: Error
-      if (error instanceof Error) {
-        failure = error
-      } else if (this.lastStopReason === 'length') {
-        failure = new Error(
+    const failed = this.lastStopReason === 'error' || this.lastStopReason === 'length'
+    const failure = failed
+      ? new Error(
           this.lastAgentError ??
-            'Response truncated at the model output limit (stopReason: length). The reply may be incomplete or empty — try continuing the turn or retrying with a higher maximum output.'
+            (this.lastStopReason === 'length'
+              ? 'Response truncated at the model output limit (stopReason: length).'
+              : 'pi agent turn failed')
         )
-      } else {
-        failure = new Error(this.lastAgentError ?? 'pi agent turn failed')
-      }
-      logger.error('pi prompt failed', chatErrorContext(failure))
+      : undefined
+    this.lastStopReason = undefined
+    this.lastAgentError = undefined
+    const leafId = await this.recordSettledFile()
+    if (this.closed) return
+    if (failure) {
       this.eventQueue.push({ type: 'error', error: failure })
     } else {
-      this.emitContextUsage()
-      let leafId: string | null | undefined
-      try {
-        leafId = this.session?.sessionManager.getLeafId()
-      } catch (checkpointError) {
-        logger.warn('Could not capture Pi fork checkpoint', { error: checkpointError })
-      }
-      const checkpoint = PiForkCheckpointSchema.safeParse({ runtime: 'pi', runtimeSessionId: this.resumeToken, leafId })
+      const checkpoint = PiForkCheckpointSchema.safeParse({
+        runtime: 'pi',
+        runtimeSessionId: this.piSessionId,
+        leafId
+      })
       this.eventQueue.push({
         type: 'turn-complete',
         forkAnchor: checkpoint.success ? { checkpoint: checkpoint.data } : undefined
       })
     }
-    this.lastStopReason = undefined
-    this.lastAgentError = undefined
+    if (autonomous) this.eventQueue.push({ type: 'autonomous-turn-state', state: 'finished' })
   }
 
-  /** Capture at the provider stream boundary so compaction calls and ordinary turns share one owner. */
-  private captureInvocationPricing(apiModelId: string): AiUsagePricingSnapshot | null {
-    const capture = this._usageCapture
-    if (capture?.owner !== 'agent-sdk') return null
-    const frozen = capture.frozenModels.find((model) => model.aliases.includes(apiModelId))
-    if (!frozen) return null
+  /** Advance the sync watermark past pi's own entries and return the new leaf. */
+  private async recordSettledFile(): Promise<string | undefined> {
+    if (!this.sessionFile) return undefined
     try {
-      const provider = providerService.getByProviderId(capture.providerId)
-      const modelId = parseUniqueModelId(frozen.modelId as UniqueModelId).modelId
-      const model = modelService.getByKey(provider.id, modelId)
-      return createAiUsageCaptureContext({
-        providerId: provider.id,
-        modelId,
-        pricing: model.pricing,
-        billing: provider.settings.billing
-      }).pricingSnapshot
+      const { size, leafId } = await readPiSessionTail(this.sessionFile)
+      this.knownSize = size
+      if (leafId) markPiSessionSynced(this.input.sessionId, { piSessionId: this.piSessionId, leafId })
+      return leafId
     } catch (error) {
-      logger.warn('Could not capture Pi invocation pricing', { error })
-      return null
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') logger.warn('Could not read pi session file', { error })
+      return undefined
     }
   }
 
-  private recordProviderInvocation(
-    message: AssistantMessage,
-    metrics?: PiInvocationMetrics,
-    pricingSnapshot?: AiUsagePricingSnapshot | null
-  ): void {
-    if (this.closed) return
-    if (this._usageCapture?.owner !== 'agent-sdk') return
-    if (message.stopReason === 'error' || message.stopReason === 'aborted') return
-
-    const providerRequestId = message.responseId?.trim() || `${message.timestamp}:${message.model}`
-    const requestId = `pi-agent:${this.input.sessionId}:${providerRequestId}`
-    if (this.committedInvocationIds.has(requestId)) return
-    this.committedInvocationIds.add(requestId)
-
-    const noCacheTokens = finiteTokenCount(message.usage.input)
-    const cacheReadTokens = finiteTokenCount(message.usage.cacheRead)
-    const cacheWriteTokens = finiteTokenCount(message.usage.cacheWrite)
-    const inputTokens = noCacheTokens + cacheReadTokens + cacheWriteTokens
-    const outputTokens = finiteTokenCount(message.usage.output)
-    this.eventQueue.push({
-      type: 'usage',
-      invocation: {
-        requestId,
-        model: message.responseModel?.trim() || message.model || this.modelId,
-        pricingSnapshot,
-        messageAssociation: 'current-turn',
-        usage: {
-          inputTokens,
-          outputTokens,
-          totalTokens: inputTokens + outputTokens,
-          ...(message.usage.reasoning !== undefined
-            ? { reasoningTokens: finiteTokenCount(message.usage.reasoning) }
-            : {}),
-          noCacheTokens,
-          cacheReadTokens,
-          cacheWriteTokens
-        },
-        ...(metrics ? { metrics } : {})
-      }
-    })
-  }
-
-  private startProviderSpan(model: { provider?: string; id?: string }): PiProviderSpanObserver | undefined {
-    const span = startAgentRuntimeChildSpan(this.traceContext, 'pi.generate_content', SpanKind.CLIENT, {
-      'gen_ai.operation.name': 'chat',
-      ...(model.provider ? { 'gen_ai.provider.name': model.provider } : {}),
-      ...(model.id ? { 'gen_ai.request.model': model.id } : {})
-    })
-    if (!span) return undefined
-    this.providerSpans.add(span)
-    return {
-      complete: (message) => {
-        if (!this.providerSpans.delete(span)) return
-        try {
-          const inputTokens =
-            finiteTokenCount(message.usage.input) +
-            finiteTokenCount(message.usage.cacheRead) +
-            finiteTokenCount(message.usage.cacheWrite)
-          span.setAttribute('gen_ai.response.model', message.responseModel?.trim() || message.model || this.modelId)
-          if (message.responseId?.trim()) span.setAttribute('gen_ai.response.id', message.responseId.trim())
-          span.setAttribute('gen_ai.response.finish_reasons', [message.stopReason])
-          span.setAttribute('gen_ai.usage.input_tokens', inputTokens)
-          span.setAttribute('gen_ai.usage.output_tokens', finiteTokenCount(message.usage.output))
-          span.setAttribute('gen_ai.usage.cache_read_tokens', finiteTokenCount(message.usage.cacheRead))
-          span.setAttribute('gen_ai.usage.cache_write_tokens', finiteTokenCount(message.usage.cacheWrite))
-          if (message.usage.reasoning !== undefined) {
-            span.setAttribute('gen_ai.usage.reasoning_tokens', finiteTokenCount(message.usage.reasoning))
-          }
-        } catch (error) {
-          logger.warn('Failed to annotate Pi provider span', { error })
-        }
-        const failed = message.stopReason === 'error' || message.stopReason === 'aborted'
-        endAgentRuntimeSpan(
-          span,
-          failed
-            ? { code: SpanStatusCode.ERROR, message: message.errorMessage ?? message.stopReason }
-            : { code: SpanStatusCode.OK }
-        )
-      },
-      error: (error) => {
-        if (!this.providerSpans.delete(span)) return
-        const failure = error instanceof Error ? error : new Error(String(error))
-        endAgentRuntimeSpan(span, { code: SpanStatusCode.ERROR, message: failure.message }, failure)
-      }
-    }
-  }
-
-  private startToolSpan(event: Extract<AgentSessionEvent, { type: 'tool_execution_start' }>): void {
-    const previous = this.toolSpans.get(event.toolCallId)
-    if (previous) this.endSpanWithError(previous, 'duplicate pi tool execution start')
-    const span = startAgentRuntimeChildSpan(this.traceContext, 'pi.execute_tool', SpanKind.INTERNAL, {
-      'gen_ai.operation.name': 'execute_tool',
-      'gen_ai.tool.name': event.toolName,
-      'gen_ai.tool.call.id': event.toolCallId
-    })
-    if (span) this.toolSpans.set(event.toolCallId, span)
-  }
-
-  private endToolSpan(event: Extract<AgentSessionEvent, { type: 'tool_execution_end' }>): void {
-    const span = this.toolSpans.get(event.toolCallId)
-    if (!span) return
-    this.toolSpans.delete(event.toolCallId)
-    endAgentRuntimeSpan(
-      span,
-      event.isError ? { code: SpanStatusCode.ERROR, message: `${event.toolName} failed` } : { code: SpanStatusCode.OK }
-    )
-  }
-
-  private endOpenToolSpans(message: string): void {
-    for (const span of this.toolSpans.values()) this.endSpanWithError(span, message)
-    this.toolSpans.clear()
-  }
-
-  private endOpenTraceSpans(message: string): void {
-    this.endOpenToolSpans(message)
-    for (const span of this.providerSpans) this.endSpanWithError(span, message)
-    this.providerSpans.clear()
-  }
-
-  private endSpanWithError(span: Span, message: string): void {
-    endAgentRuntimeSpan(span, { code: SpanStatusCode.ERROR, message })
-  }
-
-  private handleCompactionEnd(event: Extract<AgentSessionEvent, { type: 'compaction_end' }>): void {
-    if (event.errorMessage || event.aborted) {
-      // A failed manual /compact is a host turn: settle it with EXACTLY ONE terminal error (never
-      // turn-complete, which would report the failure as a junk empty-assistant success and feed the
-      // resume-token brick). pi always emits this compaction_end before `compact()` rejects, so
-      // clearing the flag here makes the later reject handler a no-op.
+  private handleCompactionEnd(record: PiRpcRecord): void {
+    const errorMessage = typeof record.errorMessage === 'string' ? record.errorMessage : undefined
+    if (errorMessage || record.aborted) {
+      const message = errorMessage ?? 'pi compaction aborted'
       if (this.manualCompactInFlight) {
         this.manualCompactInFlight = false
-        this.eventQueue.push({ type: 'error', error: new Error(event.errorMessage ?? 'pi compaction aborted') })
-        return
+        this.eventQueue.push({ type: 'error', error: new Error(message) })
+      } else {
+        this.eventQueue.push({ type: 'compaction-error', error: message })
       }
-      // Auto-compaction failure stays non-terminal — the surrounding turn owns the terminal event.
-      this.eventQueue.push({ type: 'compaction-error', error: event.errorMessage ?? 'pi compaction aborted' })
       return
     }
-    // `willRetry` keeps the surrounding agent turn open; it does not defer this compaction result.
-    // pi emits this successful compaction_end only once before retrying the model.
-    this.eventQueue.push({ type: 'compaction-complete', anchor: buildCompactionAnchor(event.reason, event.result) })
-    this.maybeCompleteManualCompactTurn()
+    const result = record.result as { tokensBefore?: unknown; estimatedTokensAfter?: unknown } | undefined
+    const anchor: AgentSessionCompactionAnchorData = {
+      status: 'done',
+      phase: 'agent-session',
+      trigger: mapCompactionTrigger(record.reason),
+      completedAt: new Date().toISOString()
+    }
+    if (typeof result?.tokensBefore === 'number') anchor.preTokens = result.tokensBefore
+    if (typeof result?.estimatedTokensAfter === 'number') anchor.postTokens = result.estimatedTokensAfter
+    this.eventQueue.push({ type: 'compaction-complete', anchor })
+    this.completeManualCompact()
   }
 
-  private maybeCompleteManualCompactTurn(): void {
-    if (this.closed) return
-    if (!this.manualCompactInFlight) return
+  private completeManualCompact(): void {
+    if (this.closed || !this.manualCompactInFlight) return
     this.manualCompactInFlight = false
+    void this.recordSettledFile()
     this.eventQueue.push({ type: 'turn-complete' })
   }
 
-  private takeDeliveredSteers(): AgentRuntimeUserInput[] {
-    const mode = this.session?.steeringMode ?? 'one-at-a-time'
-    const count = mode === 'all' ? this.pendingSteers.length : 1
-    return this.pendingSteers.splice(0, count).map((pending) => pending.input)
+  private emitResumeToken(): void {
+    if (this.resumeTokenEmitted) return
+    this.resumeTokenEmitted = true
+    this.eventQueue.push({ type: 'resume-token', token: this.piSessionId })
   }
 
-  private removePendingSteer(pending: PendingSteer): void {
-    const index = this.pendingSteers.indexOf(pending)
-    if (index !== -1) this.pendingSteers.splice(index, 1)
-  }
-
-  private emitContextUsage(): void {
-    const usage = this.session?.getContextUsage()
-    // Skip the emit while pi cannot yet report occupancy (see getContextUsage).
-    if (!usage || usage.tokens == null) return
-    this.eventQueue.push({ type: 'context-usage', usage: this.projectContextUsage(usage) })
-  }
-
-  /** pi reports occupancy/window directly; Cherry owns per-category breakdown, which
-   *  pi cannot produce, so `categories` is always empty (plan D5 — the total bar still renders). */
-  private projectContextUsage(usage: ContextUsage): AgentSessionContextUsage {
-    const totalTokens = usage.tokens ?? 0
-    const maxTokens = usage.contextWindow
-    const percentage = usage.percent ?? (maxTokens > 0 ? Math.min(100, (totalTokens / maxTokens) * 100) : 0)
-    return { categories: [], totalTokens, maxTokens, percentage, model: this.modelId }
-  }
-
-  /** resume-token = pi session id; reopen scans Cherry's session dir for `*_<id>.jsonl`. */
-  private maybeEmitResumeToken(): void {
-    const token = this.session?.sessionId
-    if (!token || token === this.resumeToken) return
-    this.resumeToken = token
-    this.eventQueue.push({ type: 'resume-token', token })
-  }
-}
-
-/** Wall-clock timing of one pi provider invocation; mirrors the usage-event metrics the host persists for TPS display. */
-interface PiInvocationMetrics {
-  timeFirstTokenMs?: number
-  timeCompletionMs?: number
-}
-
-function withPiInvocationCapture(
-  config: ProviderConfig,
-  streamSimple: NonNullable<ProviderConfig['streamSimple']>,
-  onComplete: (
-    message: AssistantMessage,
-    metrics: PiInvocationMetrics,
-    pricingSnapshot: AiUsagePricingSnapshot | null
-  ) => void,
-  startTrace: (model: { provider?: string; id?: string }) => PiProviderSpanObserver | undefined,
-  capturePricing: (model: { id: string }) => AiUsagePricingSnapshot | null
-): ProviderConfig {
-  return {
-    ...config,
-    streamSimple: (model, context, options) => {
-      const pricingSnapshot = capturePricing(model)
-      const traceObserver = startTrace(model)
-      let stream: ReturnType<typeof streamSimple>
-      try {
-        stream = streamSimple(model, context, options)
-      } catch (error) {
-        traceObserver?.error(error)
-        throw error
-      }
-      // Observe producer-side events without consuming them: the agent loop iterates the same
-      // stream, so timing is captured by wrapping push() instead of reading from the iterator.
-      const streamStartedAt = Date.now()
-      let firstTokenAt: number | undefined
-      const originalPush = typeof stream.push === 'function' ? stream.push.bind(stream) : undefined
-      if (originalPush) {
-        stream.push = (event: AssistantMessageEvent) => {
-          if (
-            firstTokenAt === undefined &&
-            (event.type === 'text_start' ||
-              event.type === 'text_delta' ||
-              event.type === 'thinking_start' ||
-              event.type === 'thinking_delta' ||
-              event.type === 'toolcall_start' ||
-              event.type === 'toolcall_delta')
-          ) {
-            firstTokenAt = Date.now()
-          }
-          originalPush(event)
+  /** Plugin dialogs become an AskUserQuestion; status lines, widgets and notifications are ignored. */
+  private handleUiRequest(client: PiRpcClient, record: PiRpcRecord): void {
+    const request = parsePiDialogRequest(record)
+    if (!request) return
+    const labels = dialogLabels()
+    const interaction = application.get('AgentSessionRuntimeService').getInteractionState(this.input.sessionId)
+    if (this.closed || interaction.userResponse === 'unavailable') {
+      client.notify(buildPiDialogResponse(request, undefined, labels))
+      return
+    }
+    const question = buildPiDialogQuestion(request, labels)
+    const input = { questions: [question] }
+    const approvalId = randomUUID()
+    const toolCallId = `pi-dialog-${request.id}`
+    const presentation = interaction.userResponse === 'stream' ? 'stream' : 'message'
+    const providerMetadata = {
+      cherry: { transport: PI_TRANSPORT, tool: { type: 'builtin' as const, name: ASK_USER_QUESTION_TOOL } }
+    }
+    const pending = toolApprovalRegistry.register({
+      approvalId,
+      sessionId: this.input.sessionId,
+      toolCallId,
+      toolName: ASK_USER_QUESTION_TOOL,
+      originalInput: input,
+      presentation,
+      resolve: (decision) => {
+        this.pendingDialogs.delete(approvalId)
+        const answers = decision.updatedInput?.answers as Record<string, string> | undefined
+        const answer = decision.approved ? answers?.[question.question] : undefined
+        client.notify(buildPiDialogResponse(request, answer, labels))
+        if (presentation === 'stream' && !this.closed) {
+          this.eventQueue.push({
+            type: 'chunk',
+            chunk: {
+              type: 'tool-output-available',
+              toolCallId,
+              output: answer ?? null,
+              dynamic: true,
+              providerExecuted: true,
+              providerMetadata
+            }
+          })
         }
       }
-      void stream.result().then(
-        (message) => {
-          traceObserver?.complete(message)
-          const timeCompletionMs = Math.max(0, Date.now() - streamStartedAt)
-          const timeFirstTokenMs = firstTokenAt !== undefined ? Math.max(0, firstTokenAt - streamStartedAt) : undefined
-          onComplete(
-            message,
-            {
-              ...(timeFirstTokenMs !== undefined ? { timeFirstTokenMs } : {}),
-              timeCompletionMs
-            },
-            pricingSnapshot
-          )
-        },
-        (error) => traceObserver?.error(error)
-      )
-      return stream
+    })
+    if (!pending) return
+    this.pendingDialogs.set(approvalId, { client, request })
+    if (presentation === 'stream') {
+      const base = {
+        toolCallId,
+        toolName: ASK_USER_QUESTION_TOOL,
+        dynamic: true,
+        providerExecuted: true,
+        providerMetadata
+      }
+      this.eventQueue.push({ type: 'chunk', chunk: { type: 'tool-input-start', ...base } })
+      this.eventQueue.push({ type: 'chunk', chunk: { type: 'tool-input-available', ...base, input } })
     }
-  }
-}
-
-interface PiProviderSpanObserver {
-  complete(message: AssistantMessage): void
-  error(error: unknown): void
-}
-
-// undici loads on the first authenticated-proxy request instead of at startup.
-const nodeFetch: typeof globalThis.fetch = async (input, init) => {
-  const { fetch } = await import('undici')
-  return fetch(input as never, init as never) as unknown as Response
-}
-
-function withPiRequestEnvironment(
-  streamSimple: NonNullable<ProviderConfig['streamSimple']>,
-  providerEnvironment: Record<string, string> | undefined
-): NonNullable<ProviderConfig['streamSimple']> {
-  return (model, context, options) => {
-    const proxyEnvironment = getProxyEnvironment(process.env)
-    const usesAuthenticatedNodeProxy = proxyUrlHasCredentials(proxyEnvironment[CHERRY_NODE_PROXY_RULES_ENV])
-
-    // Electron net.fetch cannot authenticate these proxies; retain NodeProxyBackend's credential-aware dispatcher.
-    return streamSimple(model, context, {
-      ...options,
-      env: { ...options?.env, ...proxyEnvironment, ...providerEnvironment },
-      fetch: usesAuthenticatedNodeProxy ? nodeFetch : customFetch
+    this.eventQueue.push({
+      type: 'tool-approval-request',
+      request: { approvalId, toolCallId, toolName: ASK_USER_QUESTION_TOOL, input, presentation, providerMetadata }
     })
   }
 }
 
-function finiteTokenCount(value: number | undefined): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
-}
-
-/**
- * Preserve stored blocks across legacy built-in aliases and Pi's native MCP identifier changes.
- */
-function normalizeDisabledTools(
-  disabledTools: string[] | undefined | null,
-  snapshot: PiConnectionSnapshot
-): Set<string> {
-  const disabled = new Set((disabledTools ?? []).map(normalizePiDisabledToolId))
-  const unresolved = new Set([...disabled].filter((name) => name.startsWith(LEGACY_DSH_TOOL_PREFIX)))
-  const legacyTools: Array<{ ids: string[]; nameAlias?: string; piName: string }> = listBuiltinToolPolicies({
-    mountedServers: new Set(Object.values(CHERRY_MCP_SERVER))
-  }).map((tool) => ({
-    ids: [legacyDisabledToolId(tool.serverName, tool.toolName)],
-    piName: buildPiMcpToolName(tool.serverName, tool.toolName)
-  }))
-  const catalog = application.get('McpCatalogService')
-  for (const [namespace, server] of snapshot.mcpServerSnapshots) {
-    if (!server) continue
-    const tools = catalog.listTools(server.id, { includeDisabled: false })
-    const names = tools.map((tool) => buildPiMcpToolName(server.id, tool.name))
-    for (const tool of tools) {
-      const name = buildPiMcpToolName(server.id, tool.name)
-      const piName = buildPiMcpToolName(server.id, tool.name, names.indexOf(name) !== names.lastIndexOf(name))
-      legacyTools.push({
-        ids: [legacyDisabledToolId(namespace, tool.name), legacyDisabledToolId(server.id, tool.name)],
-        nameAlias: legacyDisabledToolId(server.name, tool.name),
-        piName
-      })
-      if (
-        disabled.has(buildFunctionCallToolName(server.name, tool.name)) ||
-        disabled.has(`mcp__${server.id}__${tool.name}`)
-      ) {
-        disabled.add(piName)
-      }
-    }
+function dialogLabels(): PiDialogLabels {
+  return {
+    yes: t('agent.session.pi.dialog.yes'),
+    no: t('agent.session.pi.dialog.no'),
+    keep: t('agent.session.pi.dialog.keep')
   }
-  for (const id of unresolved) {
-    // DSH used the configured namespace; display-name aliases are only safe when unambiguous.
-    const exact = legacyTools.filter((tool) => tool.ids.includes(id))
-    const matches = exact.length ? exact : legacyTools.filter((tool) => tool.nameAlias === id)
-    const piNames = new Set(matches.map((tool) => tool.piName))
-    if (piNames.size !== 1) continue
-    for (const name of piNames) disabled.add(name)
-    unresolved.delete(id)
-  }
-  assertLegacyDisabledToolsResolved(unresolved)
-  // Sanitizing raw aliases can accidentally block another tool whose name collides.
-  return disabled
 }
 
-function setsEqual(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
-  return left.size === right.size && [...left].every((value) => right.has(value))
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+  return Promise.race([promise, delay(ms, undefined, { ref: false })])
 }
 
-/** pi triggers `manual` on `compact()`, `threshold`/`overflow` automatically — Cherry's
- *  anchor only distinguishes user-initiated from auto. */
-function mapCompactionTrigger(reason: 'manual' | 'threshold' | 'overflow'): AgentSessionCompactionTrigger {
+/** pi reports `manual` for `/compact`; Cherry's anchor only tells user-initiated from automatic. */
+function mapCompactionTrigger(reason: unknown): AgentSessionCompactionTrigger {
   return reason === 'manual' ? 'manual' : 'auto'
 }
 
@@ -1102,25 +575,6 @@ function parseManualCompactCommand(content: string): { instructions: string } | 
   const trimmed = content.trim()
   if (!/^\/compact(?:\s|$)/.test(trimmed)) return undefined
   return { instructions: trimmed.slice('/compact'.length).trim() }
-}
-
-function buildCompactionAnchor(
-  reason: 'manual' | 'threshold' | 'overflow',
-  result: CompactionResult | undefined
-): AgentSessionCompactionAnchorData {
-  const anchor: AgentSessionCompactionAnchorData = {
-    status: 'done',
-    phase: 'agent-session',
-    trigger: mapCompactionTrigger(reason),
-    completedAt: new Date().toISOString()
-  }
-  if (typeof result?.tokensBefore === 'number') anchor.preTokens = result.tokensBefore
-  if (typeof result?.estimatedTokensAfter === 'number') anchor.postTokens = result.estimatedTokensAfter
-  return anchor
-}
-
-function isUserMessageStart(event: AgentSessionEvent): boolean {
-  return event.type === 'message_start' && (event.message as { role?: string }).role === 'user'
 }
 
 function lastErrorMessage(messages: unknown): string | undefined {

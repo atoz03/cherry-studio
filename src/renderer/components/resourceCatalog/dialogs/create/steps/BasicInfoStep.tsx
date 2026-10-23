@@ -110,24 +110,26 @@ function AgentRuntimeModelFields({
           </FormItem>
         )}
       />
-      <FormField
-        control={form.control}
-        name="permissionMode"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="font-medium">{t('library.config.agent.field.permission_mode.label')}</FormLabel>
-            <PermissionModeSelect
-              cards={permissionModeCards}
-              value={field.value}
-              onValueChange={field.onChange}
-              portalContainer={portalContainer}
-              ariaLabel={t('library.config.agent.field.permission_mode.label')}
-              t={t}
-            />
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {permissionModeCards.length > 0 ? (
+        <FormField
+          control={form.control}
+          name="permissionMode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="font-medium">{t('library.config.agent.field.permission_mode.label')}</FormLabel>
+              <PermissionModeSelect
+                cards={permissionModeCards}
+                value={field.value}
+                onValueChange={field.onChange}
+                portalContainer={portalContainer}
+                ariaLabel={t('library.config.agent.field.permission_mode.label')}
+                t={t}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      ) : null}
       <CompactModelField
         form={form}
         name="modelId"

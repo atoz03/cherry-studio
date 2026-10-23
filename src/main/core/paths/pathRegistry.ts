@@ -230,11 +230,8 @@ export function buildPathRegistry(storage?: StorageRoots) {
     // (not a joined path) so the orphan sweep can never be pointed at the user's ~/.claude.
     'feature.agents.claude.projects': path.join(appUserDataData, 'Agents', '.claude', 'projects'),
     'feature.agents.channels': path.join(appUserDataData, 'Channels'),
-    // NOTE(app-managed-dirs): pi dirs are new in this PR and freely relocatable —
-    // pi resume tokens persist the pi session id, never a filesystem path.
-    'feature.agents.pi.root': path.join(appUserDataData, 'Agents', '.pi'), // Cherry-owned pi coding-agent home; passed explicitly as agentDir
-    'feature.agents.pi.sessions': path.join(appUserDataData, 'Agents', '.pi', 'sessions'), // Passed explicitly as sessionDir
-    'feature.agents.pi.vcc_file': path.join(app.getAppPath(), 'out', 'main', 'pi-vcc.mjs'),
+    // Sessions of the former bundled pi runtime; each moves to external.pi.sessions when first opened.
+    'feature.agents.pi.legacy_sessions': path.join(appUserDataData, 'Agents', '.pi', 'sessions'),
     'feature.agents.data': path.join(appUserDataData, 'Agents'), // per-agent identity + memory data
     'feature.agents.forks': path.join(appUserDataData, 'Agents', '.forks'), // owned fork snapshots; retained for Pi lineage
     'feature.agents.system_workspaces': path.join(appUserDataData, 'Agents', 'system'), // app-owned session workspaces
@@ -375,7 +372,7 @@ export function buildPathRegistry(storage?: StorageRoots) {
         : path.join(sysHome, '.mozilla/firefox'),
     'external.openclaw.config': path.join(sysHome, '.openclaw'),
     'external.deepseek_harness.config': path.join(sysHome, '.dsh'),
-    'external.pi.settings_file': path.join(sysHome, '.pi', 'agent', 'settings.json'),
+    'external.pi.sessions': path.join(sysHome, '.pi', 'agent', 'sessions'), // the user's pi CLI session store
     'external.hermes.default_home': isWin
       ? path.join(process.env.LOCALAPPDATA?.trim() || path.join(sysHome, 'AppData', 'Local'), 'hermes')
       : path.join(sysHome, '.hermes'),
@@ -441,7 +438,7 @@ const NO_ENSURE = [
   'feature.agents.builtin',
   'feature.agents.assistant.manifest.file',
   'feature.agents.skills.builtin',
-  'feature.agents.pi.vcc_file',
+  'feature.agents.pi.legacy_sessions',
   'feature.mini_app.builtin',
   // AgentSessionService stores this path through DataApi. The runtime creates
   // the concrete session directory later, keeping database writes filesystem-free.

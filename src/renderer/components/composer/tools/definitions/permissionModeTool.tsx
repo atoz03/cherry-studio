@@ -68,6 +68,7 @@ const usePermissionModeToolController = (context: PermissionModeContext) => {
   )
 
   useEffect(() => {
+    if (permissionModeCards.length === 0) return
     return launcher.registerLaunchers([
       {
         ...PERMISSION_MODE_TOOLBAR_MANIFEST.toolbar,
@@ -80,7 +81,7 @@ const usePermissionModeToolController = (context: PermissionModeContext) => {
         submenu: modeSubmenu
       }
     ])
-  }, [currentMode, launcher, launcherLabel, launcherTooltip, modeSubmenu, t, tooltipTitle])
+  }, [currentMode, launcher, launcherLabel, launcherTooltip, modeSubmenu, permissionModeCards, t, tooltipTitle])
 
   return { currentMode, tooltipTitle }
 }

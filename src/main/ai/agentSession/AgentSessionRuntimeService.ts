@@ -9,7 +9,6 @@ import { AgentSessionEditError } from '@data/services/AgentSessionEditError'
 import { agentSessionMessageService } from '@data/services/AgentSessionMessageService'
 import { agentSessionService } from '@data/services/AgentSessionService'
 import { aiUsageRecordService, type SourceSnapshot } from '@data/services/AiUsageRecordService'
-import { getRetiredAgentSessionMigration } from '@data/services/retiredAgentRuntimeMigration'
 import { loggerService } from '@logger'
 import { AgentSessionForkOperations } from '@main/ai/agentSession/fork'
 import type { NotifyChannel } from '@main/ai/runtime/agentMcpServers'
@@ -488,7 +487,6 @@ export class AgentSessionRuntimeService extends BaseService {
     // CLI session state is untrusted, so their next connection starts fresh instead of resuming it.
     this.reconcileStalePendingMessages()
     recoverSessionDeliveries()
-    for (const driver of runtimeDriverRegistry.getAgentSessionDrivers()) await driver.recoverSessions?.()
 
     this.registerDisposable(
       agentService.onAgentUpdated(({ agentId, updates, agent }) => {
@@ -1851,15 +1849,6 @@ export class AgentSessionRuntimeService extends BaseService {
   }
 
   private hydrateResumeToken(entry: AgentSessionRuntimeEntry): void {
-    const migration =
-      entry.agentType === 'pi'
-        ? getRetiredAgentSessionMigration(application.get('DbService').getDb(), entry.sessionId)
-        : undefined
-    if (migration) {
-      // Claim the Pi identity before a retry can finish importing and remove the migration marker.
-      entry.lastResumeToken = migration.resumeToken
-      return
-    }
     const runtimeResumeToken = agentSessionMessageService.getLastRuntimeResumeToken(entry.sessionId)
     if (runtimeResumeToken && !entry.lastResumeToken) entry.lastResumeToken = runtimeResumeToken
   }

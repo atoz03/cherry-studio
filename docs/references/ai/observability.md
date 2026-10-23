@@ -96,12 +96,8 @@ by the global provider. On every `startSpan` / `startActiveSpan` it:
 Claude Code Agent SDK spans do not go through `AiSdkSpanAdapter`; they are
 converted by `src/main/ai/observability/adapters/claudeCode/ClaudeCodeOtlpAdapter.ts`.
 
-Pi has no native OTel exporter. Its runtime connection creates Cherry-owned
-`pi.generate_content` spans at the provider stream boundary and
-`pi.execute_tool` spans from Pi's tool lifecycle events. These spans use the
-agent-session trace context supplied by the host and flow through the existing
-`NodeTraceService` and `TraceStorageService`; parallel tool calls are tracked by
-tool-call id and unfinished spans are closed when the connection ends.
+Pi agents run the user's own pi CLI, which Cherry does not trace; they produce no
+spans. Spans recorded by the former bundled Pi runtime remain readable.
 
 Historical DSH trace spans remain readable; no DSH runtime produces new spans.
 
